@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; transform-origin: {{FOCO}}; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      #veu-legenda { position: absolute; left: 0; right: 0; top: 1190px; height: 360px; opacity: {{VEU}}; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 28%, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 72%, transparent); } /* só com a faixa da legenda clara: o montar.mjs mede */
+      #legenda { position: absolute; left: 80px; right: 80px; top: 1270px; height: 200px; }
+      .linha {
+        position: absolute; inset: 0; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; column-gap: 0.24em; row-gap: 6px; opacity: 0;
+        font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 66px; line-height: 1.14; color: var(--fundo-claro);
+        text-shadow: 0 0 18px color-mix(in srgb, var(--fundo-escuro) 60%, transparent), 0 4px 10px color-mix(in srgb, var(--fundo-escuro) 70%, transparent);
+      }
+      .linha .p { display: inline-block; position: relative; }
+      .sublinha { position: absolute; left: 0; bottom: -4px; width: 0; height: 8px; border-radius: 4px; background: var(--destaque); }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="enquadramento">
+{{TRECHOS}}
+      </div>
+      <div id="veu-legenda"></div>
+      <div id="legenda"></div>
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL } = EC.iniciar(D.palavras);
+      const tl = gsap.timeline({ paused: true });
+
+      // Corte seco: o enquadramento alterna 100% e 115% a cada frase e a cada corte, sem transição
+      const ZOOM = 1.15;
+      EC.trocas(PAL, TRECHOS, TOTAL).forEach((t, n) => tl.set("#enquadramento", { scale: n % 2 ? 1 : ZOOM }, t));
+
+      // Legenda corrida (identidade anchor): linhas de até 5 palavras, entram e saem em 2 quadros; ênfase com traço na cor destaque
+      const caixa = document.getElementById("legenda"), LINHAS = EC.agrupar(PAL, 5, 24);
+      const FORTES = new Set(EC.marcar(PAL, D.enfase).filter((i) => i >= 0).map((i) => PAL[i]));
+      LINHAS.forEach((g, gi) => {
+        const el = caixa.appendChild(novo("div", "linha", `linha-${gi + 1}`));
+        g.forEach((p, pi) => {
+          const s = el.appendChild(novo("span", "p", `linha-${gi + 1}-p${pi + 1}`, p.txt));
+          if (FORTES.has(p)) tl.fromTo(s.appendChild(novo("span", "sublinha", `linha-${gi + 1}-p${pi + 1}-traco`)), { width: "0%" }, { width: "100%", duration: 0.25, ease: "power2.out" }, p.ini);
+        });
+        const prox = LINHAS[gi + 1], sai = Math.min(prox ? prox[0].ini : TOTAL, g[g.length - 1].fim + 0.6);
+        tl.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
+        tl.set(el, { opacity: 0 }, sai);
+      });
+      window.__timelines["editor-chefe"] = tl;
+    </script>
+  </body>
+</html>

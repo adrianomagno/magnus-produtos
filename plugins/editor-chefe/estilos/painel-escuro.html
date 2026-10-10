@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); color: var(--fundo-claro); }
+      #cartoes { position: absolute; left: 0; top: 120px; width: 1080px; height: 640px; }
+      .cartao { position: absolute; inset: 0; padding: 0 64px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 28px; opacity: 0; }
+      .cab {
+        display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 14px;
+        border-bottom: 2px solid color-mix(in srgb, var(--fundo-claro) 80%, transparent);
+        font-family: "{{CORPO}}", sans-serif; font-size: 24px; letter-spacing: 0.28em; text-transform: uppercase;
+        color: color-mix(in srgb, var(--fundo-claro) 75%, var(--fundo-escuro));
+      }
+      .tit { margin: 0; font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 88px; line-height: 1.06; letter-spacing: -0.02em; }
+      .tit em { font-style: normal; color: var(--destaque-legivel); }
+      #janela {
+        position: absolute; left: 48px; top: 790px; width: 984px; height: 600px; border-radius: 18px; overflow: hidden;
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent);
+      }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      #legenda { position: absolute; left: 48px; right: 48px; top: 1315px; height: 150px; }
+      .grupo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+      .grupo .caixa {
+        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.24em; max-width: 984px; padding: 14px 30px; border-radius: 14px;
+        background: color-mix(in srgb, var(--fundo-escuro) 92%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent);
+        font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 54px; line-height: 1.15; color: var(--fundo-claro);
+      }
+      .grupo .p { display: inline-block; padding: 0 0.12em; margin: 0 -0.12em; border-radius: 0.16em; }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="cartoes"></div>
+      <div id="janela">
+        <div id="enquadramento">
+{{TRECHOS}}
+        </div>
+      </div>
+      <div id="legenda"></div>
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, ESCURO, DESTAQUE, SOBRE_DESTAQUE } = EC.iniciar(D.palavras);
+      const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
+      const tl = gsap.timeline({ paused: true });
+
+      // Cartões: trecho literal da fala; *palavra* sai na cor destaque
+      const LEGIVEL = EC.contraste(DESTAQUE, ESCURO) >= 3;
+      document.documentElement.style.setProperty("--destaque-legivel", LEGIVEL ? DESTAQUE : `color-mix(in srgb, ${DESTAQUE} 55%, ${CLARO})`);
+      const host = document.getElementById("cartoes");
+      D.cartoes.forEach((c, i) => {
+        const id = `cartao-${i + 1}`, ini = naEdicao(c.de), fim = D.cartoes[i + 1] ? naEdicao(D.cartoes[i + 1].de) : TOTAL;
+        const el = host.appendChild(novo("div", "cartao", id));
+        const cab = el.appendChild(novo("div", "cab", `${id}-cab`));
+        cab.appendChild(novo("span", "", `${id}-marca`, D.nome));
+        cab.appendChild(novo("span", "", `${id}-num`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`));
+        const tit = el.appendChild(novo("h2", "tit", `${id}-tit`));
+        c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? tit.appendChild(novo("em", "", "", parte.slice(1, -1))) : tit.append(parte)));
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
+        tl.fromTo(cab, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);
+        tl.fromTo(tit, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, ini + 0.15);
+        tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
+      });
+
+      // Legenda em caixa escura; a palavra falada na cor destaque (ou em caixa, se a cor não tiver contraste)
+      const caixa = document.getElementById("legenda"), GRUPOS = EC.agrupar(PAL, 4, 22);
+      GRUPOS.forEach((g, gi) => {
+        const el = caixa.appendChild(novo("div", "grupo", `grupo-${gi + 1}`)), cx = el.appendChild(novo("div", "caixa", `grupo-${gi + 1}-caixa`));
+        g.forEach((p, pi) => (p.el = cx.appendChild(novo("span", "p", `grupo-${gi + 1}-p${pi + 1}`, p.txt))));
+        const prox = GRUPOS[gi + 1], sai = Math.min(prox ? prox[0].ini : TOTAL, g[g.length - 1].fim + 0.6);
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
+        tl.set(el, { opacity: 0 }, sai);
+        g.forEach((p, pi) => {
+          tl.set(p.el, LEGIVEL ? { color: DESTAQUE } : { backgroundColor: DESTAQUE, color: SOBRE_DESTAQUE }, p.ini);
+          tl.set(p.el, { color: CLARO, backgroundColor: "rgba(0,0,0,0)" }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
+        });
+      });
+      window.__timelines["editor-chefe"] = tl;
+    </script>
+  </body>
+</html>

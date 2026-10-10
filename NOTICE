@@ -1,0 +1,26 @@
+Produtos MAGNUS para o Claude Desktop
+
+Este repositório não copia o código de terceiros abaixo; ele os usa assim:
+
+HyperFrames (HeyGen)
+  Licença Apache-2.0: https://github.com/heygen-com/hyperframes/blob/v0.8.143/LICENSE
+  Instalada como plugin pelo marketplace deste repositório, direto do repositório
+  github.com/heygen-com/hyperframes, tag v0.8.143.
+
+GSAP 3.14.2 (Webflow)
+  Carregado da CDN jsDelivr (cdn.jsdelivr.net/npm/gsap@3.14.2) na hora do render,
+  pelos moldes em plugins/editor-chefe/estilos/. O render precisa de internet por isso.
+  Licença: Standard "No Charge" GSAP License, https://gsap.com/standard-license
+  (conferida em 2026-10-09; vigente desde 30/04/2025, última alteração em 30/05/2025).
+  Uso gratuito, inclusive comercial, em sites, aplicativos e interfaces digitais.
+  A licença proíbe, sem autorização por escrito, usar o GSAP em ferramenta visual de
+  criação de animação sem código que concorra com o Webflow. O Editor Chefe usa o GSAP
+  em código gerado para renderizar vídeo e não oferece editor visual de animação.
+
+Efeitos sonoros (Pixabay)
+  Licença: Pixabay Content License, https://pixabay.com/service/license-summary/
+  Uso comercial e não comercial permitido, sem atribuição obrigatória.
+  São arquivos do plugin hyperframes (pasta skills/media-use/audio/assets/sfx/, com os
+  créditos em CREDITS.md dessa pasta), usados nos vídeos do cliente: o Editor Chefe copia
+  os sons usados para a pasta de cada vídeo, no computador do cliente. Os sons não são
+  copiados para este repositório.

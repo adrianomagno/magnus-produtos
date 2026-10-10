@@ -1,0 +1,18 @@
+{
+  "name": "magnus",
+  "owner": { "name": "Equipe MAGNUS" },
+  "description": "Produtos MAGNUS para o Claude Desktop.",
+  "plugins": [
+    {
+      "name": "editor-chefe",
+      "source": "./plugins/editor-chefe",
+      "description": "Edita seus vídeos no seu computador: corta as pausas, legenda as falas e aplica o estilo que você escolher, com a sua marca."
+    },
+    {
+      "name": "hyperframes",
+      "source": { "source": "url", "url": "https://github.com/heygen-com/hyperframes.git", "ref": "v0.8.143", "sha": "3aa68869f7d4cec8b37cdfcb9cd539389b63abed" },
+      "description": "HyperFrames (HeyGen), o motor de vídeo que o Editor Chefe usa. Licença Apache-2.0.",
+      "license": "Apache-2.0"
+    }
+  ]
+}

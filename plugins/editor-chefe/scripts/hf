@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# hf: a CLI da HyperFrames pelo lançador oficial do plugin hyperframes. Uso: hf <comando> <argumentos>
+# Raiz da hyperframes: HYPERFRAMES_PLUGIN_ROOT, se definida (desenvolvimento); senão a versão mais alta ao lado
+# deste plugin no cache do Claude Code (~/.claude/plugins/cache/<marketplace>/<plugin>/<versão>/) que tenha o
+# lançador (pasta de versão sem as skills, de instalação pela metade, fica de fora).
+set -euo pipefail
+EC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+P=skills/hyperframes/scripts/plugin-cli.mjs
+if [ -n "${HYPERFRAMES_PLUGIN_ROOT:-}" ]; then L="${HYPERFRAMES_PLUGIN_ROOT%/}/$P"
+else L="$(ls -d "$EC"/../../hyperframes/*/$P 2>/dev/null | sort -V | tail -1 || true)"; fi
+[ -f "$L" ] || { echo "Editor Chefe: não achei a HyperFrames. Instale o plugin hyperframes do mesmo marketplace do Editor Chefe e abra uma conversa nova." >&2; exit 1; }
+exec node "$L" "$@"

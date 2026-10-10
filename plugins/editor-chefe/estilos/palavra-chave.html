@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; transform-origin: {{FOCO}}; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      #veu { position: absolute; inset: 0; background: var(--fundo-escuro); opacity: 0; }
+      #clarao { position: absolute; inset: 0; background: var(--fundo-claro); opacity: 0; }
+      #veu-legenda { position: absolute; left: 0; right: 0; top: 1140px; height: 460px; opacity: {{VEU}}; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 28%, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 72%, transparent); } /* só com a faixa da legenda clara: o montar.mjs mede */
+      #chaves { position: absolute; left: 0; right: 0; top: 1220px; height: 300px; }
+      .chave {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; white-space: nowrap;
+        font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 210px; line-height: 1; letter-spacing: -0.045em; text-transform: uppercase;
+        color: var(--fundo-claro); text-shadow: 0 6px 30px color-mix(in srgb, var(--fundo-escuro) 65%, transparent);
+      }
+      .chave .txt { display: inline-block; }
+      .chave.apice { color: var(--sobre-destaque); text-shadow: none; } /* ápice: no stomp a tela vira destaque; no keynote a palavra ganha caixa */
+      .keynote .chave.apice .txt { background: var(--destaque); padding: 0.04em 0.14em 0.02em; border-radius: 0.08em; }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="enquadramento">
+{{TRECHOS}}
+      </div>
+      <div id="veu"></div>
+      <div id="veu-legenda"></div>
+      <div id="chaves"></div>
+      <div id="clarao"></div>
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, PAL, ESCURO, DESTAQUE, SOBRE_DESTAQUE } = EC.iniciar(D.palavras);
+      const tl = gsap.timeline({ paused: true });
+
+      // Palavra-chave: só a palavra forte de cada frase, grande, no instante em que é dita
+      const STOMP = D.identidade === "stomp", LARGURA = STOMP ? 880 : 960;
+      document.documentElement.style.setProperty("--sobre-destaque", SOBRE_DESTAQUE);
+      document.getElementById("raiz").classList.add(D.identidade);
+      const ACHADAS = EC.marcar(PAL, D.chaves), KA = ACHADAS[D.chaves.indexOf(D.apice)], K = ACHADAS.filter((i) => i >= 0);
+      // Monta mesmo se a fonte não carregar (a medida sai com a fonte de reserva, mas a animação não congela)
+      document.fonts.load(`800 210px "{{TITULO}}"`).catch(() => {}).then(() => {
+        const caixa = document.getElementById("chaves");
+        K.forEach((k, n) => {
+          const p = PAL[k], prox = PAL[K[n + 1]], apice = k === KA;
+          const el = caixa.appendChild(novo("div", apice ? "chave apice" : "chave", `chave-${n + 1}`));
+          const t = el.appendChild(novo("span", "txt", `chave-${n + 1}-txt`, p.txt.replace(/[.,;:!?]+$/, "")));
+          if (t.offsetWidth > LARGURA) el.style.fontSize = Math.floor((210 * LARGURA) / t.offsetWidth) + "px";
+          const limite = prox ? prox.ini : TOTAL;
+          let sai = Math.min(limite, Math.max(p.fim + 0.9, p.ini + 0.6));
+          if (STOMP) {
+            if (prox && K[n + 1] === KA) sai = Math.max(p.ini + 0.3, Math.min(sai, prox.ini - 0.25)); // vazio antes do ápice
+            tl.set(el, { opacity: 1 }, p.ini);
+            if (apice) {
+              tl.fromTo(t, { scale: 1.18 }, { scale: 1, duration: 0.14, ease: "power3.out" }, p.ini);
+              tl.set("#clarao", { opacity: 0.35 }, p.ini).to("#clarao", { opacity: 0, duration: 0.15, ease: "none" }, p.ini);
+              tl.set("#veu", { backgroundColor: DESTAQUE }, p.ini).set("#veu", { backgroundColor: ESCURO }, sai);
+              tl.set("#enquadramento", { scale: 1.05 }, p.ini).to("#enquadramento", { scale: 1, duration: 0.3, ease: "power2.out" }, p.ini);
+            } else tl.fromTo(t, { scale: 1 }, { scale: 1.08, duration: sai - p.ini, ease: "none" }, p.ini);
+            tl.set(el, { opacity: 0 }, sai);
+            tl.set("#veu", { opacity: apice ? 0.9 : 0.42 }, p.ini);
+            if (!prox || prox.ini - sai > 0.4) tl.set("#veu", { opacity: 0 }, sai);
+          } else {
+            const entra = Math.min(0.24, (sai - p.ini) / 2), sai0 = Math.max(sai - 0.18, p.ini + entra);
+            tl.fromTo(el, { opacity: 0, y: 48 }, { opacity: 1, y: 0, duration: entra, ease: "expo.out" }, p.ini);
+            tl.to(el, { opacity: 0, duration: sai - sai0, ease: "power2.in" }, sai0);
+          }
+        });
+        window.__timelines["editor-chefe"] = tl;
+      });
+    </script>
+  </body>
+</html>

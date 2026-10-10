@@ -1,0 +1,15 @@
+{
+  "nome": "Estúdio Exemplo",
+  "assinatura": "Estúdio Exemplo",
+  "cores": {
+    "fundo_claro": "#F5F1EA",
+    "fundo_escuro": "#141414",
+    "texto": "#141414",
+    "destaque": "#9A6A5A"
+  },
+  "fontes": {
+    "titulo": "Montserrat",
+    "destaque": "Playfair Display",
+    "corpo": "Inter"
+  }
+}

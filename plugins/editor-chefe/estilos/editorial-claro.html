@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-claro); color: var(--texto); }
+      #cartoes { position: absolute; left: 0; top: 150px; width: 1080px; height: 560px; }
+      .cartao { position: absolute; inset: 0; padding: 0 72px; display: flex; flex-direction: column; justify-content: center; gap: 22px; opacity: 0; }
+      .olho { font-family: "{{CORPO}}", sans-serif; font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--texto) 62%, var(--fundo-claro)); }
+      .tit { margin: 0; font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 84px; line-height: 1.08; letter-spacing: -0.025em; }
+      .tit em { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 1.18em; letter-spacing: -0.01em; color: var(--destaque-legivel); }
+      .filete { width: 0; height: 7px; border-radius: 4px; background: var(--destaque); }
+      #palavra { position: absolute; left: 60px; right: 60px; top: 770px; height: 230px; }
+      .pv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; white-space: nowrap; }
+      .pv .txt { display: inline-block; }
+      .pv.a { font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 120px; letter-spacing: -0.03em; color: var(--texto); }
+      .pv.b { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 150px; color: var(--destaque-legivel); }
+      #janela {
+        position: absolute; left: 60px; top: 1056px; width: 960px; height: 540px; border-radius: 28px; overflow: hidden;
+        box-shadow: 0 18px 50px color-mix(in srgb, var(--texto) 16%, transparent);
+      }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      #assinatura { position: absolute; left: 0; right: 0; top: 1636px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      #assinatura-filete { width: 56px; height: 5px; border-radius: 3px; background: var(--destaque); }
+      #assinatura-texto { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 46px; color: var(--texto); }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="cartoes"></div>
+      <div id="palavra"></div>
+      <div id="janela">
+        <div id="enquadramento">
+{{TRECHOS}}
+        </div>
+      </div>
+      <div id="assinatura"><div id="assinatura-filete"></div><div id="assinatura-texto">{{ASSINATURA}}</div></div>
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = EC.iniciar(D.palavras);
+      const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
+      const tl = gsap.timeline({ paused: true });
+
+      // Cartões: trecho literal da fala; *palavra* sai em itálico na cor destaque
+      document.documentElement.style.setProperty("--destaque-legivel", EC.contraste(DESTAQUE, CLARO) >= 3 ? DESTAQUE : `color-mix(in srgb, ${DESTAQUE} 55%, ${TEXTO})`);
+      const host = document.getElementById("cartoes");
+      D.cartoes.forEach((c, i) => {
+        const id = `cartao-${i + 1}`, ini = naEdicao(c.de), fim = D.cartoes[i + 1] ? naEdicao(D.cartoes[i + 1].de) : TOTAL;
+        const el = host.appendChild(novo("div", "cartao", id));
+        const olho = el.appendChild(novo("div", "olho", `${id}-olho`, `${String(i + 1).padStart(2, "0")} · ${D.nome}`));
+        const tit = el.appendChild(novo("h2", "tit", `${id}-tit`));
+        c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? tit.appendChild(novo("em", "", "", parte.slice(1, -1))) : tit.append(parte)));
+        const filete = el.appendChild(novo("div", "filete", `${id}-filete`));
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
+        tl.fromTo(olho, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);
+        tl.fromTo(tit, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, ini + 0.15);
+        tl.fromTo(filete, { width: 0 }, { width: 220, duration: 0.45, ease: "power2.out" }, ini + 0.45);
+        tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
+      });
+
+      // Uma palavra por vez no meio, alternando a fonte de título (pesada) e a de destaque (itálica).
+      // Monta mesmo se uma fonte não carregar (a medida sai com a fonte de reserva, mas a animação não congela)
+      Promise.all([document.fonts.load(`800 120px "{{TITULO}}"`), document.fonts.load(`italic 400 150px "{{FONTE_DESTAQUE}}"`)]).catch(() => {}).then(() => {
+        const meio = document.getElementById("palavra");
+        PAL.forEach((p, i) => {
+          const el = meio.appendChild(novo("div", i % 2 ? "pv b" : "pv a", `palavra-${i + 1}`));
+          const t = el.appendChild(novo("span", "txt", `palavra-${i + 1}-txt`, p.txt.replace(/[.,;:]+$/, "")));
+          if (t.offsetWidth > 940) el.style.fontSize = Math.floor((parseFloat(getComputedStyle(el).fontSize) * 940) / t.offsetWidth) + "px";
+          const prox = PAL[i + 1], sai = prox && prox.ini - p.fim < 0.4 ? prox.ini : Math.min(prox ? prox.ini : TOTAL, p.fim + 0.4);
+          tl.fromTo(el, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: Math.min(0.08, (sai - p.ini) / 2), ease: "power2.out" }, p.ini);
+          tl.set(el, { opacity: 0 }, sai);
+        });
+        window.__timelines["editor-chefe"] = tl;
+      });
+    </script>
+  </body>
+</html>

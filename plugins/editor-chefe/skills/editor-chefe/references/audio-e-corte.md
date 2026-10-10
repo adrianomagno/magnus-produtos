@@ -1,0 +1,20 @@
+# Áudio e corte
+
+Trabalhe dentro da pasta do vídeo (`Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/`), com o vídeo do dono copiado para lá como `original.mp4` (ou a extensão que ele tiver). Nos comandos, `hf` é a HyperFrames, como manda o passo 3 da SKILL, sempre depois do prefixo `eval`.
+
+1. **Fonte de trabalho:** 30 quadros por segundo, um quadro-chave por segundo (com menos, a imagem congela no render), o lado maior com até 1920 px (vídeo menor não é ampliado), vídeo HDR do celular (HLG ou PQ, como o do iPhone) convertido para cor comum (SDR, BT.709) com mapeamento de tom, e o áudio já tratado (o `loudnorm` sem parâmetros mira -24):
+
+       TRC="$(ffprobe -v error -select_streams v:0 -show_entries stream=color_transfer -of csv=p=0 original.mp4 | tr -d "\r")"
+       VF="scale=w=min(iw\,1920):h=min(ih\,1920):force_original_aspect_ratio=decrease:force_divisible_by=2"
+       case "$TRC" in arib-std-b67|smpte2084) VF="$VF,zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv" ;; esac
+       ffmpeg -y -i original.mp4 -vf "$VF" -r 30 -c:v libx264 -crf 18 -g 30 -keyint_min 30 -pix_fmt yuv420p -af "highpass=f=80,acompressor=ratio=3,loudnorm=I=-16:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 192k -movflags +faststart fonte.mp4
+
+2. **Transcrição em português:** uma vez por computador, `hf models install parakeet` (cerca de 670 MB; rode com o tempo máximo da ferramenta, como manda a SKILL). Depois, na pasta do vídeo, `hf transcribe fonte.mp4 --engine parakeet --language pt` grava o `transcript.json`. Se o Parakeet não instalar, use `--engine whisper --model small --language pt` (sem `--model` o padrão é um modelo só de inglês, que traduz a fala) e, se errar palavras, `--model medium --language pt`.
+
+   Leia o texto inteiro do `transcript.json`. Palavra trocada: corrija o `text` e mantenha `start` e `end`. Palavra que faltou: insira um item novo dividindo o tempo da vizinha. O dono confere o resto na prévia.
+
+3. **Pausas e vícios:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/trechos.mjs" original.mp4 > trechos.json`. O script mede o volume da fala, acha as pausas de mais de 0,6 s (18 dB abaixo da fala), deixa 0,08 s de folga antes e depois da fala e grava os trechos que ficam. O `montar.mjs` transforma cada trecho num `<video>` (receitas `Hard cut` e `Trim in/out` da `hyperframes-core`). Para tirar vícios ("é...", "tipo", "né" repetidos), passe os intervalos como segundo argumento, do fim da palavra anterior ao início da palavra seguinte, pelos tempos do `transcript.json` (o Parakeet marca o começo do vício tarde; cortar a partir do começo dele deixa um pedaço do som): `node "${CLAUDE_PLUGIN_ROOT}/scripts/trechos.mjs" original.mp4 "12.31-12.58,20.10-20.40" > trechos.json`. Antes de montar, apague do `transcript.json` o item de cada vício cortado, senão ele aparece na legenda. Nunca corte palavra que muda o sentido, nunca no meio da palavra.
+
+4. **Formato:** 1080x1920, 30 qps. O enquadramento vertical sai do molde do estilo (`object-fit: cover` com o `"foco"` do `escolhas.json`), sem recorte antes: confira com `hf snapshot . --at 2` que o rosto está inteiro.
+
+5. **Áudio:** a cadeia já está na `fonte.mp4` e o render da HyperFrames mantém o nível. Confira no MP4 final com `ffmpeg -nostats -i saida.mp4 -af ebur128=framelog=quiet -f null -` e leia só o resumo (Integrated); o valor deve ficar perto de -16 LUFS. Anote no relatório da entrega.
