@@ -42,6 +42,7 @@
         </div>
       </div>
       <div id="assinatura"><div id="assinatura-filete"></div><div id="assinatura-texto">{{ASSINATURA}}</div></div>
+{{CAPA}}
 {{EFEITOS}}
     </div>
     <script>
@@ -79,6 +80,7 @@
           tl.fromTo(el, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: Math.min(0.08, (sai - p.ini) / 2), ease: "power2.out" }, p.ini);
           tl.set(el, { opacity: 0 }, sai);
         });
+        if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;
       });
     </script>

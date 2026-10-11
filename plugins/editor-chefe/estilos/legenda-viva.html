@@ -29,6 +29,7 @@
       </div>
       <div id="veu-legenda"></div>
       <div id="legenda"></div>
+{{CAPA}}
 {{EFEITOS}}
     </div>
     <script>
@@ -49,6 +50,7 @@
           tl.set(p.el, { backgroundColor: "rgba(0,0,0,0)", color: CLARO, textShadow: "" }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
         });
       });
+      if (D.capa) EC.capa(tl, D.capa);
       window.__timelines["editor-chefe"] = tl;
     </script>
   </body>

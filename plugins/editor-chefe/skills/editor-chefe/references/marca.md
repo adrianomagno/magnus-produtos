@@ -8,6 +8,7 @@ Guarde a marca em `Documentos/Editor Chefe/marca.json` e reaproveite nos próxim
    - nome do negócio (`nome`) e a frase do rodapé (`assinatura`; se ele não tiver, use o nome);
    - as 4 cores: fundo claro (`cores.fundo_claro`), fundo escuro (`cores.fundo_escuro`), cor do texto (`cores.texto`) e cor de destaque (`cores.destaque`). Ele pode responder pelo nome da cor; converta para `#RRGGBB` e confirme com ele;
    - as 3 fontes: a dos títulos (`fontes.titulo`), a de destaque, que aparece em itálico no estilo Editorial claro (`fontes.destaque`), e a do texto corrido (`fontes.corpo`). Se ele não souber, use as do exemplo abaixo.
+   - só no estilo Caixinha de pergunta, na primeira vez que o dono escolher esse estilo: a frase da faixa escura da caixinha (`chamada_caixinha`), como "Pergunta aqui sobre emagrecimento", com até 50 caracteres. Se ela já veio no passo 3 da SKILL, não pergunte de novo. Guarde no `marca.json` e use nos próximos vídeos desse estilo sem perguntar de novo. Os outros estilos não usam esse campo.
 
 Esquema:
 
@@ -15,7 +16,10 @@ Esquema:
       "nome": "Nome do negócio",
       "assinatura": "Texto do rodapé",
       "cores": { "fundo_claro": "#FAF8F3", "fundo_escuro": "#111111", "texto": "#111111", "destaque": "#9A6A5A" },
-      "fontes": { "titulo": "Montserrat", "destaque": "Playfair Display", "corpo": "Inter" }
+      "fontes": { "titulo": "Montserrat", "destaque": "Playfair Display", "corpo": "Inter" },
+      "chamada_caixinha": "Pergunta aqui sobre emagrecimento"
     }
+
+`chamada_caixinha` é opcional: só entra depois que o dono usou a Caixinha de pergunta.
 
 Fontes: baixe cada família de `fontes` direto na pasta `fonts/` da pasta do vídeo, **antes** de montar: `node "${CLAUDE_PLUGIN_ROOT}/scripts/baixar-fonte.mjs" "<Família>" "400,800" "<pasta do vídeo>/fonts"`. O `montar.mjs` só lê `fonts/`: se faltar a fonte de uma família que o estilo usa, ou se o arquivo não for woff2 de verdade, ele para com erro; se faltar o peso 800 ou o itálico, usa o arquivo mais perto e avisa. Fonte que não está no Google Fonts: use a mais parecida e avise o dono.

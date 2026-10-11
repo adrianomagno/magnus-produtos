@@ -32,9 +32,9 @@ Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licen�
          ]
        }
 
-   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`.
+   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`.
 4. Monte: `node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .` grava `index.html` e `comum.js` na pasta e, com os efeitos ligados, copia os sons usados para `efeitos/`. Aviso de palavra "não foi achada na fala" quer dizer que ela não aparece no `transcript.json` na ordem pedida: corrija a palavra no `escolhas.json` e monte de novo.
-5. Confira o rosto com `hf snapshot . --at 2` e ajuste o `"foco"` se preciso.
+5. Confira o rosto com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`) e ajuste o `"foco"` se preciso.
 
 ## Prévia, conferência e render
 
@@ -53,7 +53,7 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 
 ## Cuidados
 
-- **Vídeo deitado cabe melhor aqui:** a janela de 984x600 aproveita uma gravação deitada sem ampliar demais. Vídeo em pé perde o corpo e fica só o rosto: use o segundo número do `"foco"` perto de 25% e confira com `hf snapshot . --at 2`.
+- **Vídeo deitado cabe melhor aqui:** a janela de 984x600 aproveita uma gravação deitada sem ampliar demais. Vídeo em pé perde o corpo e fica só o rosto: use o segundo número do `"foco"` perto de 25% e confira com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`).
 - **Título longo:** com mais de 8 palavras, o título passa de 3 linhas e fica pesado para ler nos poucos segundos do cartão. Corte o trecho, não diminua a letra.
 - **Fonte sem peso 800:** o montador usa o peso mais pesado que houver em `fonts/` e avisa. Diga ao dono que a letra fica um pouco mais leve que a da marca.
 - **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.

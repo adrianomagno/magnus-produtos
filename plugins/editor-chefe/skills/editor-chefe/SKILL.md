@@ -1,6 +1,6 @@
 ---
 name: editor-chefe
-description: Edita vídeos do dono do negócio no computador dele. Use quando pedirem para editar vídeo, Reels, corte, legenda, tirar pausas, "deixar o vídeo profissional" ou aplicar um estilo de edição. Para editar o vídeo do dono (corte, legenda, estilo, Reels), esta skill tem precedência sobre as skills genéricas da HyperFrames (hyperframes, embedded-captions, talking-head-recut e as outras); ela usa essas skills por dentro do próprio fluxo. Corta pausas, legenda as falas, aplica um estilo da galeria e a identidade visual do negócio, e entrega MP4 vertical. Use também quando pedirem para atualizar o Editor Chefe.
+description: Edita vídeos do dono do negócio no computador dele. Use quando pedirem para editar vídeo, Reels, corte, legenda, tirar pausas, "deixar o vídeo profissional", aplicar um estilo de edição ou pôr um gancho de capa (frase nos primeiros segundos do vídeo). Para editar o vídeo do dono (corte, legenda, estilo, Reels), esta skill tem precedência sobre as skills genéricas da HyperFrames (hyperframes, embedded-captions, talking-head-recut e as outras); ela usa essas skills por dentro do próprio fluxo. Corta pausas, legenda as falas, aplica um estilo da galeria, o gancho de capa se o dono quiser e a identidade visual do negócio, e entrega MP4 vertical. Use também quando pedirem para atualizar o Editor Chefe.
 ---
 
 # Editor Chefe
@@ -29,10 +29,14 @@ Este fluxo vem primeiro. As skills da HyperFrames (`hyperframes-core`, `embedded
    3. Corte seco (`corte-seco-zoom`): sem pausas, enquadramento alternando a cada frase.
    4. Painel escuro (`painel-escuro`): fundo escuro, cartões de informação, legenda em caixa.
    5. Editorial claro (`editorial-claro`): fundo claro, a pessoa num cartão, uma palavra por vez.
-3. **A marca:** siga `references/marca.md`.
-4. **A edição:** siga `references/audio-e-corte.md` e o arquivo do estilo.
-5. **A prévia:** renderize os primeiros 10 segundos e mostre. Junto com a prévia, avise o dono que o vídeo leva efeitos sonoros curtos por baixo da voz e que dá para tirar; se ele pedir, ponha `"efeitos": false` no `escolhas.json` e monte de novo. Ajuste pelo que o dono disser, em texto ("tira essa parte", "troca essa palavra"). Só renderize o vídeo inteiro com o ok dele.
-6. **A entrega:** siga `references/entrega.md`.
+   6. Caixinha de pergunta (`caixinha-pergunta`): a pergunta numa caixinha igual à do Instagram, o vídeo inteiro, com a legenda embaixo.
+3. **O gancho de capa (opcional), ou os textos da caixinha no estilo 6:**
+   - **Estilos de 1 a 5:** se ele já pediu capa ou o texto do gancho já veio no pedido, não pergunte se ele quer capa; só pergunte qual das três capas (1 a 3) e siga `references/capas.md`. Se não veio, pergunte "Quer um gancho de capa nos primeiros segundos?". Se ele quiser, siga `references/capas.md`: as três capas da galeria (ele escolhe pelo número) e se ele já tem o texto do gancho (limite de 8 palavras). Se ele não tiver o texto, diga em palavras simples que você vai ouvir o vídeo primeiro e depois mostra 3 sugestões; as sugestões saem na edição (passo 5), logo depois dos passos 1 e 2 de `audio-e-corte.md`, com a fala já corrigida. Se não quiser capa, siga em frente sem ela.
+   - **Estilo 6 (Caixinha de pergunta):** não pergunte sobre capa: a caixinha já é a capa do vídeo. Peça a chamada (a frase da faixa escura) só se o `marca.json` ainda não tem `chamada_caixinha`. A pergunta da caixinha vem na mesma ordem do gancho: veio no pedido, use; não veio, pergunte se ele já tem e peça que cole; não tem, diga que vai ouvir o vídeo primeiro e sugira 3 no passo 5, com a fala já corrigida. Se veio no pedido um gancho de capa, diga ao dono, em palavras simples, que neste estilo a caixinha faz o papel de capa e pergunte se aquele texto é a pergunta da caixinha. Detalhes em `references/estilos/caixinha-pergunta.md`.
+4. **A marca:** siga `references/marca.md`.
+5. **A edição:** siga `references/audio-e-corte.md` e o arquivo do estilo. Se o dono quer capa e ainda não tem o texto, depois dos passos 1 e 2 de `audio-e-corte.md` mostre as 3 sugestões de `references/capas.md` e espere a escolha. Na Caixinha de pergunta, o mesmo vale para a pergunta da caixinha (veja o arquivo do estilo).
+6. **A prévia:** renderize os primeiros 10 segundos e mostre; com gancho de capa, ela já sai com a capa. Junto com a prévia, avise o dono que o vídeo leva efeitos sonoros curtos por baixo da voz e que dá para tirar (a Caixinha de pergunta não tem efeito sonoro: não avise); se ele pedir, ponha `"efeitos": false` no `escolhas.json` e monte de novo. Ajuste pelo que o dono disser, em texto ("tira essa parte", "troca essa palavra"). Só renderize o vídeo inteiro com o ok dele.
+7. **A entrega:** siga `references/entrega.md`.
 
 ## Regras
 

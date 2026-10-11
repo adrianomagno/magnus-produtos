@@ -1,6 +1,6 @@
 # Entrega
 
-- Galeria dos estilos: https://adrianomagno.github.io/magnus-produtos/galeria/
+- Galeria dos estilos e das capas: https://adrianomagno.github.io/magnus-produtos/galeria/ (as capas ficam na seção `#capas`: https://adrianomagno.github.io/magnus-produtos/galeria/#capas)
 - Arquivo final em `Documentos/Editor Chefe/prontos/<AAAA-MM-DD>-<nome curto>.mp4`.
 - Antes de entregar: `lint` e `check` da HyperFrames sem erro; `ffprobe` mostra 1080x1920; áudio perto de -16 LUFS.
 - Diga ao dono onde está o arquivo e como mandar para o celular (pela pasta do Google Drive do computador, ou pelo WhatsApp Web para ele mesmo).

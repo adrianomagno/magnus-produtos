@@ -32,9 +32,9 @@ Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licen�
          ]
        }
 
-   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`.
+   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`.
 4. Monte: `node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .` grava `index.html` e `comum.js` na pasta e, com os efeitos ligados, copia os sons usados para `efeitos/`. Aviso de palavra "não foi achada na fala" quer dizer que ela não aparece no `transcript.json` na ordem pedida: corrija a palavra no `escolhas.json` e monte de novo.
-5. Confira o rosto com `hf snapshot . --at 2` e ajuste o `"foco"` se preciso.
+5. Confira o rosto com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`) e ajuste o `"foco"` se preciso.
 
 ## Prévia, conferência e render
 
@@ -54,7 +54,7 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 ## Cuidados
 
 - **Fonte de destaque sem itálico:** sem o arquivo `-400-italic.woff2` em `fonts/`, o montador declara a fonte normal e avisa; o navegador inclina a própria fonte da marca (itálico falso, conferido a olho numa amostra, sem teste automático). Se o dono não gostar, escolha a serifada mais parecida que tenha itálico no Google Fonts.
-- **Vídeo em pé:** o cartão de 960x540 é deitado; com vídeo em pé, use o segundo número do `"foco"` perto de 25% para o rosto não sair do corte e confira com `hf snapshot . --at 2`.
+- **Vídeo em pé:** o cartão de 960x540 é deitado; com vídeo em pé, use o segundo número do `"foco"` perto de 25% para o rosto não sair do corte e confira com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`).
 - **Título longo:** com mais de 8 palavras, o título passa de 3 linhas e fica pesado para ler nos poucos segundos do cartão. Corte o trecho, não diminua a letra.
 - **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.
 - **Sem o plugin hyperframes:** o montador para dizendo que não achou os efeitos sonoros. Instale o plugin hyperframes do mesmo marketplace e abra uma conversa nova; se não der, monte com `"efeitos": false`.
