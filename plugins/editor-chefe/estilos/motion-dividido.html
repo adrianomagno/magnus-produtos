@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); color: var(--fundo-claro); }
+      /* Metade de cima (0 a 960): cabeçalho com a marca, painel de 230 a 870 com o título da ideia e a animação */
+      #cabeca { position: absolute; left: 64px; top: 150px; height: 40px; display: flex; align-items: center; gap: 18px; }
+      #cabeca-filete { width: 48px; height: 6px; border-radius: 3px; background: var(--linha); }
+      #cabeca-nome { font-weight: 800; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fundo-claro); }
+      #painel { position: absolute; left: 48px; top: 230px; width: 984px; height: 640px; box-sizing: border-box; border-radius: 28px; background: var(--painel); border: 2px solid var(--traco-apagado); }
+      #ideias { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; }
+      .ideia { position: absolute; inset: 0; opacity: 0; }
+      .ideia-num { position: absolute; right: 64px; top: 150px; height: 40px; line-height: 40px; font-weight: 800; font-size: 26px; letter-spacing: 0.08em; color: var(--apagado); }
+      .ideia-tit { position: absolute; left: 88px; right: 88px; top: 262px; height: 136px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 56px; line-height: 1.1; letter-spacing: -0.015em; color: var(--fundo-claro); }
+      .ideia-tit em { font-style: normal; color: var(--linha); }
+      .anim { position: absolute; left: 88px; right: 88px; top: 410px; height: 420px; display: flex; align-items: center; justify-content: center; }
+      .rot { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.12; text-align: center; color: var(--fundo-claro); overflow-wrap: normal; }
+      .caixa-anim { box-sizing: border-box; border: 3px solid var(--linha); border-radius: 22px; background: var(--painel-2); display: flex; align-items: center; justify-content: center; }
+      .caixa-anim.forte { background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      /* figura: o item com ícone, sem caixa (o desenho e o rótulo embaixo, como no painel do formato 0 do Clipador) */
+      .figura { box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+      .icone { display: block; flex: 0 0 auto; overflow: visible; }
+      /* fileira (etapas, antes e depois, comparação): desliza para o conjunto já na tela ficar no meio do painel */
+      .fila { position: relative; display: flex; align-items: center; width: 100%; height: 100%; }
+      /* etapas: caixas lado a lado com número (ou figuras) e seta entre elas */
+      .etapa { position: relative; flex: 1 1 0; min-width: 0; height: 240px; padding: 38px 14px 16px; }
+      .etapa.figura { height: 300px; padding: 0 8px; }
+      .etapa .rot { width: 100%; }
+      .etapa-num { position: absolute; top: -28px; left: calc(50% - 28px); width: 56px; height: 56px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--linha); font-weight: 800; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+      .seta { flex: 0 0 auto; display: block; }
+      /* antes-depois e comparação: dois lados */
+      .lado { flex: 1 1 0; min-width: 0; height: 260px; padding: 20px 22px; }
+      .lado .rot { width: 100%; font-size: 44px; }
+      .lado.figura { height: 330px; padding: 0 10px; }
+      .lado.figura .rot { font-size: 40px; }
+      .divisor { position: relative; flex: 0 0 110px; height: 300px; }
+      .divisor-linha { position: absolute; left: 53px; top: 0; width: 4px; height: 300px; border-radius: 2px; background: var(--traco-apagado); }
+      .divisor-marca { position: absolute; left: 35px; top: 130px; width: 40px; height: 40px; border-radius: 6px; background: var(--linha); }
+      /* lista que acende: o bloco fica no meio do painel */
+      .anim.lista { flex-direction: column; }
+      .bloco { display: flex; flex-direction: column; gap: 22px; max-width: 100%; }
+      .item { display: flex; align-items: center; gap: 30px; }
+      .item-marca { flex: 0 0 64px; height: 64px; box-sizing: border-box; border-radius: 50%; border: 4px solid var(--traco-apagado); }
+      .item-marca svg { display: block; }
+      .item .rot { flex: 0 1 auto; min-width: 0; text-align: left; color: var(--apagado); }
+      /* número que cresce */
+      .anim.numero { flex-direction: column; gap: 22px; }
+      .num-valor { display: inline-block; font-weight: 800; font-size: 190px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--linha); }
+      .num-barra { width: 560px; height: 12px; border-radius: 6px; background: var(--traco-apagado); overflow: hidden; }
+      .num-cheio { width: 100%; height: 100%; background: var(--linha); transform-origin: left center; }
+      .num-rotulo { display: flex; align-items: center; gap: 18px; max-width: 840px; }
+      .num-rotulo .rot { min-width: 0; font-size: 40px; }
+      /* pergunta: balão com a pergunta e, se houver, balão com a resposta, em conversa no meio do painel */
+      .anim.pergunta { flex-direction: column; }
+      .conversa { display: flex; flex-direction: column; gap: 40px; max-width: 100%; }
+      .balao { position: relative; align-self: flex-start; margin-right: 60px; max-width: 720px; box-sizing: border-box; padding: 26px 40px; border-radius: 26px; border: 3px solid var(--linha); background: var(--painel-2); display: flex; align-items: center; gap: 22px; }
+      .balao.resposta { align-self: flex-end; margin: 0 0 0 60px; background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      .balao:only-child { margin: 0; }
+      .balao-cauda { position: absolute; left: 50px; bottom: -15px; width: 26px; height: 26px; box-sizing: border-box; background: var(--painel-2); border-right: 3px solid var(--linha); border-bottom: 3px solid var(--linha); transform: rotate(45deg); }
+      .balao.resposta .balao-cauda { left: auto; right: 50px; background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      .balao-sinal { position: absolute; right: -26px; top: -26px; width: 60px; height: 60px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--linha); font-weight: 800; font-size: 40px; display: flex; align-items: center; justify-content: center; }
+      .balao .rot { min-width: 0; text-transform: none; text-align: left; letter-spacing: 0; font-size: 48px; line-height: 1.18; }
+      /* Metade de baixo (960 a 1920): o vídeo em toda a largura */
+      #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      /* A emenda: filete na cor de destaque e a legenda centrada nela (870 a 1050, meio em 960) */
+      #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--linha); }
+      #legenda { position: absolute; left: 48px; right: 48px; top: 870px; height: 180px; }
+      .grupo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+      .grupo .caixa {
+        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.24em; max-width: 984px; padding: 14px 32px; border-radius: 16px;
+        background: var(--fundo-escuro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent), 0 12px 30px color-mix(in srgb, var(--fundo-escuro) 45%, transparent);
+        font-weight: 800; font-size: 58px; line-height: 1.15; color: var(--fundo-claro);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="painel"></div>
+      <div id="ideias"></div>
+      <div id="cabeca"><div id="cabeca-filete"></div><div id="cabeca-nome"></div></div>
+      <div id="janela">
+        <div id="enquadramento">
+{{TRECHOS}}
+        </div>
+      </div>
+      <div id="emenda"></div>
+      <div id="legenda"></div>
+{{CAPA}}
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, PAL, CLARO, ESCURO, DESTAQUE } = C;
+      const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
+      const tl = gsap.timeline({ paused: true });
+
+      // Cores da marca no painel: traço, título e número na cor destaque, clareada até 3,2:1 contra o painel se preciso;
+      // texto ainda não dito (lista) apagado, mas também com 3,2:1. Nenhum texto fica sobre preenchimento da cor destaque:
+      // todo texto lê contra o próprio painel, também nas entradas e saídas, quando a caixa ainda está transparente
+      const em = (x) => `rgb(${x.join(",")})`, raizCss = document.documentElement.style;
+      const PAINEL = EC.mistura(ESCURO, CLARO, 0.05), LINHA = EC.legivel(DESTAQUE, CLARO, PAINEL, 3.2);
+      const SOBRE_LINHA = EC.contraste(LINHA, ESCURO) >= EC.contraste(LINHA, CLARO) ? ESCURO : CLARO;
+      raizCss.setProperty("--painel", em(PAINEL));
+      raizCss.setProperty("--painel-2", em(EC.mistura(ESCURO, CLARO, 0.09)));
+      raizCss.setProperty("--linha", em(LINHA));
+      raizCss.setProperty("--apagado", em(EC.legivel(EC.mistura(CLARO, PAINEL, 0.55), CLARO, PAINEL, 3.2)));
+      raizCss.setProperty("--traco-apagado", em(EC.mistura(CLARO, PAINEL, 0.78)));
+      const APAGADO = getComputedStyle(document.documentElement).getPropertyValue("--apagado").trim();
+      const TRACO_APAGADO = getComputedStyle(document.documentElement).getPropertyValue("--traco-apagado").trim();
+      document.getElementById("cabeca-nome").textContent = D.nome;
+
+      // Texto mais largo ou mais alto que o espaço encolhe de 2 em 2 px até 26 px (palavra longa numa caixa estreita);
+      // se nem assim couber, a palavra quebra dentro da caixa em vez de vazar. Chame com a animação já montada inteira.
+      const caber = (e, alt, larg) => {
+        const sobra = () => (larg ? e.offsetWidth > larg : e.scrollWidth > e.clientWidth + 1) || e.scrollHeight > alt;
+        let s = parseFloat(getComputedStyle(e).fontSize);
+        while (s > 26 && sobra()) e.style.fontSize = (s -= 2) + "px";
+        if (sobra()) e.style.overflowWrap = "anywhere";
+      };
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = (pai, tag, id, at) => { const e = pai.appendChild(document.createElementNS(NS, tag)); e.id = id; for (const k in at) e.setAttribute(k, at[k]); return e; };
+      // Seta desenhada da esquerda para a direita, terminando no instante t; devolve o elemento (entra na fileira)
+      function seta(pai, id, w, h, g, t) {
+        const s = svg(pai, "svg", id, { class: "seta", width: w, height: h, viewBox: `0 0 ${w} ${h}` }), L = w - 10;
+        const haste = svg(s, "path", `${id}-haste`, { d: `M4 ${h / 2} H${w - 6}`, fill: "none", stroke: em(LINHA), "stroke-width": g, "stroke-linecap": "round", "stroke-dasharray": L, "stroke-dashoffset": L });
+        const ponta = svg(s, "path", `${id}-ponta`, { d: `M${w - 20} ${h / 2 - 13} L${w - 6} ${h / 2} L${w - 20} ${h / 2 + 13}`, fill: "none", stroke: em(LINHA), "stroke-width": g, "stroke-linecap": "round", "stroke-linejoin": "round" });
+        ponta.style.opacity = 0;
+        tl.to(haste, { strokeDashoffset: 0, duration: 0.28, ease: "power2.inOut" }, Math.max(0, t - 0.3));
+        tl.to(ponta, { opacity: 1, duration: 0.08, ease: "none" }, t - 0.04);
+        return s;
+      }
+      // Ícone da biblioteca (EC.ICONES, grade de 64x64): traço principal na cor destaque, detalhe ("~") mais apagado.
+      // pathLength 1 deixa o traço se desenhar do mesmo jeito em qualquer ícone (stroke-dashoffset de 1 a 0); a espessura
+      // acompanha o tamanho para o traço ter sempre 6 px na tela.
+      const DETALHE = em(EC.legivel(EC.mistura(CLARO, PAINEL, 0.45), CLARO, PAINEL, 2.2));
+      function icone(pai, nome, id, tam, cor = em(LINHA)) {
+        const el = svg(pai, "svg", id, { class: "icone", width: tam, height: tam, viewBox: "0 0 64 64", fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" });
+        const tracos = EC.ICONES[nome].map((d, k) => svg(el, "path", `${id}-traco-${k + 1}`, {
+          d: d.replace(/^~/, ""), stroke: d.startsWith("~") ? DETALHE : cor, "stroke-width": +((6 * 64) / tam).toFixed(2), pathLength: 1, "stroke-dasharray": 1, "stroke-dashoffset": 1,
+        }));
+        el.style.opacity = 0;
+        return { el, tracos, principais: tracos.filter((p, k) => !EC.ICONES[nome][k].startsWith("~")) };
+      }
+      // O ícone aparece e cada traço se desenha, um depois do outro, a partir de t
+      function desenhar(ic, t) {
+        tl.to(ic.el, { opacity: 1, duration: 0.12, ease: "none" }, t);
+        ic.tracos.forEach((p, k) => tl.to(p, { strokeDashoffset: 0, duration: 0.55, ease: "power2.inOut" }, t + 0.07 * k));
+      }
+      // Fileira que se centra: partes são os elementos da fileira, na ordem; a cada passo { t, ate } a fileira desliza para
+      // o trecho já na tela (da primeira parte até a parte "ate") ficar no meio do painel. Medidas de layout (offset*).
+      function centrar(fila, partes, passos) {
+        const meio = fila.clientWidth / 2, ini = partes[0].offsetLeft;
+        const desloca = (ate) => meio - (ini + partes[ate].offsetLeft + partes[ate].offsetWidth) / 2;
+        gsap.set(fila, { x: desloca(passos[0].ate) });
+        passos.slice(1).forEach((p) => tl.to(fila, { x: desloca(p.ate), duration: 0.5, ease: "power2.inOut" }, p.t));
+      }
+
+      // Biblioteca de animações. Cada uma monta os elementos na área da animação (el) e põe cada item na tela no
+      // instante ts[k]: o primeiro junto com o título da ideia, os outros quando a fala diz as palavras deles. ics: o ícone de cada item (ou nada). Só mexe em opacidade,
+      // deslocamento, escala, cor e traço.
+      const ANIM = {
+        // Etapas em sequência (2 ou 3): caixas numeradas (ou figuras, com ícone), uma seta antes de cada uma
+        etapas(el, itens, ts, id, ini, ics) {
+          const fila = el.appendChild(novo("div", "fila", `${id}-fila`)), partes = [], rots = [], tam = itens.length > 2 ? 36 : 44;
+          itens.forEach((txt, k) => {
+            if (k) partes.push(seta(fila, `${id}-seta-${k}`, 64, 40, 5, ts[k]));
+            const e = fila.appendChild(novo("div", ics ? "etapa figura" : "etapa caixa-anim", `${id}-etapa-${k + 1}`));
+            if (ics) desenhar(icone(e, ics[k], `${id}-etapa-${k + 1}-icone`, 160), ts[k] + 0.05);
+            else tl.fromTo(e.appendChild(novo("div", "etapa-num", `${id}-etapa-${k + 1}-num`, String(k + 1).padStart(2, "0"))), { scale: 0.4 }, { scale: 1, duration: 0.36, ease: "back.out(2)" }, ts[k] + 0.08);
+            const r = e.appendChild(novo("div", "rot", `${id}-etapa-${k + 1}-rot`, txt));
+            r.style.fontSize = tam + "px";
+            rots.push(r);
+            partes.push(e);
+            tl.fromTo(e, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.32, ease: "power2.out" }, ts[k]);
+          });
+          rots.forEach((r) => caber(r, ics ? 120 : 180)); // depois de todas: a largura de cada caixa depende de quantas são
+          centrar(fila, partes, ts.map((t, k) => ({ t: t - 0.3, ate: 2 * k })));
+        },
+        // Antes e depois: o primeiro lado, a seta e o segundo lado em destaque; o primeiro se apaga quando o segundo entra
+        "antes-depois"(el, [a, b], [ta, tb], id, ini, ics) {
+          const fila = el.appendChild(novo("div", "fila", `${id}-fila`)), tipo = ics ? "lado figura" : "lado caixa-anim";
+          const A = fila.appendChild(novo("div", tipo, `${id}-antes`)), ia = ics && icone(A, ics[0], `${id}-antes-icone`, 170);
+          const ra = A.appendChild(novo("div", "rot", `${id}-antes-rot`, a));
+          const s = seta(fila, `${id}-seta`, 120, 60, 7, tb);
+          const B = fila.appendChild(novo("div", `${tipo} forte`, `${id}-depois`)), ib = ics && icone(B, ics[1], `${id}-depois-icone`, 170);
+          const rb = B.appendChild(novo("div", "rot", `${id}-depois-rot`, b));
+          for (const r of [ra, rb]) caber(r, ics ? 120 : 200);
+          tl.fromTo(A, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.34, ease: "power2.out" }, ta);
+          tl.fromTo(B, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.38, ease: "back.out(1.7)" }, tb);
+          if (ics) { desenhar(ia, ta + 0.05); desenhar(ib, tb + 0.05); tl.to(ia.principais, { stroke: TRACO_APAGADO, duration: 0.3, ease: "power2.out" }, tb + 0.2); }
+          else tl.to(A, { borderColor: TRACO_APAGADO, duration: 0.3, ease: "power2.out" }, tb);
+          tl.to(ra, { color: APAGADO, duration: 0.3, ease: "power2.out" }, tb);
+          centrar(fila, [A, s, B], [{ t: ta, ate: 0 }, { t: tb - 0.3, ate: 2 }]);
+        },
+        // Lista que acende: os itens aparecem apagados e cada um acende quando é dito (a marca se enche e o traço de
+        // confirmação se desenha; com ícone, o ícone ganha a cor destaque e pulsa)
+        lista(el, itens, ts, id, ini, ics) {
+          const bloco = el.appendChild(novo("div", "bloco", `${id}-bloco`)), tam = itens.length > 3 ? 40 : 46;
+          itens.forEach((txt, k) => {
+            const nome = `${id}-item-${k + 1}`, e = bloco.appendChild(novo("div", "item", nome)), entra = ini + 0.1 + 0.08 * k;
+            if (ics) {
+              const ic = icone(e, ics[k], `${nome}-icone`, 84, TRACO_APAGADO);
+              desenhar(ic, entra);
+              tl.to(ic.principais, { stroke: em(LINHA), duration: 0.25, ease: "power2.out" }, ts[k]);
+              tl.to(ic.el, { scale: 1.14, duration: 0.12, ease: "power2.out" }, ts[k]);
+              tl.to(ic.el, { scale: 1, duration: 0.2, ease: "power2.inOut" }, ts[k] + 0.12);
+            } else {
+              const m = e.appendChild(novo("div", "item-marca", `${nome}-marca`));
+              const s = svg(m, "svg", `${nome}-sinal`, { width: 56, height: 56, viewBox: "0 0 56 56" });
+              const v = svg(s, "path", `${nome}-traco`, { d: "M15 29 L24 38 L42 19", fill: "none", stroke: SOBRE_LINHA, "stroke-width": 6, "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-dasharray": 42, "stroke-dashoffset": 42 });
+              tl.to(m, { backgroundColor: em(LINHA), borderColor: em(LINHA), duration: 0.2, ease: "power2.out" }, ts[k]);
+              tl.to(v, { strokeDashoffset: 0, duration: 0.25, ease: "power2.out" }, ts[k] + 0.1);
+            }
+            const r = e.appendChild(novo("div", "rot", `${nome}-rot`, txt));
+            r.style.fontSize = tam + "px";
+            caber(r, itens.length > 3 ? 84 : 96);
+            tl.fromTo(e, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, entra);
+            tl.to(r, { color: CLARO, x: 10, duration: 0.25, ease: "power2.out" }, ts[k]);
+          });
+        },
+        // Número que cresce: conta de zero até o número dito, com uma barra que enche junto; o segundo item é o rótulo.
+        // Ícone do número: em cima dele; ícone do rótulo: ao lado do rótulo
+        numero(el, [valor, rotulo], [tv, tr], id, ini, ics) {
+          const n = EC.numero(valor), st = { v: 0 };
+          const iv = ics && ics[0] && icone(el, ics[0], `${id}-valor-icone`, 104);
+          const v = el.appendChild(novo("div", "num-valor", `${id}-valor`, valor));
+          if (iv) v.style.fontSize = "150px";
+          caber(v, iv ? 170 : 220, 840); // mede com o número final, o mais largo
+          const barra = el.appendChild(novo("div", "num-barra", `${id}-barra`)), cheio = barra.appendChild(novo("div", "num-cheio", `${id}-barra-cheia`));
+          if (iv) desenhar(iv, tv);
+          tl.fromTo(v, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power2.out" }, tv);
+          tl.fromTo(v, { scale: 0.72 }, { scale: 1, duration: 1.1, ease: "power3.out" }, tv);
+          tl.fromTo(st, { v: 0 }, { v: n.valor, duration: 1.1, ease: "power3.out", onUpdate: () => (v.textContent = EC.escrever(n, st.v)) }, tv);
+          tl.fromTo(barra, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power2.out" }, tv);
+          tl.fromTo(cheio, { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: "power3.out" }, tv);
+          if (rotulo) {
+            const linha = el.appendChild(novo("div", "num-rotulo", `${id}-rotulo`));
+            if (ics && ics[1]) desenhar(icone(linha, ics[1], `${id}-rotulo-icone`, 60), tr + 0.05);
+            const r = linha.appendChild(novo("div", "rot", `${id}-rot`, rotulo));
+            caber(r, 100);
+            tl.fromTo(linha, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, tr);
+          }
+        },
+        // Pergunta: a pergunta num balão com o sinal de interrogação; a resposta, se houver, noutro balão. Ícone: dentro
+        // do balão, antes do texto
+        pergunta(el, itens, ts, id, ini, ics) {
+          const conversa = el.appendChild(novo("div", "conversa", `${id}-conversa`));
+          itens.forEach((txt, k) => {
+            const nome = k ? `${id}-resposta` : `${id}-pergunta`;
+            const b = conversa.appendChild(novo("div", k ? "balao resposta" : "balao", nome));
+            b.appendChild(novo("div", "balao-cauda", `${nome}-cauda`));
+            if (ics && ics[k]) desenhar(icone(b, ics[k], `${nome}-icone`, 76), ts[k] + 0.12);
+            const r = b.appendChild(novo("div", "rot", `${nome}-rot`, txt));
+            caber(r, itens.length > 1 ? 170 : 270);
+            b.style.transformOrigin = k ? "right bottom" : "left bottom";
+            tl.fromTo(b, { opacity: 0, scale: 0.88 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, ts[k]);
+            if (!k) {
+              const sinal = b.appendChild(novo("div", "balao-sinal", `${nome}-sinal`, "?"));
+              sinal.setAttribute("data-layout-allow-overlap", "");
+              tl.fromTo(sinal, { scale: 0, rotation: -25 }, { scale: 1, rotation: 0, duration: 0.4, ease: "back.out(2.2)" }, ts[k] + 0.18);
+            }
+          });
+        },
+        // Comparação: o primeiro lado no meio; com o segundo, a fileira desliza, o divisor cresce e o segundo entra pela direita
+        comparacao(el, [a, b], [ta, tb], id, ini, ics) {
+          const fila = el.appendChild(novo("div", "fila", `${id}-fila`)), tipo = ics ? "lado figura" : "lado caixa-anim";
+          const A = fila.appendChild(novo("div", tipo, `${id}-lado-1`)), ia = ics && icone(A, ics[0], `${id}-lado-1-icone`, 170);
+          const ra = A.appendChild(novo("div", "rot", `${id}-lado-1-rot`, a));
+          const d = fila.appendChild(novo("div", "divisor", `${id}-divisor`));
+          const linha = d.appendChild(novo("div", "divisor-linha", `${id}-divisor-linha`)), marca = d.appendChild(novo("div", "divisor-marca", `${id}-divisor-marca`));
+          const B = fila.appendChild(novo("div", tipo, `${id}-lado-2`)), ib = ics && icone(B, ics[1], `${id}-lado-2-icone`, 170);
+          const rb = B.appendChild(novo("div", "rot", `${id}-lado-2-rot`, b));
+          for (const r of [ra, rb]) caber(r, ics ? 120 : 200);
+          tl.fromTo(A, { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.36, ease: "power2.out" }, ta);
+          tl.fromTo(linha, { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: "power2.out" }, tb - 0.2);
+          tl.fromTo(marca, { scale: 0, rotation: -45 }, { scale: 1, rotation: 45, duration: 0.4, ease: "back.out(2)" }, tb);
+          tl.fromTo(B, { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.36, ease: "power2.out" }, tb);
+          if (ics) { desenhar(ia, ta + 0.05); desenhar(ib, tb + 0.05); }
+          centrar(fila, [A, d, B], [{ t: ta, ate: 0 }, { t: tb - 0.3, ate: 2 }]);
+        },
+      };
+
+      // Monta depois das fontes (as medidas de caber dependem delas); monta mesmo se uma fonte não carregar
+      document.fonts.load(`800 52px "{{TITULO}}"`).catch(() => {}).then(() => {
+        const host = document.getElementById("ideias");
+        D.cartoes.forEach((c, i) => {
+          const id = `cartao-${i + 1}`, ini = naEdicao(c.de), fim = D.cartoes[i + 1] ? naEdicao(D.cartoes[i + 1].de) : TOTAL;
+          const el = host.appendChild(novo("div", "ideia", id));
+          el.appendChild(novo("div", "ideia-num", `${id}-num`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`));
+          const tit = c.titulo && el.appendChild(novo("h2", "ideia-tit", `${id}-tit`));
+          const frase = tit && tit.appendChild(novo("span", "", `${id}-tit-texto`)); // um item só no flex: os espaços em volta da *palavra* ficam
+          if (tit) c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? frase.appendChild(novo("em", "", "", parte.slice(1, -1))) : frase.append(parte)));
+          if (tit) caber(tit, 136);
+          const anim = el.appendChild(novo("div", `anim ${c.animacao}`, `${id}-anim`));
+          ANIM[c.animacao](anim, c.itens, EC.batidas(PAL, c.itens, ini, fim).map((b) => b.t), id, ini, c.icones);
+          tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
+          if (tit) tl.fromTo(tit, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, ini + EC.ENTRA_TITULO); // o primeiro item entra junto
+          tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
+        });
+
+        // Legenda em caixa escura na emenda; a palavra falada na cor destaque (clareada, se faltar contraste)
+        EC.legendaEmCaixa(tl, C);
+        if (D.capa) EC.capa(tl, D.capa);
+        window.__timelines["editor-chefe"] = tl;
+      });
+    </script>
+  </body>
+</html>

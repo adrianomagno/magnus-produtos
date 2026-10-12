@@ -1,4 +1,4 @@
-// tests/montar.test.mjs: monta os 6 estilos (e o gancho de capa) com a marca de teste e uma fala de exemplo neutra
+// tests/montar.test.mjs: monta os 9 estilos (e o gancho de capa) com a marca de teste e uma fala de exemplo neutra
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
@@ -34,6 +34,13 @@ const ESCOLHAS = {
   'corte-seco-zoom': { enfase: ['resposta', 'almoço'] },
   'painel-escuro': { cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta* no mesmo dia.' }, { de: 4.8, titulo: 'A *solução* sai antes do almoço.' }] },
   'editorial-claro': { cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta* no mesmo dia.' }, { de: 4.8, titulo: 'A *solução* sai antes do almoço.' }] },
+  // Tela dividida (7 a 9): vídeo na metade de baixo, texto ou animação na de cima
+  'painel-escuro-dividido': { cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta* no mesmo dia.' }, { de: 4.8, titulo: 'A *solução* sai antes do almoço.' }] },
+  'editorial-claro-dividido': { cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta* no mesmo dia.' }, { de: 4.8, titulo: 'A *solução* sai antes do almoço.' }] },
+  'motion-dividido': { cartoes: [
+    { de: 0.5, titulo: 'Resposta no *mesmo dia*', animacao: 'etapas', itens: ['todo cliente', 'recebe resposta', 'no mesmo dia'] },
+    { de: 4.8, titulo: 'Antes do *almoço*', animacao: 'antes-depois', itens: ['chega de manhã', 'antes do almoço'] },
+  ] },
 };
 // Sexto estilo, fora da lista acima (sem efeitos sonoros e sem gancho de capa): a caixinha de perguntas do Instagram
 const CAIXINHA = { estilo: 'caixinha-pergunta', caixinha: { pergunta: 'Emagrecer é só comer menos?', chamada: 'Pergunta aqui sobre emagrecimento' } };
@@ -253,7 +260,7 @@ test('sem ffmpeg e ffprobe (fora do PATH e sem as variáveis do ambiente.sh), o 
 
 // Gancho de capa: frase curta por cima do vídeo nos primeiros 3 s, numa camada própria (cópias mudas dos trechos)
 const CAPA = { estilo: 'faixa', texto: 'Emagrecer é só *comer menos*?' };
-const CAPAS = ['faixa', 'manchete', 'editorial', 'faixa', 'manchete'];
+const CAPAS = ['faixa', 'manchete', 'editorial', 'faixa', 'manchete', 'editorial', 'faixa', 'manchete'];
 
 test('capa: estilo que não existe é erro que lista os 3', () => {
   assert.match(erro('legenda-viva', 'fonte.mp4', '', { capa: { ...CAPA, estilo: 'banner' } }), /"banner".*faixa, manchete, editorial/);
@@ -279,7 +286,7 @@ test('capa: edição com menos de 4 s é curta demais', () => {
   assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.42, 3.86]] }, { capa: CAPA }), /curto demais para gancho de capa/);
 });
 
-test('capa: os 5 estilos levam a camada da capa com cópias mudas dos trechos dos primeiros 3 s', () => {
+test('capa: os estilos de 1 a 5 e de 7 a 9 levam a camada da capa com cópias mudas dos trechos dos primeiros 3 s', () => {
   Object.keys(ESCOLHAS).forEach((estilo, i) => {
     const capa = { estilo: CAPAS[i], texto: CAPA.texto };
     const dir = projeto(estilo, { capa, efeitos: false }), avisos = [];
@@ -330,7 +337,7 @@ test('capa: efeitos sonoros somem antes do fim da capa e entra um whoosh no come
   });
 });
 
-test('sem capa, os 5 estilos ficam como antes: sem camada e sem cópia de vídeo', () => {
+test('sem capa, os estilos de 1 a 5 e de 7 a 9 ficam sem camada e sem cópia de vídeo', () => {
   for (const estilo of Object.keys(ESCOLHAS)) {
     const dir = projeto(estilo);
     try {
@@ -505,4 +512,142 @@ test('escolhas.json que não é objeto (null, lista, texto) para com mensagem cl
       assert.throws(() => montar(dir, () => {}), /o escolhas\.json precisa ser um objeto entre chaves/);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }
+});
+
+// Tela dividida (estilos 7 a 9): vídeo na metade de baixo, em toda a largura; texto ou animação na de cima
+const DIVIDIDOS = ['painel-escuro-dividido', 'editorial-claro-dividido', 'motion-dividido'];
+const molde = (estilo) => readFileSync(new URL(`../plugins/editor-chefe/estilos/${estilo}.html`, import.meta.url), 'utf8');
+const caixa = (html, id) => { const m = new RegExp(`#${id} \\{[^}]*?top: (\\d+)px;[^}]*?height: (\\d+)px;`).exec(html); return m && { top: +m[1], alt: +m[2] }; };
+
+test('tela dividida: o vídeo ocupa a metade de baixo inteira e a legenda (no 8, a palavra grande) fica centrada na emenda', () => {
+  for (const estilo of DIVIDIDOS) {
+    const html = molde(estilo);
+    assert.match(html, /#janela \{ position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; \}/, estilo);
+    assert.match(html, /\.trecho \{[^}]*object-fit: cover; object-position: \{\{FOCO\}\};/, estilo);
+    const leg = caixa(html, estilo === 'editorial-claro-dividido' ? 'palavra' : 'legenda');
+    assert.ok(leg, estilo);
+    assert.equal(leg.top + leg.alt / 2, 960, estilo);
+  }
+  const painel = caixa(molde('motion-dividido'), 'painel'); // a animação fica sempre em cima, acima da legenda
+  assert.ok(painel.top + painel.alt <= caixa(molde('motion-dividido'), 'legenda').top, JSON.stringify(painel));
+});
+
+test('tela dividida: whoosh curto na entrada de cada cartão (no 9, de cada animação), sem som na legenda', () => {
+  const palavras = fala.map((w) => [w.text, w.start, w.end]);
+  const trechos = [{ ini: 0, dur: 3.432, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }];
+  for (const estilo of DIVIDIDOS) {
+    const ev = EC.efeitos(estilo, { palavras, ...ESCOLHAS[estilo] }, trechos, 8.2);
+    assert.deepEqual(ev.map((e) => e.som), ['whoosh-short', 'whoosh-short'], estilo);
+    assert.deepEqual(ev.map((e) => +e.t.toFixed(3)), [0.067, 3.5], estilo);
+  }
+});
+
+test('motion: o primeiro item entra junto com o título; os outros quando a fala diz as palavras deles, na ordem', () => {
+  const pal = ['Aqui', 'Resposta,', 'no', 'mesmo', 'dia.', 'Depois'].map((txt, i) => ({ txt, ini: i, fim: i + 0.5 }));
+  const b = (itens, ini = 0, fim = 6) => EC.batidas(pal, itens, ini, fim);
+  const T = EC.ENTRA_TITULO; // o instante do título no molde, depois do começo da ideia
+  assert.equal(T, 0.05);
+  assert.deepEqual(b(['RESPOSTA', 'mesmo dia']), [{ t: T, achou: true }, { t: 3, achou: true }]); // sem diferença de caixa e pontuação
+  assert.deepEqual(b(['mesmo dia'], 2.5, 6), [{ t: 2.55, achou: true }]); // dito 0,5 s depois do começo: entra no começo mesmo assim
+  assert.deepEqual(b(['dia', 'resposta']), [{ t: T, achou: true }, { t: 0.55, achou: false }]); // fora de ordem não volta
+  assert.deepEqual(b(['garantia', 'no']), [{ t: T, achou: false }, { t: 2, achou: true }]); // o primeiro sem a fala é avisado pelo montador
+  assert.deepEqual(b(['Aqui', 'mesmo'], 0, 3.2), [{ t: T, achou: true }, { t: 2.6, achou: true }]); // nunca depois de fim - 0,6 s
+  assert.deepEqual(b(['Depois'], 0, 3), [{ t: T, achou: false }]); // só procura dentro da ideia
+  assert.deepEqual(b(['?']), [{ t: T, achou: false }]); // item sem palavra não quebra
+});
+
+test('motion: o número que cresce lê o número no jeito brasileiro e escreve cada passo no mesmo formato', () => {
+  const n = EC.numero('R$ 2.000');
+  assert.deepEqual(n, { antes: 'R$ ', valor: 2000, casas: 0, milhar: true, depois: '' });
+  assert.equal(EC.escrever(n, 1234.4), 'R$ 1.234');
+  assert.equal(EC.escrever(EC.numero('30%'), 7.6), '8%');
+  assert.equal(EC.escrever(EC.numero('1,5 milhão'), 0.7), '0,7 milhão');
+  assert.equal(EC.escrever(EC.numero('2000 clientes'), 1500), '1500 clientes'); // sem ponto no original, sem ponto na contagem
+  assert.equal(EC.numero('sem número'), null);
+});
+
+const motion = (cartoes) => ({ estilo: 'motion-dividido', marca: MARCA, cartoes });
+test('motion: animação, quantidade e tamanho dos itens, número e título são conferidos com mensagem em português', () => {
+  const c = (extra) => motion([{ de: 0.5, titulo: 'Resposta', animacao: 'lista', itens: ['todo cliente', 'recebe resposta'], ...extra }]);
+  const msg = (extra) => erro('motion-dividido', 'escolhas.json', c(extra));
+  assert.match(msg({ animacao: 'grafico' }), /cartão 1 pede "animacao", uma destas: etapas, antes-depois, lista, numero, pergunta, comparacao/);
+  assert.match(msg({ animacao: undefined }), /pede "animacao"/);
+  assert.match(msg({ animacao: 'etapas', itens: ['a', 'b', 'c', 'd'] }), /\(etapas\) pede "itens", uma lista com 2 a 3 textos curtos/);
+  assert.match(msg({ animacao: 'antes-depois', itens: ['todo cliente'] }), /\(antes-depois\) pede "itens", uma lista com 2 textos curtos/);
+  assert.match(msg({ itens: 'todo cliente' }), /pede "itens"/);
+  assert.match(msg({ itens: ['todo cliente', '  '] }), /pede "itens"/);
+  assert.match(msg({ itens: ['todo cliente recebe resposta no', 'dia'] }), /tem 31 caracteres; em lista cabem até 28/);
+  assert.match(msg({ animacao: 'numero', itens: ['vários'] }), /primeiro item é o número dito na fala, com algarismos/);
+  assert.match(msg({ animacao: 'numero', itens: ['R$ 1.000.000,00 '] }), /tem 15 caracteres; em numero cabem até 14/);
+  assert.match(msg({ titulo: 'Todo cliente recebe *resposta* no mesmo dia, sempre' }), /título do cartão 1 tem 49 caracteres; .* até 40/);
+  assert.match(erro('motion-dividido', 'escolhas.json', motion([{ de: 0.5, titulo: 'x' }])), /pede "animacao"/);
+});
+
+test('motion: as 6 animações montam; item que não está na fala daquela ideia é avisado e o texto colado vira uma linha', () => {
+  const cartoes = [
+    { de: 0.5, titulo: '', animacao: 'etapas', itens: ['Aqui na loja', 'todo cliente'] },
+    { de: 2.0, titulo: 'Resposta', animacao: 'lista', itens: ['recebe  resposta', 'no mesmo dia', 'garantia'] },
+    { de: 4.8, titulo: 'A *dúvida*', animacao: 'numero', itens: ['24 horas', 'a dúvida'] },
+    { de: 5.4, titulo: 'Manhã', animacao: 'pergunta', itens: ['chega de manhã', 'a solução'] },
+    { de: 6.6, titulo: 'Solução', animacao: 'comparacao', itens: ['solução', 'sai'] },
+    { de: 7.2, titulo: 'Almoço', animacao: 'antes-depois', itens: ['antes', 'do\nalmoço'] },
+  ];
+  const dir = projeto('motion-dividido', { cartoes }), avisos = [];
+  try {
+    montar(dir, (m) => avisos.push(m));
+    const D = JSON.parse(/const D = (.*);/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1]);
+    assert.deepEqual(D.cartoes.map((c) => c.animacao), ['etapas', 'lista', 'numero', 'pergunta', 'comparacao', 'antes-depois']);
+    assert.deepEqual(D.cartoes[1].itens, ['recebe resposta', 'no mesmo dia', 'garantia']);
+    assert.deepEqual(D.cartoes[5].itens, ['antes', 'do almoço']);
+    assert.equal(D.cartoes[2].titulo, 'A *dúvida*'); // o título guarda a palavra forte
+    assert.deepEqual(avisos.map((m) => /"([^"]+)" do cartão (\d)/.exec(m).slice(1)), [['garantia', '2'], ['24 horas', '3']]);
+    assert.match(avisos[0], /entra 0,5 s depois do anterior/); // 'garantia' é o terceiro item
+    assert.match(avisos[1], /entra junto com o título, mas o texto precisa ser da fala/); // '24 horas' é o primeiro
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// Motion dividido com ícones: item como { "texto", "icone" }, ícones da biblioteca fechada EC.ICONES
+test('ícones: a biblioteca é fechada, cada ícone é só traço desenhado aqui, e a tabela do motion-dividido.md cita todos', () => {
+  const nomes = Object.keys(EC.ICONES);
+  assert.ok(nomes.length >= 16, String(nomes.length));
+  for (const n of nomes) {
+    assert.match(n, /^[a-z]+$/, n); // nome simples para o escolhas.json, sem acento
+    assert.ok(EC.ICONES[n].length && EC.ICONES[n].every((d) => /^~?M[\d. ]/.test(d) && /^[~MLHVCAZ\d. -]+$/i.test(d)), n); // só comandos de caminho
+    assert.ok(EC.ICONES[n].some((d) => !d.startsWith('~')), n); // ao menos um traço na cor destaque
+  }
+  const doc = readFileSync(new URL('../plugins/editor-chefe/skills/editor-chefe/references/estilos/motion-dividido.md', import.meta.url), 'utf8');
+  for (const n of nomes) assert.match(doc, new RegExp('`' + n + '`'), n);
+});
+
+test('ícones: item com ícone monta e leva a lista de ícones; texto puro continua como antes', () => {
+  const D = (cartoes) => {
+    const dir = projeto('motion-dividido', { cartoes }), avisos = [];
+    try { montar(dir, (m) => avisos.push(m)); return { D: JSON.parse(/const D = (.*);/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1]), avisos }; } finally { rmSync(dir, { recursive: true, force: true }); }
+  };
+  const com = D([
+    { de: 0.5, titulo: 'Resposta', animacao: 'etapas', itens: [{ texto: 'todo cliente', icone: 'pessoa' }, { texto: 'recebe  resposta', icone: 'conversa' }] },
+    { de: 4.8, titulo: 'Manhã', animacao: 'pergunta', itens: ['a dúvida chega de manhã', { texto: 'a solução sai', icone: 'ideia' }] },
+  ]);
+  assert.deepEqual(com.avisos, []);
+  assert.deepEqual(com.D.cartoes[0].itens, ['todo cliente', 'recebe resposta']);
+  assert.deepEqual(com.D.cartoes[0].icones, ['pessoa', 'conversa']);
+  assert.deepEqual(com.D.cartoes[1].icones, [null, 'ideia']); // na pergunta, cada item tem ou não o seu
+  assert.equal(D(ESCOLHAS['motion-dividido'].cartoes).D.cartoes[0].icones, undefined);
+});
+
+test('ícones: nome fora da biblioteca e ícone em só parte da fileira ou da lista são erro em português', () => {
+  const c = (animacao, itens) => motion([{ de: 0.5, titulo: 'Resposta', animacao, itens }]);
+  assert.match(erro('motion-dividido', 'escolhas.json', c('lista', [{ texto: 'todo cliente', icone: 'foguete' }, { texto: 'resposta', icone: 'pessoa' }])),
+    /o ícone "foguete" do cartão 1 não existe\. Use um destes: conversa, documento/);
+  assert.match(erro('motion-dividido', 'escolhas.json', c('lista', [{ texto: 'todo cliente', icone: '' }, 'resposta'])), /o ícone "" do cartão 1 não existe/);
+  for (const animacao of ['etapas', 'lista', 'antes-depois', 'comparacao'])
+    assert.match(erro('motion-dividido', 'escolhas.json', c(animacao, [{ texto: 'todo cliente', icone: 'pessoa' }, 'recebe resposta'])),
+      new RegExp(`no cartão 1 \\(${animacao}\\), ponha ícone em todos os itens ou em nenhum`), animacao);
+  assert.match(erro('motion-dividido', 'escolhas.json', c('lista', [{ icone: 'pessoa' }, 'resposta'])), /pede "itens".*\{ "texto": "\.\.\.", "icone": "\.\.\." \}/);
+});
+
+test('tela dividida: no Editorial claro dividido a marca aparece uma vez só (na assinatura, no alto)', () => {
+  const html = molde('editorial-claro-dividido');
+  assert.match(html, /<div id="assinatura-texto">\{\{ASSINATURA\}\}<\/div>/);
+  assert.doesNotMatch(html, /D\.nome/);
 });

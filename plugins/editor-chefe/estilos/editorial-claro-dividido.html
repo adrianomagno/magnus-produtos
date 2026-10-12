@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-claro); color: var(--texto); }
+      /* Metade de cima (0 a 960): a assinatura no alto e os cartões do Editorial claro, centrados entre 260 e 860 */
+      #assinatura { position: absolute; left: 0; right: 0; top: 150px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      #assinatura-texto { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 42px; color: var(--texto); }
+      #assinatura-filete { width: 56px; height: 5px; border-radius: 3px; background: var(--destaque); }
+      #cartoes { position: absolute; left: 0; top: 260px; width: 1080px; height: 600px; }
+      .cartao { position: absolute; inset: 0; padding: 0 72px; display: flex; flex-direction: column; justify-content: center; gap: 22px; opacity: 0; }
+      .olho { font-family: "{{CORPO}}", sans-serif; font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--texto) 62%, var(--fundo-claro)); }
+      .tit { margin: 0; font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 84px; line-height: 1.08; letter-spacing: -0.025em; }
+      .tit em { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 1.18em; letter-spacing: -0.01em; color: var(--destaque-legivel); }
+      .filete { width: 0; height: 7px; border-radius: 4px; background: var(--destaque); }
+      /* Metade de baixo (960 a 1920): o vídeo em toda a largura */
+      #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
+      #enquadramento { position: absolute; inset: 0; overflow: hidden; }
+      .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
+      /* A emenda: a palavra grande é a legenda, uma palavra por vez, numa aba do fundo claro que desce sobre o vídeo (880 a 1040, meio em 960) */
+      #palavra { position: absolute; left: 40px; right: 40px; top: 880px; height: 160px; }
+      .pv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+      .pv .aba {
+        display: inline-flex; align-items: center; height: 150px; padding: 0 48px; border-radius: 28px; white-space: nowrap;
+        background: var(--fundo-claro); box-shadow: 0 16px 36px color-mix(in srgb, var(--texto) 20%, transparent);
+      }
+      .pv.a .aba { font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 92px; letter-spacing: -0.03em; color: var(--texto); }
+      .pv.b .aba { font-family: "{{FONTE_DESTAQUE}}", serif; font-style: italic; font-weight: 400; font-size: 112px; color: var(--destaque-legivel); }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-width="1080" data-height="1920">
+      <div id="assinatura"><div id="assinatura-texto">{{ASSINATURA}}</div><div id="assinatura-filete"></div></div>
+      <div id="cartoes"></div>
+      <div id="janela">
+        <div id="enquadramento">
+{{TRECHOS}}
+        </div>
+      </div>
+      <div id="palavra"></div>
+{{CAPA}}
+{{EFEITOS}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = EC.iniciar(D.palavras);
+      const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
+      const tl = gsap.timeline({ paused: true });
+
+      // Cartões: trecho literal da fala; *palavra* sai em itálico na cor destaque
+      document.documentElement.style.setProperty("--destaque-legivel", EC.contraste(DESTAQUE, CLARO) >= 3 ? DESTAQUE : `color-mix(in srgb, ${DESTAQUE} 55%, ${TEXTO})`);
+      const host = document.getElementById("cartoes");
+      D.cartoes.forEach((c, i) => {
+        const id = `cartao-${i + 1}`, ini = naEdicao(c.de), fim = D.cartoes[i + 1] ? naEdicao(D.cartoes[i + 1].de) : TOTAL;
+        const el = host.appendChild(novo("div", "cartao", id));
+        const olho = el.appendChild(novo("div", "olho", `${id}-olho`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`)); // a marca já está na assinatura, no alto
+        const tit = el.appendChild(novo("h2", "tit", `${id}-tit`));
+        c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? tit.appendChild(novo("em", "", "", parte.slice(1, -1))) : tit.append(parte)));
+        const filete = el.appendChild(novo("div", "filete", `${id}-filete`));
+        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
+        tl.fromTo(olho, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);
+        tl.fromTo(tit, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, ini + 0.15);
+        tl.fromTo(filete, { width: 0 }, { width: 220, duration: 0.45, ease: "power2.out" }, ini + 0.45);
+        tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
+      });
+
+      // Uma palavra por vez na emenda, alternando a fonte de título (pesada) e a de destaque (itálica).
+      // Monta mesmo se uma fonte não carregar (a medida sai com a fonte de reserva, mas a animação não congela)
+      Promise.all([document.fonts.load(`800 92px "{{TITULO}}"`), document.fonts.load(`italic 400 112px "{{FONTE_DESTAQUE}}"`)]).catch(() => {}).then(() => {
+        const emenda = document.getElementById("palavra");
+        PAL.forEach((p, i) => {
+          const el = emenda.appendChild(novo("div", i % 2 ? "pv b" : "pv a", `palavra-${i + 1}`));
+          const aba = el.appendChild(novo("span", "aba", `palavra-${i + 1}-aba`, p.txt.replace(/[.,;:]+$/, "")));
+          if (aba.offsetWidth > 1000) aba.style.fontSize = Math.floor((parseFloat(getComputedStyle(aba).fontSize) * (1000 - 96)) / (aba.offsetWidth - 96)) + "px";
+          const prox = PAL[i + 1], sai = prox && prox.ini - p.fim < 0.4 ? prox.ini : Math.min(prox ? prox.ini : TOTAL, p.fim + 0.4);
+          tl.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: Math.min(0.08, (sai - p.ini) / 2), ease: "power2.out" }, p.ini);
+          tl.set(el, { opacity: 0 }, sai);
+        });
+        if (D.capa) EC.capa(tl, D.capa);
+        window.__timelines["editor-chefe"] = tl;
+      });
+    </script>
+  </body>
+</html>

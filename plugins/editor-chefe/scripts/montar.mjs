@@ -20,7 +20,17 @@ const USA = {
   "painel-escuro": ["titulo", "corpo"],
   "editorial-claro": ["titulo", "corpo", "destaque"],
   "caixinha-pergunta": ["titulo"], // a legenda; a caixinha usa a Inter 700 (CAIXINHA_FONTE), não a fonte da marca
+  "painel-escuro-dividido": ["titulo", "corpo"],
+  "editorial-claro-dividido": ["titulo", "corpo", "destaque"],
+  "motion-dividido": ["titulo"],
 };
+// Motion dividido: a biblioteca de animações. Cada uma pede [mínimo, máximo] de itens e o tamanho de cada item, em
+// caracteres (rótulo curto, para caber nas caixas da animação); no número que cresce, o primeiro item é o número.
+const ANIMACOES = { etapas: [2, 3, 28], "antes-depois": [2, 2, 28], lista: [2, 4, 28], numero: [1, 2, 40], pergunta: [1, 2, 70], comparacao: [2, 2, 28] };
+const MAX_NUMERO = 14, MAX_TITULO_IDEIA = 40; // o título da ideia cabe em 2 linhas no alto do painel
+// Item com ícone: { "texto": "...", "icone": "<nome da biblioteca EC.ICONES>" }. Na fileira e na lista, ícone em todos os
+// itens ou em nenhum (figura ao lado de caixa fica desigual); no número e na pergunta, cada item tem ou não o seu.
+const ICONE_EM_TODOS = ["etapas", "antes-depois", "lista", "comparacao"];
 // Caixinha de pergunta: a caixa imita a do Instagram, com letra fixa. Limites medidos na maquete aprovada: a chamada cabe
 // numa linha de 32 px até umas 40 letras e encolhe depois (27 px com 50); a pergunta cabe em 3 linhas de 46 px até umas
 // 65 letras e encolhe depois (34 px com 110). Acima disso a letra ficaria pequena demais para ler no celular.
@@ -125,7 +135,29 @@ const conferirWoff2 = (fonts, arq) => {
     throw new Error(`montar: fonts/${arq} não é uma fonte woff2 (pode ser uma página de erro salva no lugar). Apague o arquivo e baixe de novo com baixar-fonte.mjs.`);
 };
 const umaLinha = (s) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim() : ""); // texto colado: espaços e quebras viram um espaço
-const html = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Motion dividido: confere a animação e os itens de um cartão e devolve o cartão limpo (texto colado numa linha só;
+// "icones" só entra quando algum item tem ícone)
+function motionCartao(c, n) {
+  if (!Object.hasOwn(ANIMACOES, c.animacao ?? "")) throw new Error(`montar: o cartão ${n} pede "animacao", uma destas: ${Object.keys(ANIMACOES).join(", ")}.`);
+  const [min, max, letras] = ANIMACOES[c.animacao], texto = (x) => umaLinha(typeof x === "string" ? x : x?.texto);
+  if (!Array.isArray(c.itens) || c.itens.length < min || c.itens.length > max || c.itens.some((x) => !texto(x)))
+    throw new Error(`montar: o cartão ${n} (${c.animacao}) pede "itens", uma lista com ${min === max ? min : `${min} a ${max}`} textos curtos tirados da fala (cada um como "texto" ou { "texto": "...", "icone": "..." }).`);
+  const itens = c.itens.map(texto), icones = c.itens.map((x) => (x && typeof x === "object" && x.icone != null ? x.icone : null));
+  const errado = icones.find((x) => x !== null && !Object.hasOwn(EC.ICONES, x));
+  if (errado !== undefined) throw new Error(`montar: o ícone ${JSON.stringify(errado)} do cartão ${n} não existe. Use um destes: ${Object.keys(EC.ICONES).join(", ")}.`);
+  const comIcone = icones.filter(Boolean).length;
+  if (comIcone && comIcone < itens.length && ICONE_EM_TODOS.includes(c.animacao))
+    throw new Error(`montar: no cartão ${n} (${c.animacao}), ponha ícone em todos os itens ou em nenhum: com ícone em só alguns, a animação fica desigual.`);
+  const titulo = umaLinha(c.titulo), letrasTitulo = titulo.replace(/\*/g, "").length;
+  itens.forEach((x, k) => {
+    const lim = c.animacao === "numero" && k === 0 ? MAX_NUMERO : letras;
+    if (x.length > lim) throw new Error(`montar: o item "${x}" do cartão ${n} tem ${x.length} caracteres; em ${c.animacao} cabem até ${lim}. Use menos palavras da fala.`);
+  });
+  if (c.animacao === "numero" && !EC.numero(itens[0])) throw new Error(`montar: no cartão ${n} (numero), o primeiro item é o número dito na fala, com algarismos, como "30%" ou "R$ 2.000".`);
+  if (letrasTitulo > MAX_TITULO_IDEIA) throw new Error(`montar: o título do cartão ${n} tem ${letrasTitulo} caracteres; no Motion dividido cabem até ${MAX_TITULO_IDEIA}. Use menos palavras da fala.`);
+  return { de: c.de, titulo, animacao: c.animacao, itens, ...(comIcone ? { icones } : {}) };
+}
+const html =(s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // @font-face dos arquivos que existem em fonts/: título no peso mais perto de 800, corpo de 400, destaque em itálico
 // (sem o itálico, declara a normal e o navegador inclina a fonte da marca).
@@ -208,7 +240,7 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
 
   // Um <video> por trecho mantido (receitas Hard cut e Trim in/out da hyperframes-core)
   let pos = 0;
-  const recuo = esc.estilo === "painel-escuro" || esc.estilo === "editorial-claro" ? "          " : "        ";
+  const recuo = EC.COM_CARTOES.includes(esc.estilo) ? "          " : "        ";
   const videos = manter.map(([a, b], i) => {
     const fa = Math.round(a * F), n = Math.round(b * F) - fa;
     if (!(n >= 1)) throw new Error(`montar: o trecho ${i + 1} do trechos.json (${a} a ${b} s) tem menos de 1 quadro. Confira o início e o fim dele.`);
@@ -240,13 +272,20 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     dados.enfase = esc.enfase ?? [];
     conferir("enfase", dados.enfase);
   }
-  if (esc.estilo === "painel-escuro" || esc.estilo === "editorial-claro") {
-    if (!Array.isArray(esc.cartoes) || !esc.cartoes.length || esc.cartoes.some((c) => typeof c.de !== "number" || typeof c.titulo !== "string"))
+  if (EC.COM_CARTOES.includes(esc.estilo)) {
+    if (!Array.isArray(esc.cartoes) || !esc.cartoes.length || esc.cartoes.some((c) => !c || typeof c.de !== "number" || typeof c.titulo !== "string"))
       throw new Error('montar: este estilo pede "cartoes": [{ "de": segundo do original, "titulo": "..." }].');
     esc.cartoes.forEach((c, i) => {
       if (i && !(c.de > esc.cartoes[i - 1].de)) throw new Error(`montar: os cartões precisam estar na ordem da fala: o cartão ${i + 1} ("de": ${c.de}) não vem depois do cartão ${i} ("de": ${esc.cartoes[i - 1].de}).`);
     });
-    Object.assign(dados, { nome: marca.nome ?? "", cartoes: esc.cartoes });
+    let cartoes = esc.cartoes;
+    if (esc.estilo === "motion-dividido") { // item que não está na fala daquela ideia é avisado (ele entra sem acompanhar a fala)
+      cartoes = esc.cartoes.map((c, i) => motionCartao(c, i + 1));
+      const PAL = EC.mapear(palavras, trechos, total), em = (s) => EC.naEdicao(s, "ini", trechos, total);
+      cartoes.forEach((c, i) => EC.batidas(PAL, c.itens, em(c.de), cartoes[i + 1] ? em(cartoes[i + 1].de) : total).forEach((b, k) => b.achou ||
+        avisar(`montar: o item "${c.itens[k]}" do cartão ${i + 1} não aparece igual na fala desse cartão; ${k ? "ele entra 0,5 s depois do anterior" : "ele entra junto com o título, mas o texto precisa ser da fala"}. Use as palavras da fala, seguidas e na ordem em que foram ditas.`)));
+    }
+    Object.assign(dados, { nome: marca.nome ?? "", cartoes });
   }
   if (capa) dados.capa = capa;
   if (caixa) dados.caixinha = caixa;

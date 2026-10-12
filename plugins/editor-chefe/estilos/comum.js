@@ -52,6 +52,75 @@
       .sort((a, b) => a - b).reduce((r, t) => (t > 0.3 && t < total - 0.3 && (!r.length || t - r[r.length - 1] >= 0.8) ? [...r, t] : r), []);
   }
 
+  // Estilos com cartões ("cartoes" no escolhas.json): o Painel escuro, o Editorial claro e os três de tela dividida.
+  // No Motion dividido, cada cartão é uma ideia com uma animação da biblioteca.
+  const COM_CARTOES = ["painel-escuro", "editorial-claro", "painel-escuro-dividido", "editorial-claro-dividido", "motion-dividido"];
+
+  // Motion dividido: instante (na edição) em que cada item da animação entra. O primeiro entra junto com o título da
+  // ideia (ini + ENTRA_TITULO, o mesmo instante do título no molde), mesmo antes de ser dito; os seguintes, quando a fala
+  // diz as palavras deles, todas seguidas e na ordem dos itens, dentro da ideia (de ini - 0,5 s a fim). Item que não
+  // aparece assim entra 0,5 s depois do anterior; nenhum dos seguintes entra depois de fim - 0,6 s (para ficar na tela
+  // antes da saída). achou: as palavras do item estão na fala da ideia (o montador avisa quando não estão, também no
+  // primeiro). Devolve [{ t, achou }], com t em milésimos de segundo.
+  const ENTRA_TITULO = 0.05;
+  function batidas(pal, itens, ini, fim) {
+    let k = pal.findIndex((p) => p.ini >= ini - 0.5), ant = ini + ENTRA_TITULO;
+    if (k < 0) k = pal.length;
+    const teto = Math.max(ant, fim - 0.6);
+    return itens.map((item, n) => {
+      const w = item.split(/\s+/).map(limpa).filter(Boolean);
+      let j = k;
+      while (w.length && j + w.length <= pal.length && pal[j].ini < fim && !w.every((x, m) => limpa(pal[j + m].txt) === x)) j++;
+      const achou = w.length > 0 && j + w.length <= pal.length && pal[j].ini < fim;
+      if (achou) k = j + w.length;
+      const t = n ? Math.min(teto, Math.max(achou ? pal[j].ini : ant + 0.5, ant)) : ant;
+      ant = t;
+      return { t: +t.toFixed(3), achou };
+    });
+  }
+
+  // Motion dividido: biblioteca fechada de ícones de traço, desenhados para o Editor Chefe numa grade de 64x64 (nenhum
+  // ícone de terceiros). Cada ícone é uma lista de traços, desenhados nesta ordem; traço que começa com "~" é detalhe
+  // (linha interna, numa cor mais apagada que a de destaque).
+  const ICONES = {
+    conversa: ["M10 6 H32 A6 6 0 0 1 38 12 V24 A6 6 0 0 1 32 30 H16 L10 36 V30 A6 6 0 0 1 4 24 V12 A6 6 0 0 1 10 6 Z", "~M11 15 H31 M11 21 H24",
+      "M32 32 H54 A6 6 0 0 1 60 38 V48 A6 6 0 0 1 54 54 V60 L48 54 H32 A6 6 0 0 1 26 48 V38 A6 6 0 0 1 32 32 Z", "~M33 40 H53 M33 46 H45"],
+    documento: ["M16 6 H38 L50 18 V58 H16 Z", "M38 6 V18 H50", "~M23 28 H43 M23 36 H43 M23 44 H35"],
+    celular: ["M21 4 H43 A5 5 0 0 1 48 9 V55 A5 5 0 0 1 43 60 H21 A5 5 0 0 1 16 55 V9 A5 5 0 0 1 21 4 Z", "~M28 10 H36 M29 53 H35", "M28 24 L40 32 L28 40 Z"],
+    dinheiro: ["M6 18 H58 V46 H6 Z", "M32 24 A8 8 0 1 0 32 40 A8 8 0 1 0 32 24", "~M14 26 V38 M50 26 V38"],
+    calendario: ["M14 12 H50 A4 4 0 0 1 54 16 V54 A4 4 0 0 1 50 58 H14 A4 4 0 0 1 10 54 V16 A4 4 0 0 1 14 12 Z", "M10 24 H54", "M22 6 V16 M42 6 V16",
+      "~M19 34 H23 M30 34 H34 M41 34 H45 M19 44 H23 M30 44 H34"],
+    pessoa: ["M32 8 A10 10 0 1 0 32 28 A10 10 0 1 0 32 8", "M12 58 V52 A12 12 0 0 1 24 40 H40 A12 12 0 0 1 52 52 V58"],
+    equipe: ["M32 12 A7 7 0 1 0 32 26 A7 7 0 1 0 32 12", "M19 54 V48 A9 9 0 0 1 28 39 H36 A9 9 0 0 1 45 48 V54",
+      "~M13 22 A5 5 0 1 0 13 32 A5 5 0 1 0 13 22 M3 50 V46 A7 7 0 0 1 10 39 H15", "~M51 22 A5 5 0 1 0 51 32 A5 5 0 1 0 51 22 M61 50 V46 A7 7 0 0 0 54 39 H49"],
+    grafico: ["M8 8 V56 H58", "M16 44 L28 31 L38 37 L54 19", "M45 19 H54 V28"],
+    check: ["M32 6 A26 26 0 1 0 32 58 A26 26 0 1 0 32 6", "M20 33 L28 41 L45 23"],
+    alerta: ["M32 8 L58 54 H6 Z", "M32 25 V38", "M32 46 V46.01"],
+    relogio: ["M32 6 A26 26 0 1 0 32 58 A26 26 0 1 0 32 6", "~M32 10 V13 M54 32 H51 M32 54 V51 M10 32 H13", "M32 18 V32 L42 40"],
+    loja: ["M10 22 L15 8 H49 L54 22", "M10 22 A5.5 5.5 0 0 0 21 22 A5.5 5.5 0 0 0 32 22 A5.5 5.5 0 0 0 43 22 A5.5 5.5 0 0 0 54 22", "M13 28 V56 H51 V28", "~M26 56 V42 H38 V56"],
+    contrato: ["M8 6 H34 L42 14 V58 H8 Z", "M34 6 V14 H42", "~M14 22 H36 M14 29 H36", "M14 46 C18 38 21 52 25 44 C28 39 30 48 34 45", "M45 57 L47 51 L58 40 L62 44 L51 55 Z"],
+    ideia: ["M24 44 V40 C17 35 14 29 15 23 A17 17 0 0 1 49 23 C50 29 47 35 40 40 V44 Z", "M25 50 H39 M27 56 H37", "~M32 44 V33 M27 30 L32 34 L37 30"],
+    alvo: ["M30 10 A24 24 0 1 0 30 58 A24 24 0 1 0 30 10", "~M30 19 A15 15 0 1 0 30 49 A15 15 0 1 0 30 19", "M30 28 A6 6 0 1 0 30 40 A6 6 0 1 0 30 28", "M30 34 L56 8", "M47 8 H56 V17"],
+    megafone: ["M10 26 H18 L44 12 V52 L18 38 H10 Z", "M20 38 L24 52 H31 L28 41", "~M51 25 A9 9 0 0 1 51 39", "~M56 19 A16 16 0 0 1 56 45"],
+    pasta: ["M6 18 A4 4 0 0 1 10 14 H24 L30 20 H54 A4 4 0 0 1 58 24 V50 A4 4 0 0 1 54 54 H10 A4 4 0 0 1 6 50 Z", "~M6 28 H58"],
+    engrenagem: ["M50.6 28.2 L56.8 28.8 L56.8 35.2 L50.6 35.8 L47.8 42.5 L51.8 47.2 L47.2 51.8 L42.5 47.8 L35.8 50.6 L35.2 56.8 L28.8 56.8 L28.2 50.6 L21.5 47.8 L16.8 51.8 L12.2 47.2 L16.2 42.5 L13.4 35.8 L7.2 35.2 L7.2 28.8 L13.4 28.2 L16.2 21.5 L12.2 16.8 L16.8 12.2 L21.5 16.2 L28.2 13.4 L28.8 7.2 L35.2 7.2 L35.8 13.4 L42.5 16.2 L47.2 12.2 L51.8 16.8 L47.8 21.5 Z",
+      "M32 24 A8 8 0 1 0 32 40 A8 8 0 1 0 32 24"],
+    robo: ["M15 22 H49 A6 6 0 0 1 55 28 V48 A6 6 0 0 1 49 54 H15 A6 6 0 0 1 9 48 V28 A6 6 0 0 1 15 22 Z", "M32 22 V13 M32 6 A3.5 3.5 0 1 0 32 13 A3.5 3.5 0 1 0 32 6", "M24 34 V38 M40 34 V38",
+      "~M25 46 H39 M9 36 H4 M55 36 H60"],
+  };
+
+  // Número que cresce: separa o número do texto ("R$ 2.000" vira antes "R$ ", valor 2000, depois ""), no jeito brasileiro
+  // (ponto no milhar, vírgula nos decimais); sem algarismo, null. escrever(n, v) escreve o valor v no mesmo formato.
+  function numero(s) {
+    const m = /^(\D*?)(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?(.*)$/.exec(s);
+    if (!m) return null;
+    return { antes: m[1], valor: +(m[2].replace(/\./g, "") + "." + (m[3] || "0")), casas: (m[3] || "").length, milhar: m[2].includes("."), depois: m[4] };
+  }
+  function escrever(n, v) {
+    const [i, d] = v.toFixed(n.casas).split(".");
+    return n.antes + (n.milhar ? i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") : i) + (d ? "," + d : "") + n.depois;
+  }
+
   // Gancho de capa: instante em que começa a saída de cada estilo de capa (a camada inteira some até capa.fim)
   const SAIDA = { faixa: 2.6, manchete: 2.7, editorial: 2.6 };
 
@@ -72,7 +141,7 @@
       trocas(pal, trechos, total).forEach((t, n) => n % 2 || ev.push({ t, som: "whoosh-short" }));
       marcar(pal, d.enfase).filter((i) => i >= 0).forEach((i) => ev.push({ t: pal[i].ini, som: "pop" }));
     }
-    if (estilo === "painel-escuro" || estilo === "editorial-claro") // entrada de cada cartão
+    if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação)
       d.cartoes.forEach((c) => ev.push({ t: naEdicao(c.de, "ini", trechos, total), som: "whoosh-short" }));
     const todos = d.capa ? [...ev.filter((e) => e.t >= d.capa.fim), { t: SAIDA[d.capa.estilo], som: "whoosh-short" }] : ev;
     const fica = [];
@@ -105,6 +174,24 @@
     return { TOTAL: total, TRECHOS: trechos, PAL: mapear(palavras, trechos, total), ...c };
   }
   function novo(tag, cls, id, txt) { const e = document.createElement(tag); e.className = cls; if (id) e.id = id; if (txt != null) e.textContent = txt; return e; }
+
+  // Legenda em caixa escura, na emenda das duas metades (Painel escuro dividido e Motion dividido), como a do Painel
+  // escuro: grupos de até 4 palavras e 22 letras dentro de #legenda; a palavra falada na cor destaque, clareada até
+  // 3,4:1 contra o fundo escuro quando precisa (a caixa é opaca: o vídeo da emenda não vaza). c: o que o iniciar() devolve.
+  function legendaEmCaixa(tl, c) {
+    const COR = `rgb(${legivel(c.DESTAQUE, c.CLARO, c.ESCURO, 3.4).join(",")})`, host = document.getElementById("legenda"), GRUPOS = agrupar(c.PAL, 4, 22);
+    GRUPOS.forEach((g, gi) => {
+      const el = host.appendChild(novo("div", "grupo", `grupo-${gi + 1}`)), cx = el.appendChild(novo("div", "caixa", `grupo-${gi + 1}-caixa`));
+      g.forEach((p, pi) => (p.el = cx.appendChild(novo("span", "p", `grupo-${gi + 1}-p${pi + 1}`, p.txt))));
+      const prox = GRUPOS[gi + 1], sai = Math.min(prox ? prox[0].ini : c.TOTAL, g[g.length - 1].fim + 0.6);
+      tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
+      tl.set(el, { opacity: 0 }, sai);
+      g.forEach((p, pi) => {
+        tl.set(p.el, { color: COR }, p.ini);
+        tl.set(p.el, { color: c.CLARO }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
+      });
+    });
+  }
 
   // Gancho de capa (só no navegador): a frase por cima das cópias mudas dos trechos, na camada #capa que o montar.mjs
   // põe por cima de tudo (com o CSS de cada estilo). c: { estilo, texto, queixo, fim }. A palavra forte (*assim*) abre
@@ -176,7 +263,7 @@
     }
   }
 
-  const api = { naEdicao, mapear, marcar, agrupar, trocas, efeitos, contraste, legivel, iniciar, novo, capa };
+  const api = { naEdicao, mapear, marcar, agrupar, trocas, efeitos, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.EditorChefe = api;
 })(this);
