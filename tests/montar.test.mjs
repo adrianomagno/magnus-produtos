@@ -268,6 +268,13 @@ test('capa: mais de 8 palavras é erro que cita o limite', () => {
   assert.match(erro('legenda-viva', 'fonte.mp4', '', { capa: { ...CAPA, texto: 'Você acha mesmo que emagrecer é só *comer menos*?' } }), /9 palavras.*até 8/);
 });
 
+// A regra duplicate_media_discovery_risk do lint da HyperFrames: duas mídias com a mesma fonte, início e duração
+function semMidiaRepetida(html, msg) {
+  const marcas = [...html.matchAll(/<(video|audio)\b[^>]*>/g)].map(([tag, nome]) =>
+    [nome, ...['src', 'data-start', 'data-duration'].map((a) => (new RegExp(`\\s${a}="([^"]*)"`).exec(tag) || [])[1] ?? '')].join('|'));
+  assert.equal(new Set(marcas).size, marcas.length, msg);
+}
+
 test('capa: edição com menos de 4 s é curta demais', () => {
   assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.42, 3.86]] }, { capa: CAPA }), /curto demais para gancho de capa/);
 });
@@ -287,6 +294,7 @@ test('capa: os 5 estilos levam a camada da capa com cópias mudas dos trechos do
       assert.equal(copias.length, 1, estilo);
       assert.match(copias[0], /data-start="0\.000" data-duration="3\.000" data-media-start="0\.433"/, estilo);
       assert.match(copias[0], / muted /, estilo);
+      semMidiaRepetida(html, estilo);
       assert.doesNotMatch(copias[0], /data-has-audio|class="trecho\b/, estilo); // a classe trecho é a que o iniciar() lê
       assert.ok(html.indexOf('if (D.capa) EC.capa(tl, D.capa);') < html.indexOf('window.__timelines['), estilo);
       assert.deepEqual(JSON.parse(/const D = (.*);/.exec(html)[1]).capa, { estilo: capa.estilo, texto: capa.texto, queixo: 840, fim: 3 });
@@ -303,7 +311,8 @@ test('capa: trecho que começa dentro da capa é copiado só até o fim dela', (
     montar(dir, () => {});
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     const copias = (html.match(/<video id="capa-trecho-\d+"[^>]*>/g) || []).map((v) => /data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/.exec(v).slice(1));
-    assert.deepEqual(copias, [['0.000', '1.066', '0.433'], ['1.067', '1.933', '2.000']]);
+    assert.deepEqual(copias, [['0.000', '1.065', '0.433'], ['1.067', '1.933', '2.000']]); // a 1ª cabe inteira na capa: 1 ms a menos que o trecho
+    semMidiaRepetida(html);
     assert.equal(JSON.parse(/const D = (.*);/.exec(html)[1]).capa.queixo, 900);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

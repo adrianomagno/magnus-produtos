@@ -285,11 +285,13 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
   }
 
   // Camada da capa: o CSS do estilo e uma cópia muda, em tela cheia, de cada trecho que começa antes do fim da capa
-  // (mesmo quadro do trecho, cortada no fim da capa), numa faixa da linha do tempo depois das dos efeitos
+  // (mesmo quadro do trecho, cortada no fim da capa), numa faixa da linha do tempo depois das dos efeitos.
+  // ponytail: a cópia de um trecho que cabe inteiro na capa termina 1 ms antes dele, ainda dentro do último quadro
+  // (mesma imagem), só para não repetir início e duração do trecho: o lint acusa duplicate_media_discovery_risk e o check --strict reprova
   let camada = "";
   if (capa) {
     const copias = trechos.filter((s) => s.ini < capa.fim).map((s, i) =>
-      `          <video id="capa-trecho-${i + 1}" class="capa-trecho" src="fonte.mp4" data-start="${s.ini.toFixed(3)}" data-duration="${Math.min(s.dur, capa.fim - s.ini).toFixed(3)}" data-media-start="${s.src.toFixed(3)}" data-track-index="${faixas + 1}" muted playsinline></video>`);
+      `          <video id="capa-trecho-${i + 1}" class="capa-trecho" src="fonte.mp4" data-start="${s.ini.toFixed(3)}" data-duration="${Math.min(s.dur - 0.001, capa.fim - s.ini).toFixed(3)}" data-media-start="${s.src.toFixed(3)}" data-track-index="${faixas + 1}" muted playsinline></video>`);
     camada = `      <style>
       #capa { position: absolute; inset: 0; overflow: hidden; }
       #capa-enquadramento { position: absolute; inset: 0; overflow: hidden; transform-origin: ${foco}; }
