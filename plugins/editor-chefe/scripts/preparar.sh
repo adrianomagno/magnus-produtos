@@ -3,6 +3,7 @@
 # Idempotente: se DATA/.versao bate, não faz nada.
 set -euo pipefail
 DATA="${1:?uso: preparar.sh <pasta de dados do plugin>}"
+command -v cygpath >/dev/null && DATA="$(cygpath -u "$DATA")" # Windows: C:\Users\... vira /c/Users/...
 NODE_VER="22.23.3"
 FF_TAG="b6.1.1"
 VERSAO="node=$NODE_VER ffmpeg=$FF_TAG"
