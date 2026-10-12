@@ -13,15 +13,6 @@
       "source": { "source": "url", "url": "https://github.com/heygen-com/hyperframes.git", "ref": "v0.8.143", "sha": "3aa68869f7d4cec8b37cdfcb9cd539389b63abed" },
       "description": "HyperFrames (HeyGen), o motor de vídeo que o Editor Chefe usa. Licença Apache-2.0.",
       "license": "Apache-2.0"
-    },
-    {
-      "name": "mhl-copywriter",
-      "source": { "source": "url", "url": "https://github.com/adrianomagno/mhl-copywriter.git", "sha": "cf8e533a9d69720e3f35b46b78408af00e05ba64" },
-      "description": "Copywriter MHL: roteiros, carrosséis, posts e caixinhas no Método High Level, com o Raio-X 7Ps e o Mapa 3D do próprio aluno.",
-      "version": "2.1.0",
-      "author": { "name": "Equipe MAGNUS" },
-      "strict": false,
-      "skills": ["./"]
     }
   ]
 }

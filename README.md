@@ -1,6 +1,6 @@
 # Produtos MAGNUS para o Claude
 
-Este repositório é o marketplace de plugins `magnus`, com os produtos do programa MAGNUS para o app Claude. Hoje ele tem dois produtos: o Editor Chefe e o Copywriter MHL.
+Este repositório é o marketplace de plugins `magnus`, com os produtos do programa MAGNUS para o app Claude. Hoje ele tem um produto, o Editor Chefe.
 
 ## Editor Chefe
 
@@ -10,14 +10,6 @@ O Editor Chefe edita vídeos curtos de quem tem um negócio: corta as pausas, le
 - **Privacidade:** o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.
 - **Estilos:** veja a galeria em https://adrianomagno.github.io/magnus-produtos/galeria/
 - **Requisitos:** cerca de 5 GB livres na primeira instalação. Ele baixa o Node.js e o FFmpeg portáteis (sem pedir senha de administrador), a HyperFrames, o Chrome que ela usa e o modelo de transcrição Parakeet; precisa de internet durante a instalação e em cada render.
-
-## Copywriter MHL
-
-A skill de copy do aluno da Mentoria High Level: roteiros de Reels, carrosséis, posts e caixinhas de pergunta, escritos a partir do Raio-X 7Ps e do Mapa 3D do próprio aluno.
-
-- **Fonte:** o repositório https://github.com/adrianomagno/mhl-copywriter, numa versão fixa. O catálogo só aponta para ele.
-- **O que vem no plugin:** só o método. O Raio-X 7Ps, o Mapa 3D e o perfil de cada aluno ficam com o aluno e nunca entram aqui.
-- **Instalação e atualização:** para quem é aluno MHL e cliente MAGNUS, o Magnus instala e atualiza. Quem usa só o claude.ai instala pelo ZIP do repositório.
 
 ## Instalação
 

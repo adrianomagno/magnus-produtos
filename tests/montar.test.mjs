@@ -651,3 +651,8 @@ test('tela dividida: no Editorial claro dividido a marca aparece uma vez só (na
   assert.match(html, /<div id="assinatura-texto">\{\{ASSINATURA\}\}<\/div>/);
   assert.doesNotMatch(html, /D\.nome/);
 });
+
+test('legenda em caixa escura (estilos 4, 7 e 9): a caixa é opaca, porque o contraste da palavra falada é conferido contra o fundo escuro puro', () => {
+  for (const estilo of ['painel-escuro', 'painel-escuro-dividido', 'motion-dividido']) // com a caixa a 92%, o vídeo claro vazava e a palavra caía para 2,99:1
+    assert.match(molde(estilo), /\.grupo \.caixa \{[^}]*background: var\(--fundo-escuro\);/, estilo);
+});
