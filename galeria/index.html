@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Editor Chefe: estilos e capas</title>
-<meta name="description" content="Os seis estilos de edição do Editor Chefe e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
+<meta name="description" content="Os nove estilos de edição do Editor Chefe, três deles de tela dividida, e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
 <style>
   :root {
     --fundo: #f4f3f0;
@@ -34,7 +34,7 @@
     gap: 20px;
     grid-template-columns: minmax(0, 1fr); /* celular: uma coluna */
   }
-  /* A partir de 600 px, as duas listas em 3 colunas iguais: os 6 estilos em 2 linhas, as 3 capas em 1, cartões da mesma largura */
+  /* A partir de 600 px, as listas em 3 colunas iguais: os 6 estilos em 2 linhas, os 3 de tela dividida e as 3 capas em 1, cartões da mesma largura */
   @media (min-width: 600px) { ol { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   li {
     min-width: 0;
@@ -64,7 +64,7 @@
 <body>
 <main>
   <h1>Editor Chefe: estilos e capas</h1>
-  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. Estes são os seis. Nos estilos de 1 a 5, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> mais abaixo. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
+  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. São nove: os seis abaixo e os três de <a href="#tela-dividida">tela dividida</a>, mais abaixo. Nos estilos de 1 a 5 e de 7 a 9, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> no fim da página. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
   <ol>
     <li>
       <video src="legenda-viva.mp4" poster="legenda-viva.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Legenda viva"></video>
@@ -99,8 +99,29 @@
   </ol>
   <p class="rodape">Amostras de 8 segundos, sem som. Personagens fictícias criadas por inteligência artificial.</p>
 
+  <h2 class="secao" id="tela-dividida">Tela dividida</h2>
+  <p class="abertura">A tela fica dividida ao meio: a pessoa aparece grande na metade de baixo, em toda a largura, e a metade de cima leva o texto ou a animação. A legenda fica no meio, entre as duas metades, longe do rosto.</p>
+  <ol>
+    <li>
+      <video src="painel-escuro-dividido.mp4" poster="painel-escuro-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Painel escuro dividido"></video>
+      <h2><span class="num">7</span> Painel escuro dividido</h2>
+      <p class="linha">fundo escuro em cima, com os cartões de informação, e a legenda em caixa no meio.</p>
+    </li>
+    <li>
+      <video src="editorial-claro-dividido.mp4" poster="editorial-claro-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Editorial claro dividido"></video>
+      <h2><span class="num">8</span> Editorial claro dividido</h2>
+      <p class="linha">fundo claro em cima, com o título do cartão, e uma palavra por vez no meio.</p>
+    </li>
+    <li>
+      <video src="motion-dividido.mp4" poster="motion-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Motion dividido"></video>
+      <h2><span class="num">9</span> Motion dividido</h2>
+      <p class="linha">em cima, uma animação com ícones para cada ideia, feita com as palavras da fala.</p>
+    </li>
+  </ol>
+  <p class="rodape">Amostras de 8 segundos, sem som, com a mesma personagem fictícia dos estilos 4 e 5.</p>
+
   <h2 class="secao" id="capas">Capas</h2>
-  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5 e é opcional (no 6, a caixinha já é a capa). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
+  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5 e de 7 a 9 e é opcional (no 6, a caixinha já é a capa). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
   <ol>
     <li>
       <img src="capa-1-faixa.jpg" width="540" height="960" loading="lazy" decoding="async" alt="Capa Faixa: tarja na cor de destaque no topo, com a frase Emagrecer é só comer menos? em letras maiúsculas, e o vídeo logo abaixo">
