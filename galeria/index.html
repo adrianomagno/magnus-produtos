@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Editor Chefe: estilos e capas</title>
-<meta name="description" content="Os nove estilos de edição do Editor Chefe, três deles de tela dividida, e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
+<meta name="description" content="Os dez estilos de edição do Editor Chefe, três deles de tela dividida e um sem gravação, e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
 <style>
   :root {
     --fundo: #f4f3f0;
@@ -59,12 +59,16 @@
   .linha { margin: 0 4px; color: var(--suave); font-size: 0.9375rem; overflow-wrap: break-word; }
   .linha::first-letter { text-transform: uppercase; }
   .rodape { margin: 28px 0 0; color: var(--suave); font-size: 0.875rem; }
+  /* Estilo 10: a amostra tem voz; o som só liga quando a pessoa pede */
+  .som { display: block; width: 100%; margin: 10px 0 0; padding: 10px 14px; border: 1px solid var(--linha); border-radius: 10px; background: var(--fundo); color: var(--texto); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
+  .som[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: var(--cartao); }
+  .som:focus-visible { outline: 2px solid var(--texto); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <main>
   <h1>Editor Chefe: estilos e capas</h1>
-  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. São nove: os seis abaixo e os três de <a href="#tela-dividida">tela dividida</a>, mais abaixo. Nos estilos de 1 a 5 e de 7 a 9, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> no fim da página. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
+  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. São dez: os seis abaixo, os três de <a href="#tela-dividida">tela dividida</a> e um <a href="#sem-gravacao">sem gravação</a>, mais abaixo. Nos estilos de 1 a 5 e de 7 a 9, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> no fim da página. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
   <ol>
     <li>
       <video src="legenda-viva.mp4" poster="legenda-viva.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Legenda viva"></video>
@@ -120,8 +124,20 @@
   </ol>
   <p class="rodape">Amostras de 8 segundos, sem som, com a mesma personagem fictícia dos estilos 4 e 5.</p>
 
+  <h2 class="secao" id="sem-gravacao">Sem gravação</h2>
+  <p class="abertura">Para quando você não tem vídeo: um texto seu vira uma animação narrada por voz, e cada palavra-chave entra na tela no instante em que é dita.</p>
+  <ol>
+    <li>
+      <video id="amostra-motion-narrado" src="motion-narrado.mp4" poster="motion-narrado.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Motion narrado"></video>
+      <button type="button" class="som" aria-controls="amostra-motion-narrado" aria-pressed="false">Ligar o som</button>
+      <h2><span class="num">10</span> Motion narrado</h2>
+      <p class="linha">cada palavra-chave entra grande na tela no instante em que é dita, com a legenda da narração embaixo; de 20 a 30 segundos.</p>
+    </li>
+  </ol>
+  <p class="rodape">Amostra inteira, com voz: toque em Ligar o som. Marca e texto fictícios, narrados por uma voz pronta da ElevenLabs.</p>
+
   <h2 class="secao" id="capas">Capas</h2>
-  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5 e de 7 a 9 e é opcional (no 6, a caixinha já é a capa). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
+  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5 e de 7 a 9 e é opcional (no 6, a caixinha já é a capa; no 10, a primeira palavra-chave). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
   <ol>
     <li>
       <img src="capa-1-faixa.jpg" width="540" height="960" loading="lazy" decoding="async" alt="Capa Faixa: tarja na cor de destaque no topo, com a frase Emagrecer é só comer menos? em letras maiúsculas, e o vídeo logo abaixo">
@@ -152,6 +168,17 @@
   }
   aplicar();
   reduzir.addEventListener("change", aplicar);
+  // O som da amostra só liga com o toque da pessoa, e a narração recomeça do início
+  document.querySelectorAll(".som").forEach(function (b) {
+    var v = document.getElementById(b.getAttribute("aria-controls"));
+    b.addEventListener("click", function () {
+      var ligar = v.muted;
+      v.muted = !ligar;
+      if (ligar) { v.currentTime = 0; v.play().catch(function () {}); }
+      b.setAttribute("aria-pressed", String(ligar));
+      b.textContent = ligar ? "Desligar o som" : "Ligar o som";
+    });
+  });
 </script>
 </body>
 </html>
