@@ -3,9 +3,12 @@
 // Lê na pasta: escolhas.json (estilo e escolhas do vídeo), transcript.json (corrigido), trechos.json (do trechos.mjs),
 // fonts/ (do baixar-fonte.mjs) e a marca (padrão ../marca.json). Grava index.html e comum.js na pasta e, com
 // "efeitos" ligado (padrão), copia para efeitos/ os sons do plugin hyperframes que o estilo usa.
-import { readFileSync, writeFileSync, readdirSync, existsSync, copyFileSync, realpathSync, mkdirSync, statSync } from "node:fs";
+// No Motion narrado (sem gravação), lê words.json e audio/voz.wav (do voz-com-tempos.mjs) no lugar do vídeo e grava
+// também audio/mix.wav (voz e efeitos já mixados, em -16 LUFS) e audio/mixagem.json.
+import { readFileSync, writeFileSync, readdirSync, existsSync, copyFileSync, realpathSync, mkdirSync, statSync, mkdtempSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join, dirname, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, dirname, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -23,6 +26,7 @@ const USA = {
   "painel-escuro-dividido": ["titulo", "corpo"],
   "editorial-claro-dividido": ["titulo", "corpo", "destaque"],
   "motion-dividido": ["titulo"],
+  "motion-narrado": ["titulo", "corpo"],
 };
 // Motion dividido: a biblioteca de animações. Cada uma pede [mínimo, máximo] de itens e o tamanho de cada item, em
 // caracteres (rótulo curto, para caber nas caixas da animação); no número que cresce, o primeiro item é o número.
@@ -182,11 +186,274 @@ function fontes(pasta, f, usa, avisar) {
   return linhas.join("\n");
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Motion narrado (sem gravação): cenas pelas palavras-chave, legenda da narração e a mixagem com os efeitos.
+// Uma palavra-chave (até 3 palavras) grande no meio e, embaixo, a legenda da narração em grupos que se escrevem no instante
+// de cada palavra; a legenda leva só as palavras de fora das chaves, e o grupo cabe no que sobra de 6 palavras na tela.
+// Os instantes ficam todos aqui; o molde só anima o que este plano diz.
+const NARRADO = { minChaves: 3, maxChaves: 9, palavrasChave: 3, letrasChave: 24, letrasLegenda: 30, troca: [1, 4.5], duracao: [20, 30] };
+const limpaPal = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+// Trecho de 1 ou mais palavras seguidas na fala, a partir de k: [primeira, última] ou null
+function acharTrecho(pal, texto, k) {
+  const w = texto.split(/\s+/).map(limpaPal).filter(Boolean);
+  if (!w.length) return null;
+  for (let j = k; j + w.length <= pal.length; j++) if (w.every((x, m) => limpaPal(pal[j + m].txt) === x)) return [j, j + w.length - 1];
+  return null;
+}
+// Frase longa vira linhas equilibradas: o menor número de linhas que cabe (palavras e letras) e, entre elas, a divisão
+// em que a linha mais comprida é a menor possível
+function partir(f, pal, maxPal, maxLetras) {
+  const letras = (a, b) => f.slice(a, b).reduce((s, i) => s + pal[i].txt.length + 1, -1);
+  const custo = (a, b) => (b - a > maxPal ? Infinity : letras(a, b));
+  for (let n = Math.ceil(f.length / maxPal); n <= f.length; n++) {
+    const M = Array.from({ length: n + 1 }, () => Array(f.length + 1).fill(Infinity)), C = M.map((l) => l.map(() => 0));
+    M[0][0] = 0;
+    for (let k = 1; k <= n; k++)
+      for (let j = k; j <= f.length; j++)
+        for (let a = k - 1; a < j; a++) { const v = Math.max(M[k - 1][a], custo(a, j)); if (v < M[k][j]) { M[k][j] = v; C[k][j] = a; } }
+    if (M[n][f.length] <= maxLetras) {
+      const out = [];
+      for (let k = n, j = f.length; k > 0; j = C[k][j], k--) out.unshift(f.slice(C[k][j], j));
+      return out;
+    }
+  }
+  return f.map((i) => [i]);
+}
+
+export function planoNarrado(words, esc, avisar = () => {}) {
+  const pal = words.map((w) => ({ txt: w.text, ini: w.start, fim: w.end })), fimFala = pal[pal.length - 1].fim;
+  const { chaves, apice, fecho, quebras = [] } = esc;
+  if (!Array.isArray(chaves) || chaves.length < NARRADO.minChaves || chaves.length > NARRADO.maxChaves)
+    throw new Error(`montar: o Motion narrado pede "chaves", de ${NARRADO.minChaves} a ${NARRADO.maxChaves} palavras-chave tiradas da fala, na ordem em que são ditas (a primeira é a capa).`);
+  let k = 0;
+  const cenas = chaves.map((c) => {
+    const texto = umaLinha(typeof c === "string" ? c : c?.texto), icone = c && typeof c === "object" ? c.icone ?? null : null;
+    if (!texto) throw new Error('montar: cada palavra-chave é um texto da fala, como "agenda" ou { "texto": "agenda", "icone": "calendario" }.');
+    if (texto.split(" ").length > NARRADO.palavrasChave || texto.length > NARRADO.letrasChave)
+      throw new Error(`montar: a palavra-chave "${texto}" é longa demais; use até ${NARRADO.palavrasChave} palavras e ${NARRADO.letrasChave} caracteres.`);
+    if (icone !== null && !Object.hasOwn(EC.ICONES, icone)) throw new Error(`montar: o ícone ${JSON.stringify(icone)} da palavra-chave "${texto}" não existe. Use um destes: ${Object.keys(EC.ICONES).join(", ")}.`);
+    const r = acharTrecho(pal, texto, k);
+    if (!r) throw new Error(`montar: a palavra-chave "${texto}" não foi achada na fala depois da anterior. Use as palavras como estão no words.json, na ordem em que são ditas.`);
+    k = r[1] + 1;
+    return { texto, de: r[0], ate: r[1], t: pal[r[0]].ini, apice: false, icone };
+  });
+  if (apice != null) {
+    const a = cenas.findIndex((c) => limpaPal(c.texto) === limpaPal(String(apice)));
+    if (a < 0) throw new Error('montar: "apice" precisa ser uma das "chaves".');
+    cenas[a].apice = true;
+  }
+  // Fecho: com "fecho" (a primeira palavra da assinatura falada), começa nela; sem, logo depois da última palavra
+  let F = fimFala + 0.25, semLegenda = pal.length;
+  if (fecho != null) {
+    const r = acharTrecho(pal, umaLinha(String(fecho)), cenas[cenas.length - 1].ate + 1);
+    if (!r) throw new Error(`montar: "fecho" ("${fecho}") precisa ser palavra da fala depois da última palavra-chave: a primeira da assinatura falada.`);
+    [semLegenda] = r; F = pal[r[0]].ini;
+  }
+  const depoisDoPonto = pal.findIndex((p, i) => i > semLegenda && /[.?!]$/.test(pal[i - 1].txt));
+  const fim = Math.ceil(Math.max(fimFala + 0.9, F + 1.5) * 60) / 60;
+
+  // Legenda: as palavras de fora das chaves, em frases (pontuação, pausa de mais de 0,35 s, "quebras") e linhas equilibradas
+  const forcar = new Set();
+  let q = 0;
+  for (const txt of quebras) {
+    const r = acharTrecho(pal, umaLinha(String(txt)), q);
+    if (r) { forcar.add(r[0]); q = r[0] + 1; } else avisar(`montar: a quebra "${txt}" não foi achada na fala, na ordem; ficou de fora.`);
+  }
+  const legenda = [];
+  const limites = [{ ate: -1, n: cenas[0].ate - cenas[0].de + 1 }, ...cenas.map((c) => ({ de: c.de, ate: c.ate, n: c.ate - c.de + 1 })), { de: semLegenda, n: 0 }];
+  for (let s = 0; s + 1 < limites.length; s++) {
+    const de = limites[s].ate + 1, ate = Math.min(limites[s + 1].de, semLegenda) - 1, frases = [];
+    // na tela, junto da legenda: a palavra-chave anterior (antes da primeira, a capa) ou a seguinte
+    const maxPal = 6 - Math.max(limites[s].n, limites[s + 1].n);
+    for (let i = de; i <= ate; i++) {
+      const ant = pal[i - 1];
+      if (i === de || /[.?!,;:…]$/.test(ant.txt) || pal[i].ini - ant.fim > 0.35 || forcar.has(i)) frases.push([i]);
+      else frases[frases.length - 1].push(i);
+    }
+    // o grupo não passa da palavra-chave que vem depois da seguinte (a conta das 6 palavras só vale com as duas vizinhas)
+    const teto = cenas[s + 1] ? cenas[s + 1].t - 0.2 : Infinity;
+    for (const f of frases) for (const g of partir(f, pal, maxPal, NARRADO.letrasLegenda)) legenda.push({ de: g[0], ate: g[g.length - 1], ini: pal[g[0]].ini, teto });
+  }
+  // Cada grupo sai 0,2 s antes do seguinte (no mesmo lugar), no máximo 1,2 s depois da última palavra dele, ou no fecho
+  legenda.forEach((g, i) => {
+    g.sai = +Math.max(g.ini, Math.min(legenda[i + 1] ? legenda[i + 1].ini - 0.2 : F - 0.25, pal[g.ate].fim + 1.2, g.teto)).toFixed(3);
+    delete g.teto;
+  });
+  // Cada palavra-chave sai 0,25 s antes da seguinte bater (ou do fecho)
+  cenas.forEach((c, i) => (c.sai = +Math.max(c.t, (cenas[i + 1] ? cenas[i + 1].t : F) - 0.25).toFixed(3)));
+
+  // Troca de cena a cada 1 a 4,5 s (a capa conta desde o quadro 0) e duração de 20 a 30 s: avisos, não erros
+  const fmt = (x) => x.toFixed(1).replace(".", ","), batidas = [0, ...cenas.slice(1).map((c) => c.t), F];
+  batidas.slice(1).forEach((b, i) => {
+    const c = cenas[i + 1]?.texto;
+    if (b - batidas[i] > NARRADO.troca[1]) avisar(`montar: ${fmt(b - batidas[i])} s com a mesma palavra-chave na tela ("${cenas[i].texto}"${c ? `, até "${c}"` : ", até o fecho"}); escolha mais uma palavra-chave nesse trecho para a cena trocar a cada 2 a 4 s.`);
+  });
+  cenas.slice(1).forEach((c, i) => c.t - cenas[i].t < NARRADO.troca[0] &&
+    avisar(`montar: as palavras-chave "${cenas[i].texto}" e "${c.texto}" estão a ${fmt(c.t - cenas[i].t)} s uma da outra; a primeira mal aparece. Troque uma delas.`));
+  if (fim - F > NARRADO.troca[1]) avisar(`montar: o fecho fica ${(fim - F).toFixed(1).replace(".", ",")} s parado na tela; a assinatura falada é longa. Ponha o "fecho" numa palavra mais perto do fim ou encurte a assinatura no roteiro.`);
+  if (fim < NARRADO.duracao[0] || fim > NARRADO.duracao[1]) avisar(`montar: o vídeo vai ter ${fim.toFixed(1).replace(".", ",")} s; o Motion narrado é de ${NARRADO.duracao[0]} a ${NARRADO.duracao[1]} s (55 a 70 palavras no roteiro).`);
+
+  // Efeitos: impacto grave na capa e no ápice, curtos com camada grave nas outras chaves, carrilhão longo no fecho.
+  // Dois a menos de 0,5 s um do outro: fica o mais forte.
+  const CURTOS = ["click", "pop", "ping"], FORCA = { principal: 3, longo: 2, curto: 1 };
+  let n = 0;
+  const ev = [...cenas.map((c, i) => (!i ? { t: c.t, som: "impact-bass-2", classe: "principal" } : c.apice ? { t: c.t, som: "impact-bass-1", classe: "principal" } : { t: c.t, som: CURTOS[n++ % CURTOS.length], classe: "curto" })),
+    { t: F, som: "chime", classe: "longo" }];
+  const efeitos = [];
+  for (const e of ev) {
+    const ant = efeitos[efeitos.length - 1];
+    if (!ant || e.t - ant.t >= 0.5) efeitos.push(e);
+    else if (FORCA[e.classe] > FORCA[ant.classe]) efeitos[efeitos.length - 1] = e;
+  }
+  return {
+    palavras: pal.map((p) => [p.txt, p.ini, p.fim]), fim: +fim.toFixed(3), efeitos,
+    cenas: cenas.map(({ de, ate, t, sai, apice, icone }) => ({ de, ate, t, sai, apice, icone })), legenda,
+    fecho: { t: +F.toFixed(3), assinatura: +(depoisDoPonto > 0 ? pal[depoisDoPonto].ini : F + 0.35).toFixed(3) },
+  };
+}
+
+// Áudio do Motion narrado, todo pelo ffmpeg do ambiente.sh: estéreo em 48 kHz, em Float32Array intercalado
+const SR = 48000;
+const ALVO_DB = { principal: -2, curto: -6, longo: -8 }; // em relação à voz: o principal ao máximo dela; os outros ao instante
+const COM_CORPO = ["click", "pop", "ping"]; // curtos que ganham a camada de impacto grave por baixo
+const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg";
+function ff(args, input) {
+  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", ...args], { input, maxBuffer: 1 << 30 });
+  if (r.error || r.status !== 0) throw new Error(`montar: o ffmpeg falhou ao preparar o áudio (${String(r.error?.message ?? r.stderr).trim().split("\n").pop()}).`);
+  return r.stdout;
+}
+// Mono vai inteiro para os dois canais, como na mixagem da HyperFrames (o -ac 2 do ffmpeg baixaria 3 dB)
+function pcm(arq, filtro = "") {
+  const r = spawnSync(process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", arq], { encoding: "utf8" });
+  if (r.error || r.status !== 0) throw new Error(`montar: o ffprobe não leu o áudio ${arq}.`);
+  const af = [parseInt(r.stdout) === 1 ? "pan=stereo|c0=c0|c1=c0" : "aformat=channel_layouts=stereo", filtro].filter(Boolean).join(",");
+  const b = ff(["-i", arq, "-af", af, "-ar", String(SR), "-f", "f32le", "-"]);
+  return new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+}
+const gravar = (x, arq) => ff(["-f", "f32le", "-ar", String(SR), "-ac", "2", "-i", "-", "-c:a", "pcm_s24le", arq], Buffer.from(x.buffer, x.byteOffset, x.byteLength));
+const pico = (x) => { let m = 0, k = 0; for (let i = 0; i < x.length; i++) if (Math.abs(x[i]) > m) { m = Math.abs(x[i]); k = i; } return { m, k: k >> 1 }; };
+const aoPico = (x, db) => { const g = 10 ** (db / 20) / (pico(x).m || 1); return x.map((v) => v * g); };
+// ebur128: momentâneo de 100 em 100 ms (janela de 400 ms que termina em t), integrado e pico verdadeiro
+function loudness(arq, folga = false) {
+  const r = spawnSync(ffmpeg(), ["-nostats", "-hide_banner", "-i", arq, "-af", `${folga ? "apad=pad_dur=1," : ""}ebur128=peak=true`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 1 << 28 });
+  if (r.error || r.status !== 0) throw new Error(`montar: o ffmpeg não mediu o volume de ${arq}.`);
+  const M = [...r.stderr.matchAll(/t:\s*([\d.]+)\s+TARGET:\S+ LUFS\s+M:\s*(\S+)/g)].map((m) => [+m[1], Number.isFinite(+m[2]) ? +m[2] : -120]);
+  const resumo = r.stderr.slice(r.stderr.lastIndexOf("Summary:"));
+  return { M, I: +/I:\s*(\S+) LUFS/.exec(resumo)?.[1], TP: +/Peak:\s*(\S+) dBFS/.exec(resumo)?.[1] };
+}
+const maxM = (arq) => Math.max(...loudness(arq, true).M.map((m) => m[1]));
+
+// Efeito pronto para mixar: pico em -1 dBFS; o curto ganha a camada grave alinhada pelo pico; se nem com volume 1 ele
+// alcança o volume preciso, o limitador empurra de 1 em 1 dB (até 15) sem passar o pico
+function prepararEfeito(sfx, lista, som, preciso, pasta) {
+  let x = aoPico(pcm(join(sfx, lista[som].file)), -1);
+  if (COM_CORPO.includes(som)) {
+    const cam = aoPico(pcm(join(sfx, lista["impact-bass-1"].file), "atrim=0:0.45,lowpass=f=180,lowpass=f=180,afade=t=out:st=0.15:d=0.3"), -4);
+    const d = pico(x).k - pico(cam).k, ox = Math.max(0, -d), oc = Math.max(0, d);
+    const y = new Float32Array(2 * Math.max(ox + x.length / 2, oc + cam.length / 2));
+    y.set(x, 2 * ox);
+    for (let i = 0; i < cam.length; i++) y[2 * oc + i] += cam[i];
+    x = aoPico(y, -1);
+  }
+  const base = join(pasta, "efeitos", `_${som}.wav`), arq = join(pasta, "efeitos", `${som}.wav`);
+  gravar(x, base);
+  copyFileSync(base, arq);
+  let empurrao = 0, m = maxM(arq);
+  while (m < preciso && empurrao < 15) {
+    empurrao++;
+    ff(["-i", base, "-af", `volume=${empurrao}dB,alimiter=limit=0.891:level=disabled:attack=1:release=40:latency=1`, "-c:a", "pcm_s24le", arq]);
+    m = maxM(arq);
+  }
+  rmSync(base);
+  if (empurrao) x = pcm(arq);
+  return { x, m, empurrao, imp: pico(x).k };
+}
+
+// Voz e efeitos somados aqui, masterizados em -16 LUFS com o pico abaixo de -1 dBTP (limitador em -2 dBFS, sem atraso):
+// o render da HyperFrames só baixa o áudio que passa de -1 dBTP, então o MP4 sai no volume certo, sem passo depois
+function mixarNarrado(pasta, plano, comEfeitos) {
+  const voz = pcm(join(pasta, "audio", "voz.wav")), N = Math.round(plano.fim * SR), mix = new Float32Array(2 * N);
+  mix.set(voz.subarray(0, 2 * N));
+  const tmp = mkdtempSync(join(tmpdir(), "narrado-"));
+  try {
+    gravar(voz, join(tmp, "voz.wav"));
+    // com 1 s de folga no fim: o efeito do fecho, depois da última palavra, mede o silêncio, não a última janela da voz
+    const mv = loudness(join(tmp, "voz.wav"), true).M, vozMax = Math.max(...mv.map((m) => m[1]));
+    // voz no instante t: a janela de 400 ms de t - 0,1 a t + 0,3 s, a mesma medida da calibragem aprovada
+    const noInstante = (t) => mv.reduce((a, b) => (Math.abs(b[0] - t - 0.3) < Math.abs(a[0] - t - 0.3) ? b : a))[1];
+    let efeitos = [];
+    if (comEfeitos) {
+      const sfx = pastaEfeitos(), lista = ler(join(sfx, "manifest.json"), "o manifest.json dos efeitos");
+      mkdirSync(join(pasta, "efeitos"), { recursive: true });
+      // efeito numa pausa da voz (ou depois dela) mede contra o máximo da voz, senão sumiria
+      const ev = plano.efeitos.map((e) => { const mi = noInstante(e.t); return { ...e, m_voz: mi, alvo: (e.classe === "principal" || mi < vozMax - 20 ? vozMax : mi) + ALVO_DB[e.classe] }; });
+      const prep = {};
+      for (const som of new Set(ev.map((e) => e.som))) {
+        for (const s of [som, ...(COM_CORPO.includes(som) ? ["impact-bass-1"] : [])])
+          if (!lista[s] || !existsSync(join(sfx, lista[s].file))) throw new Error(`montar: o efeito "${s}" não está na pasta de efeitos da HyperFrames (${sfx}).`);
+        prep[som] = prepararEfeito(sfx, lista, som, Math.max(...ev.filter((e) => e.som === som).map((e) => e.alvo)) + 0.3, pasta);
+      }
+      efeitos = ev.map((e) => {
+        const p = prep[e.som], v = 10 ** ((e.alvo - p.m) / 20), vol = Math.min(1, v), ini = Math.round(e.t * SR) - p.imp;
+        for (let i = Math.max(0, -ini); i < p.x.length / 2 && ini + i < N; i++) { mix[2 * (ini + i)] += p.x[2 * i] * vol; mix[2 * (ini + i) + 1] += p.x[2 * i + 1] * vol; }
+        return { som: e.som, classe: e.classe, impacto: +e.t.toFixed(3), inicio: +(ini / SR).toFixed(5), voz_no_instante: +e.m_voz.toFixed(1), alvo: +e.alvo.toFixed(1), efeito_max: +p.m.toFixed(1), volume: +vol.toFixed(3), empurrao_db: p.empurrao, no_teto: v > 1.0005 };
+      });
+    }
+    gravar(mix, join(tmp, "soma.wav"));
+    let ganho = -16 - loudness(join(tmp, "soma.wav")).I, med;
+    for (let passo = 0; passo < 3; passo++) {
+      ff(["-i", join(tmp, "soma.wav"), "-af", `volume=${ganho.toFixed(2)}dB,alimiter=limit=0.794:level=disabled:attack=1:release=40:latency=1`, "-c:a", "pcm_s24le", join(pasta, "audio", "mix.wav")]);
+      med = loudness(join(pasta, "audio", "mix.wav"));
+      if (Math.abs(med.I + 16) <= 0.2) break;
+      ganho += -16 - med.I;
+    }
+    const rel = { voz_momentaneo_max: +vozMax.toFixed(1), ganho_db: +ganho.toFixed(2), integrado_lufs: med.I, pico_dbtp: med.TP, efeitos };
+    writeFileSync(join(pasta, "audio", "mixagem.json"), JSON.stringify(rel, null, 1));
+    return rel;
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+
+function montarNarrado(pasta, esc, marca, arqMarca, usa, avisar) {
+  const words = ler(join(pasta, "words.json"), "o words.json (do voz-com-tempos.mjs)");
+  if (!Array.isArray(words) || !words.length || words.some((w, i) => typeof w?.text !== "string" || !(w.end >= w.start) || (i && w.start < words[i - 1].start)))
+    throw new Error("montar: o words.json precisa ser a lista do voz-com-tempos.mjs ({ text, start, end }, na ordem da fala). Rode o voz-com-tempos.mjs de novo.");
+  if (!existsSync(join(pasta, "audio", "voz.wav"))) throw new Error(`montar: falta a voz (${join(pasta, "audio", "voz.wav")}). Rode o voz-com-tempos.mjs na pasta do vídeo.`);
+  if (esc.efeitos !== undefined && typeof esc.efeitos !== "boolean") throw new Error('montar: "efeitos" é true (ligados) ou false (desligados).');
+  const plano = planoNarrado(words, esc, avisar);
+  // Fecho: o logo do dono (marca.logo, caminho a partir do marca.json), ou o nome; a assinatura embaixo, se for outra frase
+  let principal = `<div id="fecho-nome"><span id="fecho-nome-texto">${html(marca.nome ?? "")}</span></div>`;
+  if (marca.logo != null) {
+    const arq = resolve(dirname(arqMarca), String(marca.logo)), ext = extname(arq).toLowerCase();
+    if (![".png", ".jpg", ".jpeg", ".webp", ".svg"].includes(ext) || !existsSync(arq))
+      throw new Error(`montar: o logo do marca.json (${marca.logo}) precisa ser um arquivo PNG, JPG, WebP ou SVG que exista, com o caminho a partir da pasta do marca.json.`);
+    copyFileSync(arq, join(pasta, "logo" + ext));
+    principal = `<img id="fecho-logo" src="logo${ext}" alt="${html(marca.nome ?? "")}" />`;
+  } else if (!umaLinha(marca.nome)) throw new Error('montar: o fecho do Motion narrado mostra o "nome" do marca.json (ou o "logo"); falta o nome.');
+  const ass = umaLinha(marca.assinatura) && umaLinha(marca.assinatura) !== umaLinha(marca.nome) ? `\n        <div id="fecho-assinatura">${html(umaLinha(marca.assinatura))}</div>` : "";
+  const mix = mixarNarrado(pasta, plano, esc.efeitos !== false);
+  const { efeitos: _ef, ...dados } = plano;
+  const valores = {
+    FONTES: fontes(join(pasta, "fonts"), marca.fontes ?? {}, usa, avisar),
+    FUNDO_CLARO: marca.cores.fundo_claro, FUNDO_ESCURO: marca.cores.fundo_escuro, TEXTO: marca.cores.texto, DESTAQUE: marca.cores.destaque,
+    TITULO: html(marca.fontes.titulo), CORPO: html(marca.fontes.corpo), DURACAO: plano.fim.toFixed(3),
+    DADOS: JSON.stringify(dados).replace(/</g, "\\u003c"), FECHO: `        ${principal}${ass}`,
+    AUDIO: `      <audio id="narracao" class="clip" src="audio/mix.wav" data-start="0" data-duration="${plano.fim.toFixed(3)}" data-track-index="1" data-volume="1"></audio>`,
+  };
+  const molde = readFileSync(join(RAIZ, "estilos", "motion-narrado.html"), "utf8");
+  const sobra = [...molde.matchAll(/\{\{([A-Z_]+)\}\}/g)].map((m) => m[1]).filter((k) => !(k in valores));
+  if (sobra.length) throw new Error(`montar: marcador sem valor no molde: ${sobra.join(", ")}.`);
+  writeFileSync(join(pasta, "index.html"), molde.replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => valores[k]));
+  copyFileSync(join(RAIZ, "estilos", "comum.js"), join(pasta, "comum.js"));
+  return { narrado: true, duracao: plano.fim, cenas: plano.cenas.length, palavras: words.length, efeitos: mix.efeitos.length, integrado: mix.integrado_lufs, pico: mix.pico_dbtp };
+}
+
 export function montar(pasta, avisar = (m) => console.error(m)) {
   const esc = ler(join(pasta, "escolhas.json"), "o escolhas.json");
   if (!esc || typeof esc !== "object" || Array.isArray(esc)) throw new Error('montar: o escolhas.json precisa ser um objeto entre chaves, como { "estilo": "legenda-viva" }.');
   if (!USA[esc.estilo]) throw new Error(`montar: estilo "${esc.estilo}" não existe. Use: ${Object.keys(USA).join(", ")}.`);
-  const caixinha = esc.estilo === "caixinha-pergunta";
+  const caixinha = esc.estilo === "caixinha-pergunta", narrado = esc.estilo === "motion-narrado";
+  if (narrado && esc.capa != null && esc.capa !== false)
+    throw new Error('montar: o Motion narrado já abre com a primeira palavra-chave como capa (ela está na tela desde o primeiro quadro); tire o campo "capa" do escolhas.json.');
   if (caixinha && esc.capa != null && esc.capa !== false)
     throw new Error('montar: a Caixinha de pergunta já é a capa do vídeo (a caixinha aparece desde o primeiro quadro); tire o campo "capa" do escolhas.json.');
   // Gancho de capa (opcional): { estilo, texto com uma *palavra forte*, até 8 palavras, queixo (y no quadro 0, padrão 840) }.
@@ -208,7 +475,7 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
   }
   // Fontes do estilo e da capa (todo estilo já usa o título, que é a fonte das capas; a Editorial pede também a de destaque, em itálico)
   const usa = [...new Set([...USA[esc.estilo], ...(capa?.estilo === "editorial" ? ["destaque"] : [])])];
-  const marca = ler(resolve(pasta, esc.marca ?? "../marca.json"), "o marca.json");
+  const arqMarca = resolve(pasta, esc.marca ?? "../marca.json"), marca = ler(arqMarca, "o marca.json");
   // Caixinha: pergunta do escolhas.json; chamada do escolhas.json ou, sem ela, a chamada_caixinha guardada no marca.json;
   // queixo opcional (y do queixo no quadro, como na capa Manchete) baixa a caixa para não cobrir a boca
   let caixa;
@@ -233,6 +500,7 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
   for (const k of ["titulo", "corpo", "destaque"])
     if ((usa.includes(k) || marca.fontes?.[k] !== undefined) && !/^[\p{L}\p{N} ]+$/u.test(marca.fontes?.[k] ?? ""))
       throw new Error(`montar: fontes.${k} do marca.json ("${marca.fontes?.[k] ?? ""}") precisa ser o nome de uma fonte, só com letras, números e espaço.`);
+  if (narrado) return montarNarrado(pasta, esc, marca, arqMarca, usa, avisar);
   const palavras = ler(resolve(pasta, esc.transcricao ?? "transcript.json"), "o transcript.json")
     .map((w) => [w.text, +w.start.toFixed(2), +w.end.toFixed(2)]);
   const manter = ler(resolve(pasta, esc.trechos ?? "trechos.json"), "o trechos.json").manter;
@@ -378,7 +646,8 @@ ${copias.join("\n")}
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const r = montar(resolve(process.argv[2] ?? "."));
-    console.log(`montar: index.html pronto (${r.trechos} trechos, ${r.palavras} palavras, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s de edição${r.veu ? ", véu atrás do texto" : ""}).`);
+    if (r.narrado) console.log(`montar: index.html pronto (Motion narrado: ${r.cenas} palavras-chave, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s; áudio em ${r.integrado} LUFS, pico de ${r.pico} dBTP).`);
+    else console.log(`montar: index.html pronto (${r.trechos} trechos, ${r.palavras} palavras, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s de edição${r.veu ? ", véu atrás do texto" : ""}).`);
   } catch (e) {
     console.error(e.message);
     process.exit(1);

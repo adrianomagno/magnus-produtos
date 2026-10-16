@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="comum.js"></script>
+    <style>
+{{FONTES}}
+      :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--fundo-escuro); color: var(--claro); font-family: "{{TITULO}}", sans-serif; }
+      /* Grade sutil: linhas a 5% da cor clara, sumindo para as bordas */
+      #grade {
+        position: absolute; inset: 0; background-size: 90px 90px; background-position: 0 0;
+        background-image: linear-gradient(color-mix(in srgb, var(--fundo-claro) 5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--fundo-claro) 5%, transparent) 1px, transparent 1px);
+        -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 50%, #000 35%, transparent 100%); mask-image: radial-gradient(ellipse 75% 60% at 50% 50%, #000 35%, transparent 100%);
+      }
+      /* Ícone da palavra-chave (opcional), centrado em 640; a palavra-chave no meio (860 a 1060); a legenda embaixo */
+      #icones { position: absolute; left: 420px; top: 520px; width: 240px; height: 240px; }
+      .icone { position: absolute; inset: 0; overflow: visible; opacity: 0; }
+      .chave { position: absolute; left: 70px; right: 70px; top: 860px; height: 200px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+      .chave .txt { font-weight: 800; font-size: 200px; line-height: 1; letter-spacing: -0.035em; text-transform: uppercase; color: var(--claro); }
+      .chave.forte .txt { color: var(--forte); }
+      .chave .p { display: inline-block; }
+      .base { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
+      .legenda { position: absolute; left: 70px; right: 70px; top: 1150px; height: 90px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+      .legenda .txt { font-family: "{{CORPO}}", sans-serif; font-weight: 400; font-size: 64px; line-height: 1.15; color: var(--legenda); }
+      /* A barra na cor de destaque: sublinha cada palavra-chave, vira um traço curto na troca e a linha do fecho */
+      #barra { position: absolute; left: 0; top: 0; width: 0; height: 14px; border-radius: 7px; background: var(--linha); }
+      #fecho-nome { position: absolute; left: 70px; right: 70px; top: 840px; height: 140px; display: flex; align-items: center; justify-content: center; white-space: nowrap; opacity: 0;
+        font-weight: 800; font-size: 120px; line-height: 1; letter-spacing: -0.02em; color: var(--claro); }
+      #fecho-logo { position: absolute; left: 220px; top: 700px; width: 640px; height: 280px; object-fit: contain; object-position: center bottom; opacity: 0; }
+      #fecho-assinatura { position: absolute; left: 90px; right: 90px; top: 1050px; text-align: center; opacity: 0;
+        font-family: "{{CORPO}}", sans-serif; font-weight: 400; font-size: 52px; line-height: 1.2; color: var(--legenda); }
+    </style>
+  </head>
+  <body>
+    <div id="raiz" data-composition-id="editor-chefe" data-start="0" data-duration="{{DURACAO}}" data-fps="60" data-width="1080" data-height="1920">
+      <div id="grade"></div>
+      <div id="icones"></div>
+      <div id="barra"></div>
+      <div id="cenas"></div>
+      <div id="fecho">
+{{FECHO}}
+      </div>
+{{AUDIO}}
+    </div>
+    <script>
+      const D = {{DADOS}};
+      const EC = window.EditorChefe, novo = EC.novo, P = D.palavras;
+      const tl = gsap.timeline({ paused: true });
+
+      // Cores: a palavra-chave e o nome na cor clara (com 7:1 contra o fundo), a legenda um pouco mais apagada (4,6:1), o ápice
+      // na cor de destaque clareada até 4,6:1, a barra e os ícones na cor de destaque com pelo menos 3:1
+      const cor = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), em = (x) => `rgb(${x.join(",")})`;
+      const CLARO = cor("--fundo-claro"), ESCURO = cor("--fundo-escuro"), DESTAQUE = cor("--destaque"), css = document.documentElement.style;
+      css.setProperty("--claro", em(EC.legivel(CLARO, [255, 255, 255], ESCURO, 7)));
+      css.setProperty("--legenda", em(EC.legivel(EC.mistura(CLARO, ESCURO, 0.18), CLARO, ESCURO, 4.6)));
+      css.setProperty("--forte", em(EC.legivel(DESTAQUE, CLARO, ESCURO, 4.6)));
+      css.setProperty("--linha", em(EC.legivel(DESTAQUE, CLARO, ESCURO, 3)));
+      const LINHA = cor("--linha"), DETALHE = em(EC.legivel(EC.mistura(CLARO, ESCURO, 0.55), CLARO, ESCURO, 2.2));
+
+      const sem = (s) => s.replace(/^["'“‘(]+|[.,;:!?…"'”’)]+$/g, ""); // a palavra sem a pontuação colada
+      const caber = (e, larg, min) => { let s = parseFloat(getComputedStyle(e).fontSize); while (s > min && e.offsetWidth > larg) e.style.fontSize = (s -= 2) + "px"; };
+      const pulso = (el, t) => tl.to(el, { keyframes: [{ scale: 1.12, duration: 0.001, ease: "none" }, { scale: 1, duration: 0.35, ease: "expo.out" }] }, t);
+      // Ícone da biblioteca do Editor Chefe (EC.ICONES, grade 64x64): traço na cor de destaque, detalhe ("~") mais apagado
+      const NS = "http://www.w3.org/2000/svg";
+      function icone(nome, id) {
+        const el = document.getElementById("icones").appendChild(document.createElementNS(NS, "svg"));
+        Object.entries({ id, class: "icone", viewBox: "0 0 64 64", fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }).forEach(([k, v]) => el.setAttribute(k, v));
+        const tracos = EC.ICONES[nome].map((d, k) => {
+          const p = el.appendChild(document.createElementNS(NS, "path"));
+          Object.entries({ id: `${id}-traco-${k + 1}`, d: d.replace(/^~/, ""), stroke: d.startsWith("~") ? DETALHE : LINHA, "stroke-width": 1.6, pathLength: 1, "stroke-dasharray": 1, "stroke-dashoffset": 1 })
+            .forEach(([a, v]) => p.setAttribute(a, v));
+          return p;
+        });
+        return { nome, el, tracos };
+      }
+
+      function montar() {
+        const cenas = document.getElementById("cenas"), barra = document.getElementById("barra");
+        let ic = null;
+        D.cenas.forEach((c, i) => {
+          const id = `chave-${i + 1}`, el = cenas.appendChild(novo("div", c.apice ? "chave forte" : "chave", id));
+          const txt = el.appendChild(novo("span", "txt", `${id}-texto`)), ws = [];
+          for (let k = c.de; k <= c.ate; k++) { if (k > c.de) txt.append(" "); ws.push(txt.appendChild(novo("span", "p", `${id}-p${k - c.de + 1}`, sem(P[k][0])))); }
+          const base = txt.appendChild(novo("span", "base"));
+          for (const e of [txt, ...ws]) e.setAttribute("data-layout-allow-overflow", ""); // a batida passa da caixa por um instante, de propósito
+          caber(txt, 940, 60);
+          const larg = txt.offsetWidth, fs = parseFloat(getComputedStyle(txt).fontSize), barraEm = { x: 540 - larg / 2, y: el.offsetTop + base.offsetTop + Math.round(0.12 * fs) + 4, width: larg };
+          if (!i) { // capa: já na tela no quadro 0; pulsa quando é dita
+            gsap.set(barra, barraEm);
+            pulso(txt, c.t);
+          } else {
+            ws.forEach((w, k) => tl.fromTo(w, { opacity: 0, scale: 1.14 }, { opacity: 1, scale: 1, duration: 0.32, ease: "expo.out" }, P[c.de + k][1]));
+            tl.to(barra, { ...barraEm, duration: 0.32, ease: "expo.out" }, c.t);
+          }
+          // Sai 0,25 s antes da seguinte bater; a barra vira um traço curto no meio, onde a próxima vai bater
+          tl.to(el, { opacity: 0, duration: 0.2, ease: "power2.in" }, c.sai);
+          tl.to(barra, { x: 522, width: 36, duration: 0.2, ease: "power2.inOut" }, c.sai);
+
+          // Ícone: desenha quando a palavra é dita (na capa, já desenhado); o mesmo ícone na seguinte fica e pulsa
+          if (c.icone && ic && ic.nome === c.icone) pulso(ic.el, c.t);
+          else if (c.icone) {
+            ic = icone(c.icone, `icone-${i + 1}`);
+            if (!i) { gsap.set(ic.el, { opacity: 1 }); gsap.set(ic.tracos, { attr: { "stroke-dashoffset": 0 } }); pulso(ic.el, c.t); }
+            else {
+              tl.to(ic.el, { opacity: 1, duration: 0.12, ease: "none" }, c.t);
+              ic.tracos.forEach((p, k) => tl.to(p, { attr: { "stroke-dashoffset": 0 }, duration: 0.5, ease: "power2.inOut" }, c.t + 0.07 * k));
+            }
+          }
+          const prox = D.cenas[i + 1];
+          if (ic && c.icone && (!prox || prox.icone !== c.icone)) {
+            tl.to(ic.tracos, { attr: { "stroke-dashoffset": 1 }, duration: 0.2, ease: "power2.in" }, c.sai);
+            tl.to(ic.el, { opacity: 0, duration: 0.05, ease: "none" }, c.sai + 0.2);
+            ic = null;
+          }
+        });
+
+        // Legenda: cada palavra se escreve letra a letra no instante em que é dita; o grupo sai antes do seguinte
+        D.legenda.forEach((g, n) => {
+          const id = `legenda-${n + 1}`, el = cenas.appendChild(novo("div", "legenda", id)), txt = el.appendChild(novo("span", "txt", `${id}-texto`));
+          for (let k = g.de; k <= g.ate; k++) {
+            if (k > g.de) txt.append(" ");
+            const w = txt.appendChild(novo("span", "", `${id}-p${k - g.de + 1}`));
+            const letras = [...P[k][0]].map((ch) => { const s = w.appendChild(novo("span", "", null, ch)); s.style.opacity = 0; return s; });
+            tl.to(letras, { opacity: 1, duration: 0.12, stagger: 0.025, ease: "none" }, P[k][1]);
+          }
+          caber(txt, 940, 40);
+          tl.to(el, { opacity: 0, duration: 0.15, ease: "power2.in" }, g.sai);
+        });
+
+        // Fecho: a barra vira a linha entre o nome (ou o logo) e a assinatura
+        const nome = document.getElementById("fecho-nome") ?? document.getElementById("fecho-logo"), ass = document.getElementById("fecho-assinatura");
+        if (nome.id === "fecho-nome") caber(document.getElementById("fecho-nome-texto"), 940, 48);
+        tl.to(barra, { x: 460, y: 1010, width: 160, duration: 0.4, ease: "power3.inOut" }, D.fecho.t);
+        tl.fromTo(nome, { opacity: 0, scale: 1.1 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, D.fecho.t);
+        if (ass) tl.fromTo(ass, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, D.fecho.assinatura);
+        window.__timelines["editor-chefe"] = tl;
+      }
+
+      // Monta depois das fontes (as medidas dependem delas); monta mesmo se uma fonte não carregar
+      Promise.all([document.fonts.load(`800 200px "{{TITULO}}"`), document.fonts.load(`400 64px "{{CORPO}}"`)]).catch(() => {}).then(montar);
+    </script>
+  </body>
+</html>
