@@ -14,4 +14,21 @@ if acha -f tests/.proibidos -- plugins/editor-chefe tests; then echo "nome proib
 if acha $'\xe2\x80\x94|\xe2\x80\x93'; then echo "travessão"; exit 1; fi # travessões em bytes, para este arquivo não achar a si mesmo
 [ ! -d plugins/editor-chefe/bin ]
 [ ! -e plugins/editor-chefe/hooks ] # sem gancho de sessão: o PATH do usuário só muda com o prefixo eval
+# Catálogo único dos estilos: cada estilo tem a referência e o molde, a lista bate com os arquivos e a SKILL não guarda lista própria
+SK=plugins/editor-chefe/skills/editor-chefe
+CAT=$SK/references/catalogo.md
+[ -f "$CAT" ] || { echo "falta $CAT"; exit 1; }
+PARES=$(awk '/^## Estilos/{d=1;next} /^## /{d=0} d' "$CAT" | sed -nE 's/^([0-9]+)\. \*\*[^*]+\*\* \(`([a-z0-9-]+)`\).*/\1:\2/p')
+[ "$(printf '%s\n' "$PARES" | cut -d: -f1 | paste -sd, -)" = "1,2,3,4,5,6,7,8,9,10" ] || { echo "catálogo: os estilos precisam ser os números de 1 a 10, em ordem"; exit 1; }
+for id in $(printf '%s\n' "$PARES" | cut -d: -f2); do
+  { [ -f "$SK/references/estilos/$id.md" ] && [ -f "plugins/editor-chefe/estilos/$id.html" ]; } || { echo "catálogo: falta a referência ou o molde de $id"; exit 1; }
+done
+[ "$(printf '%s\n' "$PARES" | cut -d: -f2 | sort)" = "$(cd $SK/references/estilos && ls *.md | sed 's/\.md$//' | sort)" ] || { echo "catálogo: a lista não bate com os arquivos de references/estilos"; exit 1; }
+grep -q 'references/catalogo.md' $SK/SKILL.md || { echo "a SKILL precisa citar references/catalogo.md"; exit 1; }
+if grep -qE '^[[:space:]]*[0-9]+\. .*\(`[a-z-]+`\)' $SK/SKILL.md; then echo "a SKILL ainda tem lista própria de estilos ou de capas"; exit 1; fi
+# Capas: o capas.md cita o catálogo e tem os ids das capas da seção "## Capas" dele
+IDCAPAS=$(awk '/^## Capas/{d=1;next} /^## /{d=0} d' "$CAT" | sed -nE 's/^[0-9]+\. \*\*[^*]+\*\* \(`([a-z0-9-]+)`\).*/\1/p')
+[ -n "$IDCAPAS" ] || { echo "catálogo: a seção Capas está vazia"; exit 1; }
+grep -q 'catalogo.md' $SK/references/capas.md || { echo "o capas.md precisa citar o catálogo"; exit 1; }
+for id in $IDCAPAS; do grep -q "\`$id\`" $SK/references/capas.md || { echo "capas.md: falta a capa $id"; exit 1; }; done
 echo OK

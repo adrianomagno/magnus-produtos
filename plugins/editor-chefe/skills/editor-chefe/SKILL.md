@@ -22,31 +22,17 @@ Este fluxo vem primeiro. As skills da HyperFrames (`hyperframes-core`, `embedded
 
 ## O fluxo de um vídeo
 
+**Pedido já preenchido:** se o pedido chegou com algo já escolhido (estilo, capa, gancho, trecho, tipo de vídeo, texto da caixinha ou texto do estilo 10), não siga em silêncio. Antes do passo 1, confirme tudo com o dono em uma linha, lendo `references/catalogo.md` para dizer o nome do estilo, por exemplo "Estilo 1, Legenda viva, sem capa: confirma?". A confirmação serve para o que o Magnus dele preparou e para texto colado cuja origem você não tem como saber. Se o próprio dono disse isso, com as palavras dele, nesta conversa, já está confirmado: não pergunte. O que ele confirmar vale e não se pergunta de novo; o que ele mudar, ou não confirmar, segue as perguntas normais dos passos abaixo.
+
 1. **O vídeo:** se o dono não tem gravação e quer um vídeo só de animação, narrado por voz, é o estilo 10: pule para o passo 2 e siga `references/estilos/motion-narrado.md`, que pede o texto e a voz no lugar do vídeo. Nos outros casos, peça o caminho do arquivo no computador (por exemplo, `Downloads/meu-video.mov`), não que ele arraste o vídeo para a conversa. Se ele não souber, peça o nome do arquivo e procure em Downloads, Mesa (Área de Trabalho) e Documentos. Crie a pasta `Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/` e trabalhe só nela. Meça a duração (`ffprobe -v error -show_entries format=duration -of csv=p=0 <vídeo>`). Se passar de 90 segundos e o pedido não disse o trecho, diga a duração em minutos e segundos e pergunte se ele quer usar o vídeo inteiro ou só uma parte, de onde até onde (como aparece no player, por exemplo "do começo até 1:44"). O corte do trecho está em `references/audio-e-corte.md`, passo 3.
-2. **O estilo:** mostre a galeria (link em `references/entrega.md`) e esta lista numerada; o dono escolhe. Depois leia `references/estilos/<id>.md` do escolhido.
-   1. Legenda viva (`legenda-viva`): 3 ou 4 palavras por vez, a palavra falada em destaque.
-   2. Palavra-chave (`palavra-chave`): só a palavra forte de cada frase, grande na tela.
-   3. Corte seco (`corte-seco-zoom`): sem pausas, enquadramento alternando a cada frase.
-   4. Painel escuro (`painel-escuro`): fundo escuro, cartões de informação, legenda em caixa.
-   5. Editorial claro (`editorial-claro`): fundo claro, a pessoa num cartão, uma palavra por vez.
-   6. Caixinha de pergunta (`caixinha-pergunta`): a pergunta numa caixinha igual à do Instagram, o vídeo inteiro, com a legenda embaixo.
-
-   Tela dividida (a pessoa grande na metade de baixo, texto ou animação na de cima, legenda no meio):
-
-   7. Painel escuro dividido (`painel-escuro-dividido`): fundo escuro em cima, com os cartões de informação.
-   8. Editorial claro dividido (`editorial-claro-dividido`): fundo claro em cima, com o título do cartão; uma palavra por vez no meio.
-   9. Motion dividido (`motion-dividido`): em cima, uma animação com ícones para cada ideia, feita com as palavras da fala.
-
-   Sem gravação (só animação, narrada por voz a partir de um texto do dono):
-
-   10. Motion narrado (`motion-narrado`): cada palavra-chave entra grande na tela no instante em que é dita, com a legenda da narração embaixo; de 20 a 30 segundos.
+2. **O estilo:** se o estilo ainda não está definido, mostre a galeria (link em `references/entrega.md`) e a lista dos estilos de `references/catalogo.md`, com os três grupos (o número, o nome e o que cada um faz); o dono escolhe pelo número. Com o estilo definido, leia `references/estilos/<id>.md` dele (o `id` de cada estilo está no catálogo).
 
    Nos estilos de 1 a 5 e de 7 a 9, pergunte também que tipo de vídeo é, a não ser que o pedido já tenha dito (a Caixinha de pergunta não tem efeito sonoro, e o Motion narrado sempre leva: não pergunte):
    1. Depoimento, entrevista ou conversa: sai sem efeitos sonoros (`"efeitos": false` no `escolhas.json`).
    2. Dica, aula, venda ou outro: leva efeitos sonoros curtos por baixo da voz.
 
    Se ele quiser o contrário do que o tipo indica, vale o que ele disser.
-3. **O gancho de capa (opcional), ou os textos da caixinha no estilo 6:** no estilo 10 não há esta etapa: a primeira palavra-chave já é a capa.
+3. **O gancho de capa (opcional), ou os textos da caixinha no estilo 6:** no estilo 10 não há esta etapa: a primeira palavra-chave já é a capa. Se a capa (ou, no estilo 6, a pergunta da caixinha) ainda não está definida, siga abaixo; o que já está definido vale e não se pergunta de novo.
    - **Estilos de 1 a 5 e de 7 a 9:** se ele já pediu capa ou o texto do gancho já veio no pedido, não pergunte se ele quer capa; só pergunte qual das três capas (1 a 3) e siga `references/capas.md`. Se não veio, pergunte "Quer um gancho de capa nos primeiros segundos?". Se ele quiser, siga `references/capas.md`: as três capas da galeria (ele escolhe pelo número) e se ele já tem o texto do gancho (limite de 8 palavras). Se ele não tiver o texto, diga em palavras simples que você vai ouvir o vídeo primeiro e depois mostra 3 sugestões; as sugestões saem na edição (passo 5), logo depois dos passos 1 e 2 de `audio-e-corte.md`, com a fala já corrigida. Se não quiser capa, siga em frente sem ela.
    - **Estilo 6 (Caixinha de pergunta):** não pergunte sobre capa: a caixinha já é a capa do vídeo. Peça a chamada (a frase da faixa escura) só se o `marca.json` ainda não tem `chamada_caixinha`. A pergunta da caixinha vem na mesma ordem do gancho: veio no pedido, use; não veio, pergunte se ele já tem e peça que cole; não tem, diga que vai ouvir o vídeo primeiro e sugira 3 no passo 5, com a fala já corrigida. Se veio no pedido um gancho de capa, diga ao dono, em palavras simples, que neste estilo a caixinha faz o papel de capa e pergunte se aquele texto é a pergunta da caixinha. Detalhes em `references/estilos/caixinha-pergunta.md`.
 4. **A marca:** siga `references/marca.md`.

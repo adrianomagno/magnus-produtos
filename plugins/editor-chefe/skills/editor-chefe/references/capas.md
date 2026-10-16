@@ -8,11 +8,7 @@ Logo depois que o dono escolheu o estilo, antes da marca, como manda o passo 3 d
 
 ## As três capas
 
-Mostre o link da seção de capas da galeria (o endereço base está em `entrega.md`): https://adrianomagno.github.io/magnus-produtos/galeria/#capas. Junto com o link, mostre esta lista numerada, e o dono escolhe pelo número:
-
-1. Faixa (`faixa`): tarja na cor de destaque no topo, frase em letras maiúsculas, o vídeo logo abaixo.
-2. Manchete (`manchete`): frase grande sobre o vídeo, abaixo do rosto, com o fundo escurecido por baixo.
-3. Editorial (`editorial`): fundo clareado embaixo, frase com a palavra forte em itálico.
+Mostre o link da seção de capas da galeria (o endereço base está em `entrega.md`): https://adrianomagno.github.io/magnus-produtos/galeria/#capas. Junto com o link, mostre a lista da seção "Capas" de `references/catalogo.md` (o número, o nome e o que cada uma faz), e o dono escolhe pelo número. Os nomes que o `escolhas.json` usa são os do catálogo: `faixa`, `manchete` e `editorial`.
 
 ## O texto do gancho, nesta ordem
 
