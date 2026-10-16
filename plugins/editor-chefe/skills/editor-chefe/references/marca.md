@@ -29,10 +29,9 @@ Fontes: baixe cada família de `fontes` direto na pasta `fonts/` da pasta do ví
 
 ## Voz (só o Motion narrado)
 
-- **A voz:** `voz.elevenlabs_voice_id` é o ID de uma voz da conta do dono na ElevenLabs (no site, em Voices, o botão de copiar o ID da voz). Pode ser o clone da voz do próprio dono, que ele mesmo cria na conta dele e só com a voz dele, ou uma voz pronta da biblioteca da ElevenLabs. Não há voz padrão: sem esse campo, o `voz-com-tempos.mjs` para e pede.
+- **A voz:** `voz.elevenlabs_voice_id` é o ID de uma voz da conta do dono na ElevenLabs (no site, em Voices, o botão de copiar o ID da voz). Pode ser qualquer voz da conta dele, a que ele escolher. Não há voz padrão: sem esse campo, o `voz-com-tempos.mjs` para e pede.
 - **O ritmo:** `voz.ritmo` (opcional) é a velocidade da fala, em palavras por segundo; o padrão é 2,54. A voz é acelerada até 10% para chegar nele, nunca desacelerada.
 - **O logo:** `logo` (opcional) é o caminho de um PNG, JPG, WebP ou SVG a partir da pasta do `marca.json`, de preferência a versão clara com fundo transparente, porque o fecho fica sobre o fundo escuro. Sem logo, o fecho mostra o `nome`.
-- **A licença:** se o perfil do dono vende alguma coisa, o plano da ElevenLabs precisa ter licença comercial, que vem nos planos pagos, a partir do Starter; o gratuito não inclui. Peça a ele que confira a página de preços da ElevenLabs antes do primeiro vídeo.
 - **A chave da API** fica só no computador do dono, num arquivo que só ele lê, e **nunca** na conversa. Ele cria a chave no site da ElevenLabs (no perfil, em API Keys; se o site oferecer, só com a permissão de texto para fala) e guarda com um comando de uma linha, no Terminal do Mac ou no Git Bash do Windows (vem com o Git que o Claude Code usa); o comando chama o `bash`, então vale também no zsh, o padrão do Mac. Mande este comando a ele com a pasta de dados escrita por extenso no lugar de CLAUDE_PLUGIN_DATA entre chaves, porque o Terminal dele não conhece essa variável (no Windows, com barras normais, como `C:/Users/...`):
 
       bash -c 'read -rsp "Chave da ElevenLabs (não aparece na tela): " K; echo; umask 077; printf %s "$K" > "$1"; chmod 600 "$1"' _ "${CLAUDE_PLUGIN_DATA}/chave-elevenlabs"

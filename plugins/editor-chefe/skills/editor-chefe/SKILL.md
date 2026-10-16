@@ -55,7 +55,7 @@ Nunca diga "instalado" ou "pronto" antes do `AUTOTESTE OK`. Nunca diga "se der p
 ## Regras
 
 - Nunca mude o sentido do que a pessoa falou, nunca reordene frases sem pedir.
-- Nunca use música gerada nem imagem de terceiros. Voz sintética, só no estilo 10, com a voz do `marca.json` que o dono escolheu e sobre o texto que ele aprovou. Os únicos sons além da voz são os efeitos sonoros do plugin hyperframes que o `montar.mjs` põe (licença Pixabay); se o dono não quiser, `"efeitos": false` no `escolhas.json`.
+- Os sons que o Editor Chefe põe por conta própria são só os efeitos sonoros do plugin hyperframes que o `montar.mjs` usa (licença Pixabay); se o dono não quiser, `"efeitos": false` no `escolhas.json`. No estilo 10, a voz é a do `marca.json` que o dono escolheu, sobre o texto que ele aprovou.
 - Escreva para o dono em português simples, sem termo técnico.
 
 ## Atualização

@@ -71,7 +71,7 @@ Na conversa do MAGNUS:
 Na conversa do MAGNUS:
 > Escreva um texto de 55 a 70 palavras para o estilo 10 do Editor Chefe sobre [assunto], me mostre e, com o meu ok, prepare o pedido.
 
-Na primeira vez do estilo 10, o Editor Chefe orienta como usar uma voz autorizada da sua conta na ElevenLabs e como guardar a chave só no seu computador.
+Na primeira vez do estilo 10, o Editor Chefe orienta como escolher a voz da sua conta na ElevenLabs e como guardar a chave só no seu computador.
 
 ### Atualizar
 Quando o MAGNUS avisar, cole numa conversa Local:

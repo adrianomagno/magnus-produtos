@@ -9,8 +9,8 @@
 ## Antes de começar, confira
 
 - **O texto aprovado pelo dono**, com 55 a 70 palavras (cerca de 20 a 30 s). Frase que ele já disse rende mais que frase de efeito escrita do zero. A voz fala exatamente o que estiver escrito: mostre o texto final e espere o ok dele antes de gerar a voz, porque cada geração gasta créditos da conta dele.
-- **A voz:** `voz.elevenlabs_voice_id` no `marca.json` (`marca.md`, seção "Voz"). Pode ser o clone do próprio dono, feito por ele e com o consentimento dele, ou uma voz pronta da biblioteca da ElevenLabs. Nunca a voz de outra pessoa sem a autorização dela.
-- **A chave** da ElevenLabs guardada no computador do dono, pelo comando de `marca.md`, nunca no pacote e nunca escrita na conversa. Se o perfil vende alguma coisa, o plano da ElevenLabs precisa ter licença comercial.
+- **A voz:** `voz.elevenlabs_voice_id` no `marca.json` (`marca.md`, seção "Voz"). É a voz da conta dele na ElevenLabs que ele escolher.
+- **A chave** da ElevenLabs guardada no computador do dono, pelo comando de `marca.md`, nunca no pacote e nunca escrita na conversa.
 
 ## Desenho
 

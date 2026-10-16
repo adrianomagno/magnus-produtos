@@ -1,6 +1,6 @@
 {
   "name": "editor-chefe",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Editor de vídeo do MAGNUS: galeria de estilos, corte de pausas, legenda e marca do negócio. O vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.",
   "author": { "name": "Equipe MAGNUS" },
   "dependencies": ["hyperframes"]
