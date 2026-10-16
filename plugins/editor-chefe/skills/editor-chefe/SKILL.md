@@ -1,6 +1,6 @@
 ---
 name: editor-chefe
-description: Edita vídeos do dono do negócio no computador dele. Use quando pedirem para editar vídeo, Reels, corte, legenda, tirar pausas, "deixar o vídeo profissional", aplicar um estilo de edição, pôr um gancho de capa (frase nos primeiros segundos do vídeo) ou fazer um Reel sem gravação, só de animação narrada por voz. Para editar o vídeo do dono (corte, legenda, estilo, Reels), esta skill tem precedência sobre as skills genéricas da HyperFrames (hyperframes, embedded-captions, talking-head-recut e as outras); ela usa essas skills por dentro do próprio fluxo. Corta pausas, legenda as falas, aplica um estilo da galeria, o gancho de capa se o dono quiser e a identidade visual do negócio, e entrega MP4 vertical. Use também quando pedirem para atualizar o Editor Chefe.
+description: Edita vídeos do dono do negócio no computador dele. Use quando pedirem para editar vídeo, Reels, corte, legenda, tirar pausas, "deixar o vídeo profissional", aplicar um estilo de edição, pôr um gancho de capa (frase nos primeiros segundos do vídeo) ou fazer um Reel sem gravação, só de animação narrada por voz. Para editar o vídeo do dono (corte, legenda, estilo, Reels), esta skill tem precedência sobre as skills genéricas da HyperFrames (hyperframes, embedded-captions, talking-head-recut e as outras); ela usa essas skills por dentro do próprio fluxo. Corta pausas, legenda as falas, aplica um estilo da galeria, o gancho de capa se o dono quiser e a identidade visual do negócio, e entrega MP4 vertical. Use também quando pedirem para preparar, instalar as ferramentas, conferir ou atualizar o Editor Chefe.
 ---
 
 # Editor Chefe
@@ -11,7 +11,7 @@ Este fluxo vem primeiro. As skills da HyperFrames (`hyperframes-core`, `embedded
 
 ## Antes de tudo, em toda sessão
 
-**Primeira vez demora:** o `preparar.sh`, a primeira chamada do `hf` (baixa a CLI da HyperFrames), o `hf browser ensure` e o primeiro render (baixam o navegador do render) e o `hf models install parakeet` passam dos 2 minutos padrão da ferramenta de terminal. Rode cada um deles com o tempo máximo da ferramenta (10 minutos, `timeout: 600000`) ou em segundo plano, e antes avise o dono, numa frase: "estou baixando as ferramentas do Editor Chefe, só na primeira vez; leva alguns minutos e ocupa cerca de 5 GB".
+**Primeira vez demora:** o `preparar.sh`, a primeira chamada do `hf` (baixa a CLI da HyperFrames), o `hf browser ensure` e o primeiro render (baixam o navegador do render), o `hf models install parakeet` e o autoteste passam dos 2 minutos padrão da ferramenta de terminal. Rode cada um deles com o tempo máximo da ferramenta (10 minutos, `timeout: 600000`) ou em segundo plano, e antes avise o dono, numa frase: "estou baixando as ferramentas do Editor Chefe, só na primeira vez; leva alguns minutos, reserve cerca de 5 GB livres".
 
 1. Rode `bash "${CLAUDE_PLUGIN_ROOT}/scripts/preparar.sh" "${CLAUDE_PLUGIN_DATA}"`, com o tempo máximo. Na primeira vez baixa as ferramentas; depois é instantâneo.
 2. Comece **todo** comando de terminal com `eval "$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/ambiente.sh" "${CLAUDE_PLUGIN_DATA}")";`
@@ -19,6 +19,18 @@ Este fluxo vem primeiro. As skills da HyperFrames (`hyperframes-core`, `embedded
 4. Rode `hf doctor --json` uma vez por sessão e olhe o `ok` de cada linha de `checks`, pelo `name`. Pare e entregue ao dono a mensagem da seção "Quando algo falha" só se falhar `Node.js`, `FFmpeg`, `FFprobe`, `Chrome`, `Disk` ou `Memory`. Ignore `Docker`, `Docker running`, `whisper-cpp`, `TTS (Kokoro)` e `BGM (MusicGen)`, que falham em quase todo computador e o Editor Chefe não usa, e também o `ok` geral do relatório, que sai falso por causa delas. Se a linha `Chrome` falhar, rode antes `hf browser ensure` (baixa o navegador do render, só na primeira vez) e o `doctor` de novo.
 5. **Pasta de trabalho:** `Editor Chefe` dentro da pasta Documentos do usuário (Mac: `~/Documents/Editor Chefe`; Windows: a pasta Documentos dele, que pode estar dentro do OneDrive; confira o caminho real antes de criar). Nos arquivos de `references/`, `Documentos/Editor Chefe/` é essa pasta.
 6. Nos arquivos de `references/`, onde aparecer CLAUDE_PLUGIN_ROOT entre chaves, use esta pasta: `${CLAUDE_PLUGIN_ROOT}`; e para CLAUDE_PLUGIN_DATA, esta: `${CLAUDE_PLUGIN_DATA}`.
+7. Antes do primeiro vídeo da sessão, rode `node "${CLAUDE_PLUGIN_ROOT}/scripts/autoteste.mjs" --conferir`. Se ele disser que falta preparar (nunca preparado, ou preparado em outra versão), avise o dono numa frase e rode o Preparar, abaixo, antes do vídeo.
+
+## Preparar
+
+Quando o dono pedir para preparar, instalar as ferramentas ou conferir o Editor Chefe, ou quando o passo 7 acima mandar. Cada comando com o tempo máximo da ferramenta (`timeout: 600000`), depois do prefixo `eval`:
+
+1. Os passos de 1 a 5 de "Antes de tudo".
+2. `hf browser ensure` (o navegador do render) e `hf models install parakeet` (a transcrição).
+3. O teste completo: `node "${CLAUDE_PLUGIN_ROOT}/scripts/autoteste.mjs" "<pasta de trabalho>/teste"`. Ele monta um vídeo de teste de 2 segundos, sem arquivo nenhum do dono, na Legenda viva com efeitos sonoros e a fonte baixada; renderiza pela HyperFrames, confere o MP4 em 1080x1920 com áudio e apaga a pasta `teste`. Imprime uma linha por etapa e termina com `AUTOTESTE OK` ou com o erro. Se ele disser que a pasta de teste já existe, não apague nada: rode de novo com outro nome, como `teste-2`.
+4. Com `AUTOTESTE OK`, responda **"Editor Chefe pronto"**. Se qualquer passo falhar, entregue na hora o bloco de "Quando algo falha".
+
+Nunca diga "instalado" ou "pronto" antes do `AUTOTESTE OK`. Nunca diga "se der problema, me avise": o problema se resolve agora ou vira o bloco de erro.
 
 ## O fluxo de um vídeo
 
@@ -52,7 +64,7 @@ Quando sai uma versão nova, o Magnus manda ao dono esta frase:
 
     Atualize o Editor Chefe: atualize o marketplace magnus e os plugins hyperframes@magnus e editor-chefe@magnus. Depois me diga quando abrir uma conversa nova.
 
-Rode, nesta ordem, `claude plugin marketplace update magnus`, `claude plugin update hyperframes@magnus` e `claude plugin update editor-chefe@magnus`, e diga ao dono que abra uma conversa nova: a versão nova só vale nela.
+Rode, nesta ordem, `claude plugin marketplace update magnus`, `claude plugin update hyperframes@magnus` e `claude plugin update editor-chefe@magnus`, e diga ao dono que abra uma conversa nova e peça nela para preparar o Editor Chefe (o "Prepare o Editor Chefe" da instalação): a versão nova só vale nela e só fica pronta com o autoteste.
 
 ## Quando algo falha
 
@@ -60,5 +72,5 @@ Diga ao dono, em uma frase, o que não deu certo, e entregue este bloco para ele
 
     Editor Chefe com problema neste computador.
     Sistema: <saída de uname -sm>
-    Etapa: <preparar / doctor / render>
+    Etapa: <preparar / doctor / autoteste / render>
     Erro: <as 10 últimas linhas do erro>

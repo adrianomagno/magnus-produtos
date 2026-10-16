@@ -46,4 +46,6 @@ O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 se
 
 O Magnus lê este catálogo para falar dos estilos e das capas com o dono: mostrar o que cada um faz e explicar o que o estilo pede (a gravação, a pergunta da caixinha, o texto e a voz). Mas ele não escolhe por ele. O estilo, a capa, o gancho e o trecho do vídeo só vão no pedido se o dono disse qual. Se ele ainda não disse, o pedido segue sem isso e o Editor Chefe pergunta.
 
+Se o vídeo tem roteiro escrito (por exemplo, pelo próprio Magnus), o pedido leva o roteiro junto. O Editor Chefe usa o roteiro para escrever certo os nomes, as marcas e os termos da legenda e como primeira fonte das sugestões de gancho de capa e de pergunta da caixinha. A legenda é sempre a fala real: onde o roteiro e a fala divergem, vale a fala.
+
 Tudo o que vier já escolhido no pedido (estilo, capa, gancho, trecho, tipo de vídeo, texto da caixinha ou texto do estilo 10), o Editor Chefe confirma com o dono numa linha antes de começar. Só não confirma o que o próprio dono disse, com as palavras dele, na conversa.

@@ -15,6 +15,9 @@ import { createRequire } from "node:module";
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EC = createRequire(import.meta.url)(join(RAIZ, "estilos", "comum.js"));
 const F = 30;
+// Tempo máximo de cada ffmpeg/ffprobe (10 min, o mesmo do autoteste). No estouro o spawnSync devolve erro e cada chamada
+// já trata erro; no Windows um processo filho preso pode segurar o retorno mesmo assim (limite do spawnSync).
+const TEMPO_MAX = 600000;
 // Fontes que cada estilo usa
 const USA = {
   "legenda-viva": ["titulo"],
@@ -111,14 +114,14 @@ const FAIXA = { "legenda-viva": [1250, 1470, 70, 1010], "palavra-chave": [1220, 
 const CLARA = 130, CLARA_STOMP = 185; // luma média (0 a 255) da faixa, no 90º percentil dos quadros; acima disso, véu
 function claridade(arq, [y0, y1, x0, x1], foco) {
   // Os binários do ambiente.sh (com .exe no Windows); sem eles e fora do PATH, devolve null e o montador avisa
-  const sonda = spawnSync(process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", arq], { encoding: "utf8" });
+  const sonda = spawnSync(process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", arq], { encoding: "utf8", timeout: TEMPO_MAX });
   if (sonda.error || !sonda.stdout) return null;
   const [W, H] = sonda.stdout.trim().split(",").map(Number);
   if (!(W > 0 && H > 0)) return null;
   const s = Math.max(1080 / W, 1920 / H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
   const x = Math.max(0, Math.round((x0 + (W * s - 1080) * fx) / s)), y = Math.max(0, Math.round((y0 + (H * s - 1920) * fy) / s));
   const w = Math.max(2, Math.min(W - x, Math.round((x1 - x0) / s))), h = Math.max(2, Math.min(H - y, Math.round((y1 - y0) / s)));
-  const r = spawnSync(process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg", ["-hide_banner", "-nostats", "-i", arq, "-vf", `fps=2,crop=${w}:${h}:${x}:${y},signalstats,metadata=print:key=lavfi.signalstats.YAVG`, "-an", "-f", "null", "-"], { encoding: "utf8" });
+  const r = spawnSync(process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg", ["-hide_banner", "-nostats", "-i", arq, "-vf", `fps=2,crop=${w}:${h}:${x}:${y},signalstats,metadata=print:key=lavfi.signalstats.YAVG`, "-an", "-f", "null", "-"], { encoding: "utf8", timeout: TEMPO_MAX });
   if (r.error || !r.stderr) return null;
   const v = [...r.stderr.matchAll(/YAVG=([\d.]+)/g)].map((m) => +m[1]).sort((a, b) => a - b);
   return v.length ? v[Math.floor(v.length * 0.9)] : null;
@@ -318,13 +321,13 @@ const ALVO_DB = { principal: -2, curto: -6, longo: -8 }; // em relação à voz:
 const COM_CORPO = ["click", "pop", "ping"]; // curtos que ganham a camada de impacto grave por baixo
 const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg";
 function ff(args, input) {
-  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", ...args], { input, maxBuffer: 1 << 30 });
+  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", ...args], { input, maxBuffer: 1 << 30, timeout: TEMPO_MAX });
   if (r.error || r.status !== 0) throw new Error(`montar: o ffmpeg falhou ao preparar o áudio (${String(r.error?.message ?? r.stderr).trim().split("\n").pop()}).`);
   return r.stdout;
 }
 // Mono vai inteiro para os dois canais, como na mixagem da HyperFrames (o -ac 2 do ffmpeg baixaria 3 dB)
 function pcm(arq, filtro = "") {
-  const r = spawnSync(process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", arq], { encoding: "utf8" });
+  const r = spawnSync(process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", arq], { encoding: "utf8", timeout: TEMPO_MAX });
   if (r.error || r.status !== 0) throw new Error(`montar: o ffprobe não leu o áudio ${arq}.`);
   const af = [parseInt(r.stdout) === 1 ? "pan=stereo|c0=c0|c1=c0" : "aformat=channel_layouts=stereo", filtro].filter(Boolean).join(",");
   const b = ff(["-i", arq, "-af", af, "-ar", String(SR), "-f", "f32le", "-"]);
@@ -335,7 +338,7 @@ const pico = (x) => { let m = 0, k = 0; for (let i = 0; i < x.length; i++) if (M
 const aoPico = (x, db) => { const g = 10 ** (db / 20) / (pico(x).m || 1); return x.map((v) => v * g); };
 // ebur128: momentâneo de 100 em 100 ms (janela de 400 ms que termina em t), integrado e pico verdadeiro
 function loudness(arq, folga = false) {
-  const r = spawnSync(ffmpeg(), ["-nostats", "-hide_banner", "-i", arq, "-af", `${folga ? "apad=pad_dur=1," : ""}ebur128=peak=true`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 1 << 28 });
+  const r = spawnSync(ffmpeg(), ["-nostats", "-hide_banner", "-i", arq, "-af", `${folga ? "apad=pad_dur=1," : ""}ebur128=peak=true`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 1 << 28, timeout: TEMPO_MAX });
   if (r.error || r.status !== 0) throw new Error(`montar: o ffmpeg não mediu o volume de ${arq}.`);
   const M = [...r.stderr.matchAll(/t:\s*([\d.]+)\s+TARGET:\S+ LUFS\s+M:\s*(\S+)/g)].map((m) => [+m[1], Number.isFinite(+m[2]) ? +m[2] : -120]);
   const resumo = r.stderr.slice(r.stderr.lastIndexOf("Summary:"));
