@@ -25,7 +25,7 @@ A skill de copy do aluno da Mentoria High Level: roteiros de Reels, carrosséis,
 
 São duas conversas no app Claude, aba Code:
 - **MAGNUS** (no servidor): você pede o vídeo e ele prepara o pedido. Ele não edita.
-- **Editor Chefe** (Local, no seu computador, pasta Documentos): edita e mostra a prévia. O vídeo não sai do seu computador.
+- **Editor Chefe** (Local, no seu computador, pasta Documentos): edita e mostra a prévia. O arquivo de vídeo fica no seu computador; o Claude lê o texto da fala e alguns quadros para conferir a edição.
 
 ### 1. Abrir a conversa Local
 Aba Code, nova sessão. Escolha **o seu computador (Local)**, não o servidor do MAGNUS, e a pasta **Documentos**. Confira colando:
