@@ -263,7 +263,17 @@
     }
   }
 
-  const api = { naEdicao, mapear, marcar, agrupar, trocas, efeitos, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
+  // Aproximação no rosto (só no navegador): o invólucro #aproximar, que o montar.mjs põe em volta dos trechos, cresce até z
+  // com o centro no rosto (ox, oy, em px da janela) de "de" a "ate" e volta de "volta" a "fim" (planejarAproximacao, no rosto.mjs)
+  function aproximar(tl, lista) {
+    for (const a of lista) {
+      const centro = `${a.ox}px ${a.oy}px`;
+      tl.fromTo("#aproximar", { scale: 1, transformOrigin: centro }, { scale: a.z, transformOrigin: centro, duration: a.ate - a.de, ease: "power2.inOut", immediateRender: false }, a.de);
+      tl.fromTo("#aproximar", { scale: a.z, transformOrigin: centro }, { scale: 1, transformOrigin: centro, duration: a.fim - a.volta, ease: "power2.inOut", immediateRender: false }, a.volta);
+    }
+  }
+
+  const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.EditorChefe = api;
 })(this);

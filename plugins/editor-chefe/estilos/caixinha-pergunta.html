@@ -90,6 +90,7 @@
           tl.set(p.el, { backgroundColor: "rgba(0,0,0,0)", color: CLARO, textShadow: "" }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
         });
       });
+      if (D.aproximar) EC.aproximar(tl, D.aproximar);
       window.__timelines["editor-chefe"] = tl;
     </script>
   </body>

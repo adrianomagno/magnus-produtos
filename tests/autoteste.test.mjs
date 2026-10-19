@@ -44,6 +44,8 @@ test('sem render: monta o projeto sintético na Legenda viva com efeitos, não g
   const r = autoteste(pasta, { render: false, baixarFonte: fonteFalsa, dados, avisar: (m) => linhas.push(m) });
   assert.equal(r.montagem.trechos, 2);
   assert.ok(r.montagem.efeitos > 0, 'os efeitos sonoros da HyperFrames entram');
+  assert.equal(r.montagem.aproximacoes, 1, 'a aproximação no rosto entra, no rastro de rosto de mentira');
+  assert.match(linhas.join('\n'), /visual de cor forte/);
   assert.equal(linhas.at(-1), 'AUTOTESTE SEM RENDER OK');
   assert.ok(!existsSync(pasta));
   assert.ok(!existsSync(join(dados, 'pronto')));

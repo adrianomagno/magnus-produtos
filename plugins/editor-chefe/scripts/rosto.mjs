@@ -117,22 +117,107 @@ export async function reenquadrar(pasta, estilo, { dados, avisar = () => {} } = 
   const fim = (estado, extra = {}) => {
     if (estado !== "seguindo" && estado !== "parado") copyFileSync(inteira, fonte);
     const r = { estado, estilo, janela: [bw, bh], ...extra };
-    writeFileSync(rel, JSON.stringify(r, null, 1)); // depois da fonte.mp4: é a marca de que ela já é a saída deste script
+    writeFileSync(rel, JSON.stringify(r)); // depois da fonte.mp4: é a marca de que ela já é a saída deste script
     return r;
   };
-  if (W / H <= (bw / bh) * 1.02) return fim("sem sobra"); // vídeo já estreito como a janela: nada para seguir dos lados
+  const sobra = W / H > (bw / bh) * 1.02; // vídeo mais largo que a janela: dá para seguir o rosto dos lados
   const det = await detector(dados);
-  if (!det) { avisar("rosto: o detector de rosto não está nesta pasta de dados (rode o preparar.sh); segue com o foco fixo."); return fim("sem detector"); }
-  const cw = Math.round((H * bw) / bh / 2) * 2, qps = duracao > 180 ? 2 : 5, centros = [];
+  if (!det) {
+    if (!sobra) return fim("sem sobra");
+    avisar("rosto: o detector de rosto não está nesta pasta de dados (rode o preparar.sh); segue com o foco fixo.");
+    return fim("sem detector");
+  }
+  // O rastro do rosto (centro, largura e altura do maior rosto em cada amostra, em px da fonte inteira) fica no rosto.json
+  // mesmo sem recorte: é dele que o montar.mjs tira a aproximação no rosto. Sem sobra, 2 amostras por segundo bastam.
+  // ponytail: no vídeo em pé, com sobra zero, o rastro é só para a aproximação; 2 por segundo deixa de pegar movimento rápido
+  const cw = Math.round((H * bw) / bh / 2) * 2, qps = !sobra || duracao > 180 ? 2 : 5, centros = [], caixas = [];
   for await (const q of quadros(inteira, W, H, 480, qps)) {
     const r = (await det(q.px, q.largura, q.altura)).sort((a, b) => b.w * b.h - a.w * a.h)[0]; // o maior rosto: quem fala, perto da câmera
     centros.push(r ? r.x * q.escala : null);
+    caixas.push(r ? [r.x, r.y, r.w, r.h].map((v) => Math.round(v * q.escala)) : null);
   }
-  const achados = centros.filter((c) => c != null).length;
-  if (achados < 0.3 * centros.length) return fim("sem rosto", { amostras: centros.length, achados });
+  const achados = centros.filter((c) => c != null).length, rastro = { qps, W, H, caixas };
+  if (!sobra) return fim("sem sobra", { amostras: centros.length, achados, rastro });
+  if (achados < 0.3 * centros.length) return fim("sem rosto", { amostras: centros.length, achados, rastro });
   const t = trajetoria(centros, W, cw);
-  if (!recortar(pasta, t.x, qps, cw, H, duracao, avisar)) return fim("falhou");
-  return fim(t.parado ? "parado" : "seguindo", { amostras: centros.length, achados, recorte: [cw, H], x_min: Math.min(...t.x), x_max: Math.max(...t.x) });
+  if (!recortar(pasta, t.x, qps, cw, H, duracao, avisar)) return fim("falhou", { rastro });
+  return fim(t.parado ? "parado" : "seguindo", { amostras: centros.length, achados, recorte: [cw, H], x_min: Math.min(...t.x), x_max: Math.max(...t.x), rastro, corte_x: t.x });
+}
+
+// Aproximação no rosto: nas frases de ênfase que o Claude escolheu, o vídeo cresce devagar até ZOOM com o centro no rosto,
+// fica assim durante a frase e volta. Regras: nunca durante o gancho de capa; no máximo uma a cada 8 s de vídeo e 4 s sem
+// aproximação entre uma e outra; a cabeça (a caixa do rosto e mais um quarto da altura dela para o cabelo) fica inteira
+// dentro da janela e fora de toda faixa de texto em todas as amostras do trecho; a força desce até caber e, abaixo de
+// ZOOM_MIN, a aproximação fica de fora (com aviso). Vídeo já ampliado mais de 1,5 vez para caber na janela (deitado em
+// tela cheia) vai só até ZOOM_AMPLIADO, para não perder nitidez.
+export const ZOOM = 1.25, ZOOM_MIN = 1.1, ZOOM_AMPLIADO = 1.15, SOBE = 0.45, DESCE = 0.6, SEGURA_MAX = 5, A_CADA = 8, INTERVALO = 4;
+const limpa = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+// frases: textos da fala; pal: palavras da edição [{ txt, ini, fim }]; trechos: [{ ini, dur, src }]; rosto: o rosto.json;
+// fonte: { W, H } da fonte.mp4; janela: [x, y, largura, altura] no quadro 1080x1920; faixas: [{ y0, y1, x0, x1 }] do texto no
+// quadro; foco: o "foco" do escolhas.json; desde: fim do gancho de capa (0 sem capa). Devolve { lista, avisos }, com cada
+// item { de, ate, volta, fim, z, ox, oy }: cresce de "de" a "ate", segura, volta de "volta" a "fim"; centro (ox, oy) em px da janela.
+export function planejarAproximacao({ frases, pal, trechos, total, rosto, fonte, janela, faixas = [], foco = "50% 40%", desde = 0 }) {
+  const avisos = [], lista = [], r = rosto?.rastro;
+  if (!r?.caixas?.length) return { lista, avisos: ["aproximar: não há rastro do rosto (rode o rosto.mjs, passo 1b); segue sem aproximar."] };
+  const corte = rosto.corte_x, larg = corte ? rosto.recorte?.[0] : r.W;
+  if (fonte.W !== larg || fonte.H !== r.H) return { lista, avisos: ["aproximar: o rastro do rosto é de outra fonte.mp4 (rode o rosto.mjs de novo, passo 1b); segue sem aproximar."] };
+  const [jx, jy, bw, bh] = janela, s = Math.max(bw / fonte.W, bh / fonte.H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
+  const dx = (fonte.W * s - bw) * fx, dy = (fonte.H * s - bh) * fy, teto = s > 1.5 ? ZOOM_AMPLIADO : ZOOM;
+  // Caixa do rosto (centro, largura, altura) em px da janela no instante t da edição, ou null
+  const caixa = (t) => {
+    const p = trechos.find((x) => t >= x.ini && t < x.ini + x.dur);
+    if (!p) return null;
+    const i = Math.min(r.caixas.length - 1, Math.max(0, Math.round((p.src + t - p.ini) * r.qps))), c = r.caixas[i];
+    return c && [(c[0] - (corte?.[i] ?? 0)) * s - dx, c[1] * s - dy, c[2] * s, c[3] * s];
+  };
+  const maximo = Math.max(1, Math.floor(total / A_CADA));
+  let k = 0, livre = desde > 0 ? desde + 0.3 : 0;
+  for (const frase of frases) {
+    const w = String(frase).split(/\s+/).map(limpa).filter(Boolean);
+    let j = k;
+    while (w.length && j + w.length <= pal.length && !w.every((x, m) => limpa(pal[j + m].txt) === x)) j++;
+    if (!w.length || j + w.length > pal.length) { avisos.push(`aproximar: "${frase}" não foi achada na fala, na ordem; ficou de fora.`); continue; }
+    k = j + w.length;
+    const de = +Math.max(0, pal[j].ini - 0.15).toFixed(3), ate = +(de + SOBE).toFixed(3);
+    const volta = +Math.min(Math.max(ate, pal[k - 1].fim + 0.2), de + SOBE + SEGURA_MAX, total - DESCE).toFixed(3), fim = +(volta + DESCE).toFixed(3);
+    const nao = (m) => avisos.push(`aproximar: "${frase}" ficou sem aproximação (${m}).`);
+    if (lista.length >= maximo) { nao(`no máximo ${maximo} neste vídeo, uma a cada ${A_CADA} s`); continue; }
+    if (de < livre) { nao(desde > 0 && de < desde + 0.3 ? "cai no gancho de capa" : `menos de ${INTERVALO} s depois da anterior`); continue; }
+    if (volta <= ate) { nao("perto demais do fim do vídeo"); continue; }
+    const amostras = [];
+    for (let t = de; t <= fim; t += 0.2) amostras.push(caixa(t));
+    const vistos = amostras.filter(Boolean);
+    if (vistos.length < 0.6 * amostras.length) { nao("o rosto não aparece bem nesse trecho"); continue; }
+    // A cabeça em cada amostra: [esquerda, direita, topo (um quarto da altura acima da caixa, o cabelo), queixo], em px da janela
+    const cabecas = vistos.map(([cx, cy, cw, ch]) => [cx - cw / 2, cx + cw / 2, cy - 0.75 * ch, cy + ch / 2]);
+    // O rosto (só a caixa, a mesma regra da conferir.mjs) já está embaixo do texto: aproximar não conserta
+    if (vistos.some(([cx, cy, cw, ch]) => faixas.some((f) => Math.min(cy + ch / 2 + jy, f.y1) - Math.max(cy - ch / 2 + jy, f.y0) >= 0.25 * ch
+      && cx + cw / 2 + jx > f.x0 && cx - cw / 2 + jx < f.x1))) { nao("o rosto já está embaixo do texto"); continue; }
+    // Com o centro (ox, oy) e a força z, nenhuma borda da cabeça sai mais da janela nem entra mais no texto do que sem aproximar
+    const sobre = (e, d, a, b) => faixas.reduce((n, f) => n + (d + jx > f.x0 && e + jx < f.x1 ? Math.max(0, Math.min(b + jy, f.y1) - Math.max(a + jy, f.y0)) : 0), 0);
+    const cabe = (z, ox, oy) => cabecas.every(([e1, d1, a1, b1]) => {
+      const e = ox + z * (e1 - ox), d = ox + z * (d1 - ox), a = oy + z * (a1 - oy), b = oy + z * (b1 - oy);
+      return e >= Math.min(0, e1) && d <= Math.max(bw, d1) && a >= Math.min(0, a1) && b <= Math.max(bh, b1) && sobre(e, d, a, b) <= sobre(e1, d1, a1, b1) + 0.5;
+    });
+    // O centro da aproximação: o meio do rosto; se ele não deixa aproximar o bastante (rosto perto da borda ou do texto),
+    // a borda da cabeça que está perto (topo, queixo, um lado), que fica parada enquanto o resto cresce para o outro lado
+    // (a borda mais extrema entre as amostras: ela é a que encosta primeiro)
+    const med = (a) => [...a].sort((x, y) => x - y)[a.length >> 1], col = (k) => (k % 2 ? Math.max : Math.min)(...cabecas.map((c) => c[k]));
+    const cx = med(vistos.map((c) => c[0])), cy = med(vistos.map((c) => c[1]));
+    let z = 0, ox = cx, oy = cy;
+    // O centro fica dentro da janela: fora dela, o vídeo aproximado deixaria uma faixa vazia na borda
+    const dentro = ([x, y]) => [Math.min(bw, Math.max(0, x)), Math.min(bh, Math.max(0, y))];
+    for (const [x, y] of [[cx, cy], [cx, col(2)], [cx, col(3)], [col(0), cy], [col(1), cy], [col(0), col(2)], [col(1), col(2)], [col(0), col(3)], [col(1), col(3)]].map(dentro)) {
+      let t = teto;
+      while (t >= ZOOM_MIN && t > z && !cabe(t, x, y)) t = +(t - 0.01).toFixed(2);
+      if (t >= ZOOM_MIN && t > z) [z, ox, oy] = [t, x, y];
+      if (z === teto) break;
+    }
+    if (!z) { nao("o rosto está perto da borda ou do texto e não cabe aproximar"); continue; }
+    lista.push({ de, ate, volta, fim, z, ox: Math.round(ox), oy: Math.round(oy) });
+    livre = fim + INTERVALO;
+  }
+  return { lista, avisos };
 }
 
 // Recorta a fonte-inteira.mp4 da pasta em fonte.mp4 (largura cw, altura H), com o x de cada amostra (qps por segundo)
@@ -153,10 +238,15 @@ export function recortar(pasta, x, qps, cw, H, duracao, avisar = () => {}) {
   return true;
 }
 
+// Volta a fonte inteira. O rastro do rosto fica no rosto.json (estado "desligado", sem recorte), para a aproximação no rosto
+// continuar valendo com o enquadramento parado.
 export function desligar(pasta) {
-  const inteira = join(pasta, "fonte-inteira.mp4");
+  const inteira = join(pasta, "fonte-inteira.mp4"), rel = join(pasta, "rosto.json");
+  let antes = null;
+  try { antes = JSON.parse(readFileSync(rel, "utf8")); } catch { /* sem rosto.json */ }
   if (existsSync(inteira)) renameSync(inteira, join(pasta, "fonte.mp4"));
-  rmSync(join(pasta, "rosto.json"), { force: true });
+  rmSync(rel, { force: true });
+  if (antes?.rastro) writeFileSync(rel, JSON.stringify({ estado: "desligado", estilo: antes.estilo, janela: antes.janela, rastro: antes.rastro }));
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {

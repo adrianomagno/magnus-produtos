@@ -76,6 +76,7 @@
             tl.to(el, { opacity: 0, duration: sai - sai0, ease: "power2.in" }, sai0);
           }
         });
+        if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;
       });

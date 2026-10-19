@@ -46,7 +46,8 @@ O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 se
 
 - **Enquadramento que segue o rosto:** ligado sempre. Quando o vídeo é deitado ou a pessoa se mexe, o corte vertical acompanha o rosto. O dono desliga dizendo que quer o enquadramento parado.
 - **Limpeza de ruído:** opcional. O Editor Chefe mede o áudio e só oferece quando há chiado de fundo (ventilador, ar-condicionado); o dono liga ou desliga em palavras simples.
-- **Visual de cor:** opcional, escolhido pelo nome: **natural** (correção leve), **claro** (claro e limpo), **quente** (tom mais quente na pele) ou **contraste** (mais contraste). Sem escolha, o vídeo sai com a cor original.
+- **Visual de cor:** opcional, escolhido pelo nome: **natural** (correção leve), **claro** (claro e limpo), **quente** (tom mais quente na pele) ou **contraste** (mais contraste). Cada um vem em dois níveis: leve (o padrão) e **forte**, com mais luz e vida no rosto, sem estourar o branco nem deixar a pele laranja. Sem escolha, o vídeo sai com a cor original.
+- **Aproximação no rosto:** opcional, em todo estilo com gravação menos o Corte seco (que já aproxima a cada frase). Nas frases mais fortes da fala, o vídeo aproxima devagar no rosto e volta depois, no máximo uma vez a cada 8 segundos, sem cortar o rosto nem pôr o texto em cima dele. O Editor Chefe pergunta ao dono se ele quer; ele desliga quando quiser.
 - **Conferência automática:** antes da prévia e antes da entrega, o Editor Chefe confere tamanho, duração, volume e se algum texto ficou em cima do rosto, e corrige antes de mostrar.
 
 Tudo isso roda no computador do dono: o vídeo não sai dele.
@@ -57,4 +58,4 @@ O Magnus lê este catálogo para falar dos estilos e das capas com o dono: mostr
 
 Se o vídeo tem roteiro escrito (por exemplo, pelo próprio Magnus), o pedido leva o roteiro junto. O Editor Chefe usa o roteiro para escrever certo os nomes, as marcas e os termos da legenda e como primeira fonte das sugestões de gancho de capa e de pergunta da caixinha. A legenda é sempre a fala real: onde o roteiro e a fala divergem, vale a fala.
 
-Tudo o que vier já escolhido no pedido (estilo, capa, gancho, trecho, tipo de vídeo, visual de cor, limpeza de ruído, texto da caixinha ou texto do estilo 10), o Editor Chefe confirma com o dono numa linha antes de começar. Só não confirma o que o próprio dono disse, com as palavras dele, na conversa.
+Tudo o que vier já escolhido no pedido (estilo, capa, gancho, trecho, tipo de vídeo, visual de cor, limpeza de ruído, aproximação no rosto, texto da caixinha ou texto do estilo 10), o Editor Chefe confirma com o dono numa linha antes de começar. Só não confirma o que o próprio dono disse, com as palavras dele, na conversa.

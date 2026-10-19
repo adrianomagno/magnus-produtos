@@ -83,6 +83,7 @@
           tl.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: Math.min(0.08, (sai - p.ini) / 2), ease: "power2.out" }, p.ini);
           tl.set(el, { opacity: 0 }, sai);
         });
+        if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;
       });

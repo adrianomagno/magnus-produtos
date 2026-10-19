@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 import { join, dirname, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { planejarAproximacao, medidas } from "./rosto.mjs";
+import { zonas } from "./conferir.mjs";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EC = createRequire(import.meta.url)(join(RAIZ, "estilos", "comum.js"));
@@ -626,31 +628,58 @@ ${copias.join("\n")}
     fonteCaixa = `\n      @font-face { font-family: "Inter"; src: url("fonts/${CAIXINHA_FONTE}") format("woff2"); font-weight: 700; font-display: block; }`;
   }
 
+  // Aproximação no rosto (opcional): "aproximar": ["frase da fala", ...], as frases de ênfase, na ordem da fala. O plano sai
+  // do rastro do rosto (rosto.json, do passo 1b) e das faixas de texto do molde; o que não cabe fica de fora, com aviso.
+  const molde = readFileSync(join(RAIZ, "estilos", `${esc.estilo}.html`), "utf8");
+  let trechosHtml = videos.join("\n");
+  if (esc.aproximar != null && esc.aproximar !== false) {
+    if (!Array.isArray(esc.aproximar) || esc.aproximar.some((f) => typeof f !== "string" || !f.trim()))
+      throw new Error('montar: "aproximar" é a lista das frases de ênfase, como estão na fala: "aproximar": ["isso muda tudo", "o segredo é a constância"] (ou false, para desligar).');
+    if (esc.estilo === "corte-seco-zoom") avisar("montar: no Corte seco o enquadramento já aproxima a cada frase; o \"aproximar\" ficou de fora.");
+    else {
+      const arqRosto = join(pasta, "rosto.json");
+      let rosto = null;
+      if (existsSync(arqRosto) && existsSync(fonte) && statSync(fonte).mtimeMs <= statSync(arqRosto).mtimeMs) try { rosto = JSON.parse(readFileSync(arqRosto, "utf8")); } catch { /* rosto.json estragado: segue sem */ }
+      if (!rosto) avisar("montar: falta o rosto.json desta fonte.mp4 (rode o rosto.mjs, passo 1b de references/audio-e-corte.md); segue sem aproximar.");
+      else {
+        const j = /#janela \{[^}]*?left: (\d+)(?:px)?; top: (\d+)px; width: (\d+)px; height: (\d+)px;/.exec(molde), janela = j ? j.slice(1).map(Number) : [0, 0, 1080, 1920];
+        const faixas = zonas(molde, total);
+        if (caixa) faixas.push({ y0: caixa.topo, y1: 1500, x0: 90, x1: 990 });
+        const { W, H } = medidas(fonte);
+        const r = planejarAproximacao({ frases: esc.aproximar, pal: EC.mapear(palavras, trechos, total), trechos, total, rosto, fonte: { W, H }, janela, faixas, foco, desde: capa ? capa.fim : 0 });
+        r.avisos.forEach((m) => avisar(`montar: ${m}`));
+        if (r.lista.length) {
+          dados.aproximar = r.lista;
+          trechosHtml = `${recuo}<div id="aproximar" data-layout-allow-overflow style="position: absolute; inset: 0;">\n${videos.map((v) => "  " + v).join("\n")}\n${recuo}</div>`;
+        }
+      }
+    }
+  }
+
   const valores = {
     FONTES: fontes(join(pasta, "fonts"), marca.fontes ?? {}, usa, avisar) + fonteCaixa,
     FUNDO_CLARO: marca.cores.fundo_claro, FUNDO_ESCURO: marca.cores.fundo_escuro, TEXTO: marca.cores.texto, DESTAQUE: marca.cores.destaque,
     TITULO: html(marca.fontes.titulo), CORPO: html(marca.fontes.corpo ?? ""), FONTE_DESTAQUE: html(marca.fontes.destaque ?? ""),
     FOCO: foco, VEU: String(veu),
-    DURACAO: (pos / F).toFixed(3), TRECHOS: videos.join("\n"),
+    DURACAO: (pos / F).toFixed(3), TRECHOS: trechosHtml,
     DADOS: JSON.stringify(dados).replace(/</g, "\\u003c"),
     ASSINATURA: html(marca.assinatura ?? marca.nome ?? ""),
     EFEITOS: efeitos.join("\n"), CAPA: camada,
   };
   if (esc.foco && valores.FOCO !== esc.foco) avisar(`montar: foco "${esc.foco}" fora do formato "50% 40%"; usando 50% 40%.`);
-  const molde = readFileSync(join(RAIZ, "estilos", `${esc.estilo}.html`), "utf8");
   const sobra = [...molde.matchAll(/\{\{([A-Z_]+)\}\}/g)].map((m) => m[1]).filter((k) => !(k in valores));
   if (sobra.length) throw new Error(`montar: marcador sem valor no molde: ${sobra.join(", ")}.`);
   const saida = molde.replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => valores[k]);
   writeFileSync(join(pasta, "index.html"), saida);
   copyFileSync(join(RAIZ, "estilos", "comum.js"), join(pasta, "comum.js"));
-  return { duracao: pos / F, trechos: manter.length, palavras: palavras.length, efeitos: efeitos.length, veu: !!veu };
+  return { duracao: pos / F, trechos: manter.length, palavras: palavras.length, efeitos: efeitos.length, veu: !!veu, aproximacoes: dados.aproximar?.length ?? 0 };
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const r = montar(resolve(process.argv[2] ?? "."));
     if (r.narrado) console.log(`montar: index.html pronto (Motion narrado: ${r.cenas} palavras-chave, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s; áudio em ${r.integrado} LUFS, pico de ${r.pico} dBTP).`);
-    else console.log(`montar: index.html pronto (${r.trechos} trechos, ${r.palavras} palavras, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s de edição${r.veu ? ", véu atrás do texto" : ""}).`);
+    else console.log(`montar: index.html pronto (${r.trechos} trechos, ${r.palavras} palavras, ${r.efeitos} efeitos sonoros, ${r.duracao.toFixed(3)} s de edição${r.veu ? ", véu atrás do texto" : ""}${r.aproximacoes ? `, ${r.aproximacoes} aproximações no rosto` : ""}).`);
   } catch (e) {
     console.error(e.message);
     process.exit(1);

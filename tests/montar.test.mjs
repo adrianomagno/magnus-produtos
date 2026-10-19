@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -655,4 +655,71 @@ test('tela dividida: no Editorial claro dividido a marca aparece uma vez só (na
 test('legenda em caixa escura (estilos 4, 7 e 9): a caixa é opaca, porque o contraste da palavra falada é conferido contra o fundo escuro puro', () => {
   for (const estilo of ['painel-escuro', 'painel-escuro-dividido', 'motion-dividido']) // com a caixa a 92%, o vídeo claro vazava e a palavra caía para 2,99:1
     assert.match(molde(estilo), /\.grupo \.caixa \{[^}]*background: var\(--fundo-escuro\);/, estilo);
+});
+
+// Aproximação no rosto: fonte.mp4 de verdade (1080x1920, para o montador medir) e o rosto.json gravado depois dela
+function comRosto(estilo, extra, caixa = [540, 900, 300, 300]) {
+  const dir = projeto(estilo, extra);
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0x303030:s=1080x1920:r=30:d=9.5', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', join(dir, 'fonte.mp4')]);
+  writeFileSync(join(dir, 'rosto.json'), JSON.stringify({ estado: 'sem sobra', rastro: { qps: 2, W: 1080, H: 1920, caixas: Array(20).fill(caixa) } }));
+  utimesSync(join(dir, 'rosto.json'), new Date(), new Date(Date.now() + 1000));
+  return dir;
+}
+const aproxima = (dir) => {
+  const html = readFileSync(join(dir, 'index.html'), 'utf8');
+  return { html, lista: JSON.parse(/const D = (\{.*\});/.exec(html)[1]).aproximar ?? [] };
+};
+
+test('aproximar: a frase de ênfase vira uma aproximação no rosto, com o invólucro #aproximar em volta dos trechos', () => {
+  for (const estilo of ['legenda-viva', 'painel-escuro-dividido', 'painel-escuro']) {
+    const dir = comRosto(estilo, { aproximar: ['a solução sai'] }), avisos = [];
+    try {
+      const r = montar(dir, (m) => avisos.push(m));
+      const { html, lista } = aproxima(dir);
+      assert.deepEqual(avisos, [], estilo);
+      assert.equal(r.aproximacoes, 1, estilo);
+      assert.equal(lista.length, 1);
+      assert.ok(lista[0].z >= 1.1 && lista[0].z <= 1.25 && lista[0].de > 4.5 && lista[0].de < 5.1, JSON.stringify(lista[0]));
+      assert.match(html, /<div id="aproximar" data-layout-allow-overflow style="position: absolute; inset: 0;">\s*<video id="trecho-1"[^]*<video id="trecho-2"[^]*?<\/video>\s*<\/div>/, estilo);
+      assert.match(html, /if \(D\.aproximar\) EC\.aproximar\(tl, D\.aproximar\);/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('aproximar: cada molde com gravação (menos o Corte seco) chama a aproximação', () => {
+  for (const estilo of [...Object.keys(ESCOLHAS), 'caixinha-pergunta'].filter((e) => e !== 'corte-seco-zoom')) {
+    const m = readFileSync(new URL(`../plugins/editor-chefe/estilos/${estilo}.html`, import.meta.url), 'utf8');
+    assert.match(m, /if \(D\.aproximar\) EC\.aproximar\(tl, D\.aproximar\);\s*(if \(D\.capa\) EC\.capa\(tl, D\.capa\);\s*)?window\.__timelines/, estilo);
+  }
+});
+
+test('aproximar: rosto embaixo da caixinha, Corte seco, sem rosto.json ou rosto.json velho seguem sem aproximar, com aviso', () => {
+  const casos = [
+    [comRosto('caixinha-pergunta', { ...CAIXINHA, aproximar: ['a solução sai'] }), /embaixo do texto/],
+    [comRosto('corte-seco-zoom', { aproximar: ['a solução sai'] }), /Corte seco/],
+  ];
+  const sem = comRosto('legenda-viva', { aproximar: ['a solução sai'] });
+  rmSync(join(sem, 'rosto.json'));
+  const velho = comRosto('legenda-viva', { aproximar: ['a solução sai'] });
+  utimesSync(join(velho, 'rosto.json'), new Date(), new Date(Date.now() - 60000)); // a fonte foi gravada de novo depois do rosto.mjs
+  casos.push([sem, /falta o rosto\.json/], [velho, /falta o rosto\.json/]);
+  for (const [dir, aviso] of casos) {
+    const avisos = [];
+    try {
+      const r = montar(dir, (m) => avisos.push(m));
+      assert.equal(r.aproximacoes, 0);
+      assert.doesNotMatch(aproxima(dir).html, /id="aproximar"/);
+      assert.match(avisos.join('\n'), aviso);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('aproximar: false desliga sem aviso; formato errado é erro em português', () => {
+  const dir = comRosto('legenda-viva', { aproximar: false }), avisos = [];
+  try {
+    assert.equal(montar(dir, (m) => avisos.push(m)).aproximacoes, 0);
+    assert.deepEqual(avisos, []);
+    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'legenda-viva', marca: MARCA, aproximar: 'a solução sai' }));
+    assert.throws(() => montar(dir, () => {}), /"aproximar" é a lista das frases de ênfase/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

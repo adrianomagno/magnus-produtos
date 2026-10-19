@@ -10,6 +10,8 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TEMPO_MAX = 600000;
+const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg", ffprobe = () => process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe";
+const ultima = (s) => String(s ?? "").trim().split("\n").pop();
 // Visuais de cor, escritos para pele e fala: mudanças pequenas, que não estouram o branco nem deixam a pele laranja.
 // Entram depois da conversão de HDR, já em cor comum, então não brigam com o mapeamento de tom.
 export const CORES = {
@@ -17,12 +19,49 @@ export const CORES = {
   claro: "eq=brightness=0.03:gamma=1.08:contrast=0.98:saturation=0.96", // claro e limpo: sombras abertas, cor contida
   quente: "colortemperature=temperature=5200:mix=0.55,eq=saturation=1.04", // tom de fim de tarde, pele mais quente
   contraste: "eq=contrast=1.12:gamma=0.97:saturation=1.08", // pretos mais firmes, imagem mais marcada
+  // Nível forte: mais luz e vida no rosto. A luz vem do gamma (ou de uma curva só no brilho), que sobe os tons do meio e
+  // deixa o branco e o preto no lugar, sem mexer no tom da cor: a pele clareia sem puxar para o laranja. Uma curva de cor
+  // em RGB faria o contrário (testado: a pele foi para o amarelo). Medidas em amostrarCor e nos testes.
+  "natural-forte": "eq=gamma=1.15:saturation=1.12",
+  "claro-forte": "eq=brightness=0.02:gamma=1.3:contrast=0.97",
+  "quente-forte": "colortemperature=temperature=5000:mix=0.6,eq=gamma=1.28:contrast=0.97:saturation=1.03",
+  "contraste-forte": "lutyuv=y=16+219*pow(clip((val-16)/219\\,0\\,1)-0.05*sin(2*PI*clip((val-16)/219\\,0\\,1))\\,1/1.12),eq=saturation=1.1", // curva em S só no brilho: sombra mais funda, meio mais claro, branco no lugar
 };
+// Amostras para conferir um visual: três tons de pele (clara, média, escura), o cinza médio, uma parede clara, um quase
+// branco e uma sombra. amostrarCor(filtro) devolve o RGB de cada uma depois do filtro, pelo mesmo ffmpeg do fluxo.
+export const AMOSTRAS = { pele1: "E0AC8C", pele2: "C68642", pele3: "8D5524", cinza: "808080", parede: "E6E6E6", quase: "F5F5F5", sombra: "303030" };
+export function amostrarCor(filtro) {
+  const o = {};
+  for (const [k, c] of Object.entries(AMOSTRAS)) {
+    const r = spawnSync(ffmpeg(), ["-v", "error", "-f", "lavfi", "-i", `color=c=0x${c}:s=16x16:d=0.04`, "-vf", `format=yuv420p,${filtro ? filtro + "," : ""}format=rgb24`, "-frames:v", "1", "-f", "rawvideo", "-"], { timeout: TEMPO_MAX, maxBuffer: 1 << 20 });
+    if (r.error || r.status !== 0 || r.stdout.length < 768) throw new Error(`fonte: o visual de cor não roda no ffmpeg (${ultima(r.error?.message ?? r.stderr)}).`);
+    const i = (8 * 16 + 8) * 3; // o pixel do meio
+    o[k] = [r.stdout[i], r.stdout[i + 1], r.stdout[i + 2]];
+  }
+  return o;
+}
+// Confere um visual forte nas amostras; devolve a lista do que deu errado (vazia: ok). Branco: o quase branco não chega
+// a 254 e fica pelo menos 7 pontos acima da parede clara (o detalhe perto do branco não some). Pele: nenhum dos três tons
+// muda mais que 3 graus de matiz nem ganha mais que 0,08 de saturação (o "laranja"). Luz: a pele clara fica pelo menos 8
+// pontos de brilho acima do vídeo sem visual e 4 acima do mesmo visual no nível de hoje.
+const brilho = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+const matiz = ([r, g, b]) => { const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); if (!d) return 0; const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return (h * 60 + 360) % 360; };
+const saturacao = ([r, g, b]) => { const mx = Math.max(r, g, b); return mx ? (mx - Math.min(r, g, b)) / mx : 0; };
+export function conferirForte(nome, filtro = CORES[nome]) {
+  if (!nome.endsWith("-forte") || !Object.hasOwn(CORES, nome)) throw new Error(`fonte: "${nome}" não é um visual forte.`);
+  const sem = amostrarCor(""), leve = amostrarCor(CORES[nome.replace(/-forte$/, "")]), a = amostrarCor(filtro), ruim = [];
+  if (Math.max(...a.quase) > 253 || a.quase[1] - a.parede[1] < 7) ruim.push(`o branco estoura (quase branco em ${a.quase.join("/")}, parede em ${a.parede.join("/")})`);
+  for (const k of ["pele1", "pele2", "pele3"]) {
+    if (Math.abs(matiz(a[k]) - matiz(sem[k])) > 3) ruim.push(`a pele muda de tom (${k}: ${sem[k].join("/")} vira ${a[k].join("/")})`);
+    if (saturacao(a[k]) - saturacao(sem[k]) > 0.08) ruim.push(`a pele fica laranja (${k}: ${sem[k].join("/")} vira ${a[k].join("/")})`);
+  }
+  if (brilho(a.pele1) < brilho(sem.pele1) + 8 || brilho(a.pele1) < brilho(leve.pele1) + 4) ruim.push("o rosto não ganha luz");
+  return ruim;
+}
+
 // Ruído: oferece a limpeza quando as pausas ficam a menos de 30 dB da fala (ventilador, ar-condicionado, chiado). Num
 // microfone de lapela em sala quieta a distância passa de 45 dB; com ar-condicionado perto, cai para uns 20.
 export const OFERECER_RUIDO = 30;
-const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg", ffprobe = () => process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe";
-const ultima = (s) => String(s ?? "").trim().split("\n").pop();
 
 // Volume de 0,1 em 0,1 s: o fundo é o 10º percentil (as pausas entre as palavras), a fala é o 90º
 export function medirRuido(arq) {

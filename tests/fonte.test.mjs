@@ -6,7 +6,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fonte, medirRuido, filtros, CORES } from '../plugins/editor-chefe/scripts/fonte.mjs';
+import { fonte, medirRuido, filtros, conferirForte, CORES } from '../plugins/editor-chefe/scripts/fonte.mjs';
 
 const md = readFileSync(new URL('../plugins/editor-chefe/skills/editor-chefe/references/audio-e-corte.md', import.meta.url), 'utf8');
 const dir = mkdtempSync(join(tmpdir(), 'fonte-'));
@@ -66,3 +66,19 @@ test('ruído: chiado perto da fala é oferecido, a limpeza afasta o fundo da fal
 });
 
 test.after(() => rmSync(dir, { recursive: true, force: true }));
+
+test('visuais fortes: um para cada visual de hoje, que ficam como estavam; mais luz no rosto, pele no tom e branco sem estourar', () => {
+  assert.deepEqual(Object.fromEntries(['natural', 'claro', 'quente', 'contraste'].map((n) => [n, CORES[n]])), {
+    natural: 'eq=contrast=1.04:saturation=1.06', claro: 'eq=brightness=0.03:gamma=1.08:contrast=0.98:saturation=0.96',
+    quente: 'colortemperature=temperature=5200:mix=0.55,eq=saturation=1.04', contraste: 'eq=contrast=1.12:gamma=0.97:saturation=1.08',
+  }, 'os 4 visuais da 0.6.0 não mudam');
+  assert.deepEqual(Object.keys(CORES).filter((n) => n.endsWith('-forte')), ['natural-forte', 'claro-forte', 'quente-forte', 'contraste-forte']);
+  for (const nome of Object.keys(CORES).filter((n) => n.endsWith('-forte'))) assert.deepEqual(conferirForte(nome), [], nome);
+});
+
+test('visuais fortes: a conferência pega o filtro que estoura o branco, alaranja a pele ou não clareia', () => {
+  assert.match(conferirForte('natural-forte', 'eq=brightness=0.12').join(), /branco estoura/);
+  assert.match(conferirForte('quente-forte', 'colortemperature=temperature=3500:mix=1,eq=saturation=1.4').join(), /laranja|muda de tom/);
+  assert.match(conferirForte('claro-forte', 'eq=gamma=1.02').join(), /não ganha luz/);
+  assert.throws(() => conferirForte('quente'), /não é um visual forte/);
+});

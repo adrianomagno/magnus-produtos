@@ -309,6 +309,7 @@
 
         // Legenda em caixa escura na emenda; a palavra falada na cor destaque (clareada, se faltar contraste)
         EC.legendaEmCaixa(tl, C);
+        if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;
       });

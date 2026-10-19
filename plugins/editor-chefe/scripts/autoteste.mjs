@@ -3,9 +3,10 @@
 //      node autoteste.mjs --conferir                          (diz se o autoteste já passou nesta versão do plugin)
 // Monta na pasta um projeto sintético na Legenda viva, com os efeitos sonoros ligados: original.mp4 de 2 s deitado (16:9,
 // cor, tom e chiado, do ffmpeg), transcript.json e trechos.json escritos aqui, escolhas.json, marca.json de exemplo e a
-// fonte baixada pelo baixar-fonte.mjs. Passa pelos 4 recursos da 0.6.0: a fonte de trabalho com visual de cor e limpeza
-// de ruído (fonte.mjs, e cada visual de cor no ffmpeg), o detector de rosto (rosto.mjs: sem rosto no vídeo sintético, o
-// fluxo segue com o foco fixo) e o recorte vertical que segue um caminho dado. Roda o montar.mjs e, sem --sem-render, o
+// fonte baixada pelo baixar-fonte.mjs. Passa pelos recursos da 0.6.0 e da 0.6.1: a fonte de trabalho com visual de cor
+// forte e limpeza de ruído (fonte.mjs, cada visual de cor no ffmpeg e os fortes nas amostras de pele e de branco), o
+// detector de rosto (rosto.mjs: sem rosto no vídeo sintético, o fluxo segue com o foco fixo), o recorte vertical que segue
+// um caminho dado e a aproximação no rosto, num rastro de rosto de mentira junto com esse caminho. Roda o montar.mjs e, sem --sem-render, o
 // render da HyperFrames pelo hf (o mesmo lançador do fluxo normal) e a conferência automática (conferir.mjs: 1080x1920,
 // duração, áudio perto de -16 LUFS). No sucesso, grava <pasta de dados>/pronto com a versão do plugin e a data. A pasta de teste precisa ser nova: o autoteste recusa pasta que já existe e, no fim, com sucesso
 // ou com erro, apaga só a pasta que ele mesmo criou. Cada programa chamado para em 10 minutos.
@@ -14,7 +15,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { montar } from "./montar.mjs";
-import { fonte, medirRuido, CORES } from "./fonte.mjs";
+import { fonte, medirRuido, conferirForte, CORES } from "./fonte.mjs";
 import { trajetoria, recortar, medidas } from "./rosto.mjs";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -66,7 +67,7 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
       // A marca fica dentro da pasta de teste: o padrão do montar (../marca.json) seria a marca do dono
       writeFileSync(join(pasta, "marca.json"), JSON.stringify({ nome: "Negócio Exemplo", assinatura: "Negócio Exemplo",
         cores: { fundo_claro: "#F5F1EA", fundo_escuro: "#141414", texto: "#141414", destaque: "#9A6A5A" }, fontes: { titulo: "Montserrat", corpo: "Inter" } }));
-      writeFileSync(join(pasta, "escolhas.json"), JSON.stringify({ estilo: "legenda-viva", foco: "50% 40%", efeitos: true, marca: "marca.json" }));
+      writeFileSync(join(pasta, "escolhas.json"), JSON.stringify({ estilo: "legenda-viva", foco: "50% 40%", efeitos: true, marca: "marca.json", aproximar: ["Teste do Editor"] }));
     });
     avisar("autoteste: projeto de teste criado (vídeo de 2 s, fala, trechos e marca)");
     etapa("cor e ruído", () => {
@@ -74,11 +75,16 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
         const r = rodar(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", "testsrc2=s=320x240:d=0.1", "-vf", filtro, "-f", "null", "-"], tempo);
         if (r.status !== 0) throw new Error(`o visual de cor "${nome}" não roda no ffmpeg deste computador.\n${ultimas(r.stderr)}`);
       }
+      // Os visuais fortes, nas amostras de pele e de branco: a pele não muda de tom nem fica laranja, o branco não estoura
+      for (const nome of Object.keys(CORES).filter((n) => n.endsWith("-forte"))) {
+        const ruim = conferirForte(nome);
+        if (ruim.length) throw new Error(`o visual "${nome}" não passou: ${ruim.join("; ")}.`);
+      }
       const m = medirRuido(join(pasta, "original.mp4"));
       if (!Number.isFinite(m.distancia_db)) throw new Error("a medida do ruído de fundo não saiu.");
-      fonte(join(pasta, "original.mp4"), { cor: "natural", ruido: true });
+      fonte(join(pasta, "original.mp4"), { cor: "quente-forte", ruido: true });
     });
-    avisar(`autoteste: fonte de trabalho com visual de cor e limpeza de ruído (${Object.keys(CORES).length} visuais conferidos)`);
+    avisar(`autoteste: fonte de trabalho com visual de cor forte e limpeza de ruído (${Object.keys(CORES).length} visuais conferidos)`);
     etapa("rosto", () => {
       // O detector de verdade, pelo mesmo comando do fluxo: no vídeo sintético não há rosto e a fonte fica inteira
       const r = rodar(process.execPath, [join(RAIZ, "scripts", "rosto.mjs"), pasta, "legenda-viva"], tempo, { env: { ...process.env, EDITOR_CHEFE_DATA: dados ?? "" } });
@@ -90,6 +96,9 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
       if (t.parado || !recortar(pasta, t.x, 5, cw, H, duracao)) throw new Error("o recorte que segue o rosto não saiu.");
       const v = medidas(join(pasta, "fonte.mp4"));
       if (v.W !== cw || v.H !== H) throw new Error(`o recorte saiu com ${v.W}x${v.H}, e não em ${cw}x${H}.`);
+      // O rastro do rosto de mentira, junto com o recorte, para a montagem aproximar no rosto em "Teste do Editor"
+      writeFileSync(join(pasta, "rosto.json"), JSON.stringify({ estado: "seguindo", estilo: "legenda-viva", recorte: [cw, H], corte_x: t.x,
+        rastro: { qps: 5, W, H, caixas: t.x.map((x) => [x + cw / 2, Math.round(H * 0.42), Math.round(H * 0.19), Math.round(H * 0.23)]) } })); // o rosto no meio do recorte
     });
     avisar("autoteste: detector de rosto e recorte que segue o rosto ok");
     etapa("fonte", () => baixarFonte("Montserrat", "800", join(pasta, "fonts"), tempo));
@@ -98,9 +107,10 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
       const avisos = [], r = montar(pasta, (m) => avisos.push(m));
       if (avisos.length) throw new Error(avisos.join("\n"));
       if (!(r.efeitos > 0)) throw new Error("os efeitos sonoros da HyperFrames não entraram na montagem.");
+      if (r.aproximacoes !== 1) throw new Error("a aproximação no rosto não entrou na montagem.");
       return r;
     });
-    avisar(`autoteste: montagem ok (${montagem.trechos} trechos, ${montagem.efeitos} efeitos sonoros)`);
+    avisar(`autoteste: montagem ok (${montagem.trechos} trechos, ${montagem.efeitos} efeitos sonoros, ${montagem.aproximacoes} aproximação no rosto)`);
     if (!render) { avisar("AUTOTESTE SEM RENDER OK"); return { montagem }; }
     etapa("render", () => {
       // O render vai pelo próprio hf, que acha a HyperFrames (HYPERFRAMES_PLUGIN_ROOT ou o cache de plugins) como no fluxo normal
