@@ -12,6 +12,8 @@ D="$(mktemp -d)"
 bash "$S" "$D"
 "$D/node/bin/node" -v | grep -qx v22.23.3
 "$D/ffmpeg/ffmpeg" -version | head -1 | grep -q "ffmpeg version"
+# detector de rosto: os 3 arquivos do ONNX Runtime Web e o modelo YuNet
+for a in ort.wasm.bundle.min.mjs ort-wasm-simd-threaded.mjs ort-wasm-simd-threaded.wasm yunet.onnx; do [ -s "$D/rosto/$a" ]; done
 # idempotente: segunda vez não baixa de novo e termina rápido
 t0=$(date +%s); bash "$S" "$D"; t1=$(date +%s); [ $((t1-t0)) -lt 5 ]
 # checksum errado é recusado

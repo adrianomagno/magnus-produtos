@@ -10,7 +10,7 @@ O Editor Chefe edita vídeos curtos de quem tem um negócio: corta as pausas, le
 - **Privacidade:** o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.
 - **Estilos:** veja a galeria em https://adrianomagno.github.io/magnus-produtos/galeria/
 - **Lista atual dos estilos e das capas:** o catálogo, em `plugins/editor-chefe/skills/editor-chefe/references/catalogo.md` (no GitHub: https://github.com/adrianomagno/magnus-produtos/blob/main/plugins/editor-chefe/skills/editor-chefe/references/catalogo.md).
-- **Requisitos:** cerca de 5 GB livres na primeira instalação. Ele baixa o Node.js e o FFmpeg portáteis (sem pedir senha de administrador), a HyperFrames, o Chrome que ela usa e o modelo de transcrição Parakeet; precisa de internet durante a instalação e em cada render.
+- **Requisitos:** cerca de 5 GB livres na primeira instalação. Ele baixa o Node.js e o FFmpeg portáteis (sem pedir senha de administrador), o detector de rosto (cerca de 15 MB), a HyperFrames, o Chrome que ela usa e o modelo de transcrição Parakeet; precisa de internet durante a instalação e em cada render.
 - **Motor de vídeo:** o plugin `hyperframes` é a HyperFrames, da HeyGen (licença Apache-2.0). O marketplace instala essa HyperFrames direto do repositório oficial dela, numa versão fixa.
 
 ## Copywriter MHL

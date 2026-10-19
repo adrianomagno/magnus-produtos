@@ -42,10 +42,19 @@ O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 se
 2. **Manchete** (`manchete`): frase grande sobre o vídeo, abaixo do rosto, com o fundo escurecido por baixo.
 3. **Editorial** (`editorial`): fundo clareado embaixo, frase com a palavra forte em itálico.
 
+## Acabamento (vale para todo estilo com gravação)
+
+- **Enquadramento que segue o rosto:** ligado sempre. Quando o vídeo é deitado ou a pessoa se mexe, o corte vertical acompanha o rosto. O dono desliga dizendo que quer o enquadramento parado.
+- **Limpeza de ruído:** opcional. O Editor Chefe mede o áudio e só oferece quando há chiado de fundo (ventilador, ar-condicionado); o dono liga ou desliga em palavras simples.
+- **Visual de cor:** opcional, escolhido pelo nome: **natural** (correção leve), **claro** (claro e limpo), **quente** (tom mais quente na pele) ou **contraste** (mais contraste). Sem escolha, o vídeo sai com a cor original.
+- **Conferência automática:** antes da prévia e antes da entrega, o Editor Chefe confere tamanho, duração, volume e se algum texto ficou em cima do rosto, e corrige antes de mostrar.
+
+Tudo isso roda no computador do dono: o vídeo não sai dele.
+
 ## Para o Magnus do dono
 
 O Magnus lê este catálogo para falar dos estilos e das capas com o dono: mostrar o que cada um faz e explicar o que o estilo pede (a gravação, a pergunta da caixinha, o texto e a voz). Mas ele não escolhe por ele. O estilo, a capa, o gancho e o trecho do vídeo só vão no pedido se o dono disse qual. Se ele ainda não disse, o pedido segue sem isso e o Editor Chefe pergunta.
 
 Se o vídeo tem roteiro escrito (por exemplo, pelo próprio Magnus), o pedido leva o roteiro junto. O Editor Chefe usa o roteiro para escrever certo os nomes, as marcas e os termos da legenda e como primeira fonte das sugestões de gancho de capa e de pergunta da caixinha. A legenda é sempre a fala real: onde o roteiro e a fala divergem, vale a fala.
 
-Tudo o que vier já escolhido no pedido (estilo, capa, gancho, trecho, tipo de vídeo, texto da caixinha ou texto do estilo 10), o Editor Chefe confirma com o dono numa linha antes de começar. Só não confirma o que o próprio dono disse, com as palavras dele, na conversa.
+Tudo o que vier já escolhido no pedido (estilo, capa, gancho, trecho, tipo de vídeo, visual de cor, limpeza de ruído, texto da caixinha ou texto do estilo 10), o Editor Chefe confirma com o dono numa linha antes de começar. Só não confirma o que o próprio dono disse, com as palavras dele, na conversa.

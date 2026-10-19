@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Instala Node 22 e ffmpeg portáteis em DATA, sem administrador e sem mexer no PATH do sistema.
-# Idempotente: se DATA/.versao bate, não faz nada.
+# Instala Node 22 e ffmpeg portáteis em DATA, sem administrador e sem mexer no PATH do sistema, e o detector de rosto
+# (YuNet no ONNX Runtime Web, em DATA/rosto). Idempotente: se DATA/.versao e DATA/rosto/.versao batem, não faz nada.
 set -euo pipefail
 DATA="${1:?uso: preparar.sh <pasta de dados do plugin>}"
 command -v cygpath >/dev/null && DATA="$(cygpath -u "$DATA")" # Windows: C:\Users\... vira /c/Users/...
 NODE_VER="22.23.3"
 FF_TAG="b6.1.1"
 VERSAO="node=$NODE_VER ffmpeg=$FF_TAG"
+# Detector de rosto: 3 arquivos do pacote onnxruntime-web (licença MIT) e o modelo YuNet de 2026-05 (licença MIT, OpenCV Zoo)
+ORT_VER="1.30.0"; ORT_SHA=d2228df7e4616bc3348bf504ee888f3bec43789a273f0a63f3e68d203ce3bf71
+YUNET_COMMIT="47534e27c9851bb1128ccc0102f1145e27f23f98"; YUNET_SHA=ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0
+ROSTO_VERSAO="ort=$ORT_VER yunet=$YUNET_COMMIT"
 
 plataforma() {
   local s="${PREPARAR_UNAME_S:-$(uname -s)}" m="${PREPARAR_UNAME_M:-$(uname -m)}"
@@ -19,7 +23,9 @@ plataforma() {
 PLAT="$(plataforma)" || { echo "Editor Chefe: este computador não é Mac nem Windows 64 bits." >&2; exit 1; }
 [ "${PREPARAR_SO_PLATAFORMA:-}" = 1 ] && { echo "$PLAT"; exit 0; }
 
-[ "$(cat "$DATA/.versao" 2>/dev/null)" = "$VERSAO" ] && exit 0
+FERRAMENTAS=1; [ "$(cat "$DATA/.versao" 2>/dev/null)" = "$VERSAO" ] && FERRAMENTAS=0
+ROSTO=1; [ "$(cat "$DATA/rosto/.versao" 2>/dev/null)" = "$ROSTO_VERSAO" ] && ROSTO=0
+[ "$FERRAMENTAS$ROSTO" = 00 ] && exit 0
 
 case "$PLAT" in
   darwin-arm64) NODE_ARQ="node-v$NODE_VER-darwin-arm64.tar.gz"; NODE_SHA=23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922f53
@@ -43,6 +49,16 @@ extrair_zip() { # zip destino
 echo "Editor Chefe: baixando as ferramentas, só na primeira vez, alguns minutos."
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$DATA"
+
+if [ "$ROSTO" = 1 ]; then
+  rm -rf "$DATA/rosto"; mkdir -p "$TMP/r" "$TMP/rosto"
+  baixar "https://registry.npmjs.org/onnxruntime-web/-/onnxruntime-web-$ORT_VER.tgz" "$TMP/ort.tgz" "$ORT_SHA"
+  for a in ort.wasm.bundle.min.mjs ort-wasm-simd-threaded.mjs ort-wasm-simd-threaded.wasm; do tar -xzf "$TMP/ort.tgz" -C "$TMP/r" "package/dist/$a"; mv "$TMP/r/package/dist/$a" "$TMP/rosto/"; done
+  baixar "https://media.githubusercontent.com/media/opencv/opencv_zoo/$YUNET_COMMIT/models/face_detection_yunet/face_detection_yunet_2026may.onnx" "$TMP/rosto/yunet.onnx" "$YUNET_SHA"
+  echo "$ROSTO_VERSAO" > "$TMP/rosto/.versao"
+  mv "$TMP/rosto" "$DATA/rosto"
+fi
+[ "$FERRAMENTAS" = 0 ] && { echo "Editor Chefe: detector de rosto pronto."; exit 0; }
 
 baixar "https://nodejs.org/dist/v$NODE_VER/$NODE_ARQ" "$TMP/$NODE_ARQ" "$NODE_SHA"
 rm -rf "$DATA/node"; mkdir -p "$TMP/n"

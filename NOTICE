@@ -24,3 +24,17 @@ Efeitos sonoros (Pixabay)
   créditos em CREDITS.md dessa pasta), usados nos vídeos do cliente: o Editor Chefe copia
   os sons usados para a pasta de cada vídeo, no computador do cliente. Os sons não são
   copiados para este repositório.
+
+ONNX Runtime Web 1.30.0 (Microsoft)
+  Licença MIT: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+  O preparar.sh baixa o pacote onnxruntime-web do registro npm (com conferência do
+  SHA-256) e guarda só 3 arquivos (ort.wasm.bundle.min.mjs, ort-wasm-simd-threaded.mjs e
+  ort-wasm-simd-threaded.wasm) na pasta de dados do plugin, no computador do cliente.
+  Roda o detector de rosto do enquadramento que segue o rosto. Não é copiado para este
+  repositório.
+
+YuNet (Shiqi Yu, OpenCV Zoo), modelo face_detection_yunet_2026may.onnx
+  Licença MIT: https://github.com/opencv/opencv_zoo/blob/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/LICENSE
+  Baixado pelo preparar.sh do commit 47534e2 do OpenCV Zoo (com conferência do SHA-256)
+  para a pasta de dados do plugin, no computador do cliente. Não é copiado para este
+  repositório.
