@@ -82,13 +82,15 @@ export function medirRuido(arq) {
   return { fundo_db: +fundo.toFixed(1), fala_db: +fala.toFixed(1), distancia_db: distancia, oferecer: distancia < OFERECER_RUIDO, amostra_s: quieto };
 }
 
+// HDR do celular (HLG ou PQ) para cor comum (SDR, BT.709), com mapeamento de tom; a capa do perfil usa o mesmo
+export const HDR_SDR = "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
 export function filtros(arq, { cor, ruido } = {}) {
   if (cor != null && !Object.hasOwn(CORES, cor)) throw new Error(`fonte: o visual de cor "${cor}" não existe. Use: ${Object.keys(CORES).join(", ")}.`);
   const p = spawnSync(ffprobe(), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=color_transfer", "-of", "csv=p=0", arq], { encoding: "utf8", timeout: TEMPO_MAX });
   if (p.error || p.status !== 0) throw new Error(`fonte: não consegui ler o vídeo ${arq}.`);
   const hdr = ["arib-std-b67", "smpte2084"].includes(p.stdout.trim());
   const vf = ["scale=w=min(iw\\,1920):h=min(ih\\,1920):force_original_aspect_ratio=decrease:force_divisible_by=2"];
-  if (hdr) vf.push("zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p");
+  if (hdr) vf.push(HDR_SDR);
   if (cor) vf.push(CORES[cor]);
   // Limpeza: o afftdn aprende o ruído no meio segundo mais quieto do vídeo (colado antes do áudio e tirado depois) e o
   // reduz em 12 dB, o bastante para o chiado sumir sem a voz ficar metálica. Sem amostra, o afftdn quase não age.

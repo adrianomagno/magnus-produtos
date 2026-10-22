@@ -170,7 +170,7 @@ const html =(s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 // @font-face dos arquivos que existem em fonts/: título no peso mais perto de 800, corpo de 400, destaque em itálico
 // (sem o itálico, declara a normal e o navegador inclina a fonte da marca).
-function fontes(pasta, f, usa, avisar) {
+export function fontes(pasta, f, usa, avisar) {
   const arquivos = existsSync(pasta) ? readdirSync(pasta) : [];
   const de = (fam) => arquivos
     .map((n) => new RegExp(`^${fam.replace(/\s+/g, "")}-(\\d+)(-italic)?\\.woff2$`).exec(n))

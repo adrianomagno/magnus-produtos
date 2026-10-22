@@ -52,6 +52,10 @@ O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 se
 
 Tudo isso roda no computador do dono: o vídeo não sai dele.
 
+## Capa do perfil
+
+A imagem parada que aparece na grade do perfil do Instagram, diferente do gancho de capa (que fica dentro do vídeo). No fim de todo vídeo que vai ser postado, o Editor Chefe pergunta se ele precisa dela: recomenda em vídeo de evento, lançamento ou anúncio, ou quando o começo do vídeo não mostra o rosto nem o assunto; no dia a dia é opcional. Sai com o rosto do dono em close, tirado do próprio vídeo, um título de até 6 palavras e a cor da marca, pronta para trocar no app.
+
 ## Para o Magnus do dono
 
 O Magnus lê este catálogo para falar dos estilos e das capas com o dono: mostrar o que cada um faz e explicar o que o estilo pede (a gravação, a pergunta da caixinha, o texto e a voz). Mas ele não escolhe por ele. O estilo, a capa, o gancho e o trecho do vídeo só vão no pedido se o dono disse qual. Se ele ainda não disse, o pedido segue sem isso e o Editor Chefe pergunta.

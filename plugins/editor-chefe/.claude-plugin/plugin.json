@@ -1,7 +1,7 @@
 {
   "name": "editor-chefe",
-  "version": "0.6.1",
-  "description": "Editor de vídeo do MAGNUS: galeria de estilos, corte de pausas, legenda, marca do negócio, enquadramento que segue o rosto, aproximação no rosto nas frases mais fortes, limpeza de ruído, visuais de cor em dois níveis e conferência automática antes de entregar. O vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.",
+  "version": "0.7.0",
+  "description": "Editor de vídeo do MAGNUS: galeria de estilos, corte de pausas, legenda, marca do negócio, enquadramento que segue o rosto, aproximação no rosto nas frases mais fortes, limpeza de ruído, visuais de cor em dois níveis, conferência automática antes de entregar e capa do perfil com gancho para a grade do Instagram. O vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.",
   "author": { "name": "Equipe MAGNUS" },
   "dependencies": ["hyperframes"]
 }
