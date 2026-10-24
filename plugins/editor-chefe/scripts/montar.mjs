@@ -2,7 +2,7 @@
 // Uso: node montar.mjs <pasta do vídeo>
 // Lê na pasta: escolhas.json (estilo e escolhas do vídeo), transcript.json (corrigido), trechos.json (do trechos.mjs),
 // fonts/ (do baixar-fonte.mjs) e a marca (padrão ../marca.json). Grava index.html e comum.js na pasta e, com
-// "efeitos" ligado (padrão), copia para efeitos/ os sons do plugin hyperframes que o estilo usa.
+// "efeitos" ligado (padrão), copia para efeitos/ os sons que o estilo usa (de sons/ ou do plugin hyperframes).
 // No Motion narrado (sem gravação), lê words.json e audio/voz.wav (do voz-com-tempos.mjs) no lugar do vídeo e grava
 // também audio/mix.wav (voz e efeitos já mixados, em -16 LUFS) e audio/mixagem.json.
 import { readFileSync, writeFileSync, readdirSync, existsSync, copyFileSync, realpathSync, mkdirSync, statSync, mkdtempSync, rmSync } from "node:fs";
@@ -17,6 +17,8 @@ import { zonas } from "./conferir.mjs";
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EC = createRequire(import.meta.url)(join(RAIZ, "estilos", "comum.js"));
 const F = 30;
+// Rampa de volume (s) em cada ponta de trecho: a emenda no meio da fala (corte extra) não estala
+const RAMPA = 0.005;
 // Tempo máximo de cada ffmpeg/ffprobe (10 min, o mesmo do autoteste). No estouro o spawnSync devolve erro e cada chamada
 // já trata erro; no Windows um processo filho preso pode segurar o retorno mesmo assim (limite do spawnSync).
 const TEMPO_MAX = 600000;
@@ -87,9 +89,15 @@ const CAPA = {
       #capa-forte { font-family: "${destaque}", serif; font-style: italic; font-weight: 400; color: var(--capa-forte); letter-spacing: -0.01em; }`,
 };
 
-// Efeitos sonoros: volume por baixo da voz (0,35; o impacto grave é 9 dB mais alto que os outros arquivos, vai a 0,2)
-// e antecipação para o pico do som cair no instante em que o elemento aparece.
-const SOM = { "whoosh-short": { volume: 0.35, antes: 0.12 }, pop: { volume: 0.35, antes: 0.08 }, "impact-bass-1": { volume: 0.2, antes: 0.04 } };
+// Efeitos sonoros dos estilos 1 a 9: sons/manifest.json, com os sons CC0 do pacote (arquivos em sons/, licença em
+// sons/LICENCAS.md) e os 3 do plugin hyperframes (origem "hyperframes", licença Pixabay, não copiados para cá). Cada som
+// tem a medida do arquivo (medirSom): o pico, em segundos desde o começo, e o volume. O efeito começa no instante do
+// movimento menos o pico, para o pico cair nele. Volume: todos no mesmo nível, por baixo da voz (que fica em -16 LUFS):
+// o menor entre 1, o que leva o momentâneo máximo do som a ALVO_LUFS e o que leva o pico a TETO_DBFS (os sons curtos,
+// cliques e estalos, param no teto do pico). O whoosh-short, a 0,35 aprovado na 0.7.0, sai a 0,363.
+const SONS = JSON.parse(readFileSync(join(RAIZ, "sons", "manifest.json"), "utf8"));
+const ALVO_LUFS = -24, TETO_DBFS = -10;
+export const volumeDoSom = (s) => +Math.min(1, 10 ** ((ALVO_LUFS - s.momentaneo_lufs) / 20), 10 ** ((TETO_DBFS - s.pico_dbfs) / 20)).toFixed(3);
 
 // Pasta de efeitos do plugin hyperframes, achada pelo mesmo critério do hf: HYPERFRAMES_PLUGIN_ROOT ou a versão mais
 // alta ao lado deste plugin no cache do Claude Code (<cache>/<marketplace>/hyperframes/<versão>/) que tenha o lançador
@@ -348,6 +356,24 @@ function loudness(arq, folga = false) {
 }
 const maxM = (arq) => Math.max(...loudness(arq, true).M.map((m) => m[1]));
 
+// Medida de um som como a HyperFrames toca (mono nos dois canais, em nível cheio): duração, instante do pico, nível do
+// pico (a maior amostra) e momentâneo máximo. É a medida gravada no sons/manifest.json e conferida pelos testes.
+// O instante do pico é o centro da janela de 10 ms com mais energia nos dois canais: nos sons de pico largo, a maior
+// amostra sozinha muda de lugar com a compressão do MP4 final (medido: 121 ms no whoosh-grave).
+export function medirSom(arq) {
+  const x = pcm(arq), p = pico(x), n = x.length / 2, J = SR / 100, tmp = mkdtempSync(join(tmpdir(), "som-"));
+  let soma = 0, max = -1, k = 0;
+  for (let i = 0; i < n; i++) {
+    soma += x[2 * i] ** 2 + x[2 * i + 1] ** 2;
+    if (i >= J) soma -= x[2 * (i - J)] ** 2 + x[2 * (i - J) + 1] ** 2;
+    if (soma > max) { max = soma; k = Math.max(0, i - J / 2); }
+  }
+  try {
+    gravar(x, join(tmp, "som.wav"));
+    return { duracao: +(n / SR).toFixed(3), pico: +(k / SR).toFixed(3), pico_dbfs: +(20 * Math.log10(p.m)).toFixed(1), momentaneo_lufs: +maxM(join(tmp, "som.wav")).toFixed(1) };
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+
 // Efeito pronto para mixar: pico em -1 dBFS; o curto ganha a camada grave alinhada pelo pico; se nem com volume 1 ele
 // alcança o volume preciso, o limitador empurra de 1 em 1 dB (até 15) sem passar o pico
 function prepararEfeito(sfx, lista, som, preciso, pasta) {
@@ -506,27 +532,39 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     if ((usa.includes(k) || marca.fontes?.[k] !== undefined) && !/^[\p{L}\p{N} ]+$/u.test(marca.fontes?.[k] ?? ""))
       throw new Error(`montar: fontes.${k} do marca.json ("${marca.fontes?.[k] ?? ""}") precisa ser o nome de uma fonte, só com letras, números e espaço.`);
   if (narrado) return montarNarrado(pasta, esc, marca, arqMarca, usa, avisar);
-  const palavras = ler(resolve(pasta, esc.transcricao ?? "transcript.json"), "o transcript.json")
-    .map((w) => [w.text, +w.start.toFixed(2), +w.end.toFixed(2)]);
-  const manter = ler(resolve(pasta, esc.trechos ?? "trechos.json"), "o trechos.json").manter;
+  const corte = ler(resolve(pasta, esc.trechos ?? "trechos.json"), "o trechos.json"), manter = corte.manter, extras = corte.extras ?? [];
   if (!Array.isArray(manter) || !manter.length) throw new Error('montar: o trechos.json não tem nenhum trecho em "manter". Rode o trechos.mjs de novo e confira se o vídeo tem fala.');
+  if (!Array.isArray(extras) || extras.some((c) => !Array.isArray(c) || c.length !== 2 || !c.every(Number.isFinite)))
+    throw new Error('montar: "extras" do trechos.json precisa ser a lista de cortes extras do trechos.mjs ([início, fim] em segundos). Rode o trechos.mjs de novo.');
+  // Palavra dentro de um corte extra (vício, tomada repetida, fora do trecho escolhido) sai da legenda, com aviso. Corte de
+  // pausa não tira palavra: perto das pausas o tempo do reconhecedor erra alguns centésimos.
+  const fora = [];
+  const palavras = ler(resolve(pasta, esc.transcricao ?? "transcript.json"), "o transcript.json")
+    .map((w) => [w.text, +w.start.toFixed(2), +w.end.toFixed(2)])
+    .filter(([txt, a, b]) => {
+      const sai = extras.some(([x, y]) => (a + b) / 2 > x && (a + b) / 2 < y);
+      if (sai) fora.push(txt);
+      return !sai;
+    });
+  if (fora.length) avisar(`montar: ${fora.length} ${fora.length > 1 ? "palavras dentro dos cortes extras saíram" : "palavra dentro de um corte extra saiu"} da legenda: "${fora.slice(0, 12).join(" ")}${fora.length > 12 ? " ..." : ""}". Confira se são as que você cortou.`);
 
-  // Um <video> por trecho mantido (receitas Hard cut e Trim in/out da hyperframes-core)
-  let pos = 0;
+  // Um <video> por trecho mantido (receitas Hard cut e Trim in/out da hyperframes-core). O início arredonda para o quadro de
+  // antes e o fim para o quadro de depois (o fim fraco da palavra não se perde), sem repetir quadro do trecho anterior.
+  let pos = 0, fimAnt = 0;
   const recuo = EC.COM_CARTOES.includes(esc.estilo) ? "          " : "        ";
-  const videos = manter.map(([a, b], i) => {
-    const fa = Math.round(a * F), n = Math.round(b * F) - fa;
+  const trechos = manter.map(([a, b], i) => {
+    const fa = Math.max(Math.floor(a * F + 1e-6), fimAnt), n = Math.ceil(b * F - 1e-6) - fa;
     if (!(n >= 1)) throw new Error(`montar: o trecho ${i + 1} do trechos.json (${a} a ${b} s) tem menos de 1 quadro. Confira o início e o fim dele.`);
-    const tag = `${recuo}<video id="trecho-${i + 1}" class="trecho clip" src="fonte.mp4" data-start="${(pos / F).toFixed(3)}" data-duration="${(n / F - 0.001).toFixed(3)}" data-media-start="${(fa / F).toFixed(3)}" data-track-index="0" playsinline data-has-audio="true"></video>`;
-    pos += n;
-    return tag;
+    // como o molde os lê na página (os números já arredondados das marcas do <video>). Início e duração em milissegundos
+    // inteiros, a duração até 1 ms antes do início do trecho seguinte: arredondar os dois em separado deixava a soma passar
+    // do início seguinte no ponto flutuante (84.367 + 1.266 > 85.633), e o lint acusa duplicate_audio_track
+    const ms = (q) => Math.round((q * 1000) / F);
+    const t = { ini: ms(pos) / 1000, dur: (ms(pos + n) - ms(pos) - 1) / 1000, src: +(fa / F).toFixed(3) };
+    pos += n; fimAnt = fa + n;
+    return t;
   });
+  const videos = trechos.map((t, i) => `${recuo}<video id="trecho-${i + 1}" class="trecho clip" src="fonte.mp4" data-start="${t.ini.toFixed(3)}" data-duration="${t.dur.toFixed(3)}" data-media-start="${t.src.toFixed(3)}" data-track-index="0" playsinline data-has-audio="true" data-fade-in="${RAMPA}" data-fade-out="${RAMPA}"></video>`);
   const total = +(pos / F).toFixed(3);
-  // Os trechos como o molde os lê na página (os números já arredondados das marcas do <video>)
-  const trechos = manter.map(([a, b], i, m) => {
-    const ini = m.slice(0, i).reduce((s, [x, y]) => s + Math.round(y * F) - Math.round(x * F), 0), fa = Math.round(a * F), n = Math.round(b * F) - fa;
-    return { ini: +(ini / F).toFixed(3), dur: +(n / F - 0.001).toFixed(3), src: +(fa / F).toFixed(3) };
-  });
   if (capa && total < 4) throw new Error(`montar: o vídeo editado tem ${total.toFixed(2).replace(".", ",")} s, curto demais para gancho de capa (precisa de 4 s ou mais).`);
   if (!existsSync(join(pasta, "fonte.mp4"))) avisar("montar: falta fonte.mp4 na pasta (passo 1 de references/audio-e-corte.md).");
 
@@ -566,22 +604,27 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
   // Efeitos sonoros (padrão: ligados), um <audio> por efeito, cortado no fim da edição
   if (esc.efeitos !== undefined && typeof esc.efeitos !== "boolean") throw new Error('montar: "efeitos" é true (ligados) ou false (desligados).');
   let efeitos = [], faixas = 0;
+  const sons = [];
   const ev = esc.efeitos === false ? [] : EC.efeitos(esc.estilo, dados, trechos, total);
-  if (ev.length) { // estilo sem efeito nenhum (a caixinha) não precisa do plugin hyperframes
-    const sfx = pastaEfeitos(), lista = ler(join(sfx, "manifest.json"), "o manifest.json dos efeitos");
+  if (ev.length) { // estilo sem efeito nenhum (a caixinha) não precisa de som nenhum
     mkdirSync(join(pasta, "efeitos"), { recursive: true });
     for (const som of new Set(ev.map((e) => e.som))) {
-      if (!lista[som] || !existsSync(join(sfx, lista[som].file))) throw new Error(`montar: o efeito "${som}" não está na pasta de efeitos da HyperFrames (${sfx}).`);
-      copyFileSync(join(sfx, lista[som].file), join(pasta, "efeitos", lista[som].file));
+      const s = SONS[som];
+      if (!s) throw new Error(`montar: o efeito "${som}" não está no sons/manifest.json do Editor Chefe.`);
+      // os sons do plugin hyperframes só são procurados quando o vídeo usa um deles
+      const dir = s.origem === "hyperframes" ? pastaEfeitos() : join(RAIZ, "sons");
+      if (!existsSync(join(dir, s.arquivo))) throw new Error(`montar: o efeito "${som}" (${s.arquivo}) não está em ${dir}.`);
+      copyFileSync(join(dir, s.arquivo), join(pasta, "efeitos", s.arquivo));
     }
     const fimDaFaixa = []; // efeitos que se sobrepõem vão para faixas diferentes (a 0 é do vídeo)
     efeitos = ev.map((e, i) => {
-      const ini = +Math.max(0, e.t - SOM[e.som].antes).toFixed(3), dur = +Math.min(lista[e.som].duration, total - ini).toFixed(3);
-      if (dur < 0.1) return "";
+      const s = SONS[e.som], ini = +Math.max(0, e.t - s.pico).toFixed(3), dur = +Math.min(s.duracao, total - ini).toFixed(3);
+      if (dur < Math.min(0.1, s.duracao)) return ""; // pedaço curto demais no fim do vídeo (o som curto entra inteiro)
       let f = fimDaFaixa.findIndex((fim) => fim <= ini);
       if (f < 0) f = fimDaFaixa.push(0) - 1;
       fimDaFaixa[f] = ini + dur;
-      return `      <audio id="efeito-${i + 1}" class="clip" src="efeitos/${lista[e.som].file}" data-start="${ini.toFixed(3)}" data-duration="${dur.toFixed(3)}" data-track-index="${f + 1}" data-volume="${SOM[e.som].volume}"></audio>`;
+      sons.push(e.som);
+      return `      <audio id="efeito-${i + 1}" class="clip" src="efeitos/${s.arquivo}" data-start="${ini.toFixed(3)}" data-duration="${dur.toFixed(3)}" data-track-index="${f + 1}" data-volume="${s.volume}"></audio>`;
     }).filter(Boolean);
     faixas = fimDaFaixa.length;
   }
@@ -672,7 +715,7 @@ ${copias.join("\n")}
   const saida = molde.replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => valores[k]);
   writeFileSync(join(pasta, "index.html"), saida);
   copyFileSync(join(RAIZ, "estilos", "comum.js"), join(pasta, "comum.js"));
-  return { duracao: pos / F, trechos: manter.length, palavras: palavras.length, efeitos: efeitos.length, veu: !!veu, aproximacoes: dados.aproximar?.length ?? 0 };
+  return { duracao: pos / F, trechos: manter.length, palavras: palavras.length, efeitos: efeitos.length, sons, veu: !!veu, aproximacoes: dados.aproximar?.length ?? 0 };
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {

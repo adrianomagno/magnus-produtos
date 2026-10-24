@@ -25,6 +25,18 @@ Efeitos sonoros (Pixabay)
   os sons usados para a pasta de cada vídeo, no computador do cliente. Os sons não são
   copiados para este repositório.
 
+Efeitos sonoros CC0 (Woven SFX e Kenney)
+  Licença: CC0 1.0 Universal (domínio público), https://creativecommons.org/publicdomain/zero/1.0/
+  Copiados para plugins/editor-chefe/sons/, com a origem, o commit ou a data, o nome original e o
+  preparo de cada arquivo em plugins/editor-chefe/sons/LICENCAS.md:
+  - Woven SFX, github.com/woven-video/woven-sfx, commit 7dd52724affe89bf500c74854bfc1391d778a1ea
+    (sons CC0 pelo SOUNDS_LICENSE do repositório): whoosh-rapido, whoosh-largo, whoosh-grave,
+    pop-mao e tique.
+  - Kenney, UI Audio 1.0, kenney.nl/assets/ui-audio, baixado em 2026-10-24 (CC0 pelo License.txt do
+    pacote): clique e clique-suave.
+  - Kenney, Impact Sounds 1.0, kenney.nl/assets/impact-sounds, baixado em 2026-10-24 (CC0 pelo
+    License.txt do pacote): impacto-suave.
+
 ONNX Runtime Web 1.30.0 (Microsoft)
   Licença MIT: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
   O preparar.sh baixa o pacote onnxruntime-web do registro npm (com conferência do

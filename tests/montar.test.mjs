@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import { montar } from '../plugins/editor-chefe/scripts/montar.mjs';
 
 const EC = createRequire(import.meta.url)('../plugins/editor-chefe/estilos/comum.js');
+const MANIFESTO = JSON.parse(readFileSync(new URL('../plugins/editor-chefe/sons/manifest.json', import.meta.url), 'utf8'));
 const WOFF2 = 'wOF2'; // os 4 primeiros bytes de um arquivo woff2 de verdade
 const MARCA = fileURLToPath(new URL('./marca-teste.json', import.meta.url));
 
@@ -27,7 +28,7 @@ test.after(() => rmSync(HF, { recursive: true, force: true }));
 const texto = 'Aqui na loja, todo cliente recebe resposta no mesmo dia. Se a dúvida chega de manhã, a solução sai antes do almoço.'.split(' ');
 let t = 0.5;
 const fala = texto.map((w) => { const p = { text: w, start: +t.toFixed(2), end: +(t + 0.28).toFixed(2) }; t += w.endsWith('.') ? 1.3 : 0.3; return p; });
-const corte = { limiar: -38, duracao: 9.5, manter: [[0.42, 3.86], [4.72, 9.5]] };
+const corte = { limiar: -38, duracao: 9.5, manter: [[0.44, 3.86], [4.74, 9.5]] };
 const ESCOLHAS = {
   'legenda-viva': {},
   'palavra-chave': { identidade: 'stomp', chaves: ['cliente', 'resposta', 'manhã', 'almoço'], apice: 'resposta' },
@@ -92,6 +93,36 @@ test('palavra com tempo dentro de um corte não se perde e não fica com duraç�
   assert.ok(pal[1].ini < pal[2].ini);
 });
 
+test('palavra dentro de corte extra sai da legenda, com aviso; palavra dentro de corte de pausa fica', () => {
+  // "todo" (1,4 a 1,68 s) cai no corte extra; "Se" (4,5 a 4,78 s) cai no corte da pausa depois de "dia." (3,86 a 4,74 s)
+  const dir = projeto('legenda-viva', { efeitos: false }), avisos = [];
+  try {
+    writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ ...corte, manter: [[0.44, 1.38], [1.7, 3.86], [4.74, 9.5]], extras: [[1.38, 1.7]] }));
+    assert.equal(montar(dir, (m) => avisos.push(m)).palavras, texto.length - 1);
+    assert.equal(avisos.length, 1);
+    assert.match(avisos[0], /1 palavra dentro de um corte extra saiu da legenda: "todo"/);
+    const legenda = JSON.parse(/const D = (.*);/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1]).palavras.map(([w]) => w);
+    assert.ok(!legenda.includes('todo') && legenda.includes('Se'), legenda.join(' '));
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('"extras" do trechos.json fora do formato é erro em português', () => {
+  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, extras: ['1.38-1.7'] }), /"extras" do trechos\.json/);
+});
+
+test('o trecho começa no quadro de antes e termina no de depois (o fim da palavra não se perde), sem repetir quadro', () => {
+  const dir = projeto('legenda-viva', { efeitos: false });
+  try {
+    // 0,42 vai para o quadro 12 (0,400 s) e 3,851 para o 116 (3,867 s); o 2º trecho começaria no quadro 115, já mostrado
+    writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ ...corte, manter: [[0.42, 3.851], [3.86, 9.5]] }));
+    montar(dir, () => {});
+    const html = readFileSync(join(dir, 'index.html'), 'utf8');
+    const v = [...html.matchAll(/<video id="trecho-\d+"[^>]* data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/g)].map((m) => m.slice(1));
+    assert.deepEqual(v, [['0.000', '3.466', '0.400'], ['3.467', '5.632', '3.867']]);
+    semMidiaRepetida(html);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('fonte de destaque sem itálico: declara a normal e avisa', () => {
   const dir = projeto('editorial-claro'), avisos = [];
   try {
@@ -139,7 +170,7 @@ test('"manter" vazio é erro em português', () => {
 });
 
 test('trecho com menos de 1 quadro (ou duração negativa) é erro', () => {
-  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.42, 3.86], [5, 5.01]] }), /trecho 2 .* menos de 1 quadro/);
+  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.44, 3.86], [5, 5]] }), /trecho 2 .* menos de 1 quadro/);
   assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[3, 2]] }), /trecho 1 .* menos de 1 quadro/);
 });
 
@@ -164,7 +195,7 @@ test('efeitos ligados (padrão): um <audio> por efeito, por baixo da voz, e os s
     try {
       const r = montar(dir, () => {});
       const html = readFileSync(join(dir, 'index.html'), 'utf8');
-      const audios = html.match(/<audio id="efeito-\d+" class="clip" src="efeitos\/[\w-]+\.mp3" data-start="[\d.]+" data-duration="[\d.]+" data-track-index="\d+" data-volume="0\.(35|2)"><\/audio>/g) || [];
+      const audios = html.match(/<audio id="efeito-\d+" class="clip" src="efeitos\/[\w-]+\.(mp3|wav)" data-start="[\d.]+" data-duration="[\d.]+" data-track-index="\d+" data-volume="[\d.]+"><\/audio>/g) || [];
       assert.ok(audios.length > 0, estilo);
       assert.equal(audios.length, r.efeitos, estilo);
       for (const a of audios) assert.ok(existsSync(join(dir, /src="([^"]+)"/.exec(a)[1])), a);
@@ -172,13 +203,55 @@ test('efeitos ligados (padrão): um <audio> por efeito, por baixo da voz, e os s
   }
 });
 
-test('palavra-chave: impacto grave no ápice, whoosh nas outras palavras fortes', () => {
-  const dir = projeto('palavra-chave');
+// Os trechos do corte como o molde os lê (os mesmos do montar.mjs para este trechos.json)
+const TRECHOS = [{ ini: 0, dur: 3.432, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }];
+const PALAVRAS = fala.map((w) => [w.text, w.start, w.end]);
+
+test('cada efeito começa no instante do movimento menos o pico medido do som, com o volume e a duração do manifesto', () => {
+  for (const estilo of Object.keys(ESCOLHAS)) {
+    const dir = projeto(estilo);
+    try {
+      const r = montar(dir, () => {});
+      const ev = EC.efeitos(estilo, { palavras: PALAVRAS, ...ESCOLHAS[estilo] }, TRECHOS, 8.2);
+      const audios = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/<audio id="efeito-\d+" class="clip" src="efeitos\/([^"]+)" data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="\d+" data-volume="([\d.]+)">/g)];
+      assert.equal(audios.length, ev.length, estilo);
+      assert.deepEqual(r.sons, ev.map((e) => e.som), estilo);
+      audios.forEach(([, arq, ini, dur, vol], i) => {
+        const s = MANIFESTO[ev[i].som];
+        assert.equal(arq, s.arquivo, estilo);
+        assert.equal(ini, Math.max(0, ev[i].t - s.pico).toFixed(3), `${estilo}: ${ev[i].som} em ${ev[i].t}`);
+        assert.ok(ev[i].t - s.pico < 0 || Math.abs(+ini + s.pico - ev[i].t) <= 0.0005, `${estilo}: o pico de ${ev[i].som} não cai no movimento`);
+        assert.equal(+vol, s.volume, estilo);
+        assert.equal(+dur, Math.min(s.duracao, +(8.2 - +ini).toFixed(3)), estilo);
+      });
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('o som do pacote (sons/) entra sem o plugin hyperframes; só o som da hyperframes pede o plugin', () => {
+  const antes = process.env.HYPERFRAMES_PLUGIN_ROOT;
+  process.env.HYPERFRAMES_PLUGIN_ROOT = join(HF, 'nao-existe');
+  const dir = projeto('painel-escuro'); // só a entrada dos cartões: whoosh-largo, do pacote
   try {
-    montar(dir, () => {});
-    const sons = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/src="efeitos\/([\w-]+)\.mp3"/g)].map((m) => m[1]);
-    assert.deepEqual(sons, ['whoosh-short', 'impact-bass-1', 'whoosh-short', 'whoosh-short']);
-  } finally { rmSync(dir, { recursive: true, force: true }); }
+    const r = montar(dir, () => {});
+    assert.deepEqual(r.sons, ['whoosh-largo', 'whoosh-largo']);
+    assert.ok(existsSync(join(dir, 'efeitos', MANIFESTO['whoosh-largo'].arquivo)));
+  } finally { process.env.HYPERFRAMES_PLUGIN_ROOT = antes; rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('palavra-chave: impacto no ápice (grave no stomp, suave no keynote), whooshes revezando nas outras palavras fortes', () => {
+  for (const [identidade, apice] of [['stomp', 'impact-bass-1'], ['keynote', 'impacto-suave']]) {
+    const dir = projeto('palavra-chave', { identidade });
+    try {
+      montar(dir, () => {});
+      const sons = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/src="efeitos\/([\w-]+)\.(mp3|wav)"/g)].map((m) => m[1]);
+      assert.deepEqual(sons, ['whoosh-short', apice, 'whoosh-rapido', 'whoosh-short'], identidade);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('corte seco: whoosh na aproximação, pop e pop da mão revezando nas palavras de ênfase', () => {
+  assert.deepEqual(EC.efeitos('corte-seco-zoom', { palavras: PALAVRAS, ...ESCOLHAS['corte-seco-zoom'] }, TRECHOS, 8.2).map((e) => e.som), ['pop', 'whoosh-short', 'pop-mao']);
 });
 
 test('"efeitos": false tira todos os <audio> de efeito', () => {
@@ -283,7 +356,7 @@ function semMidiaRepetida(html, msg) {
 }
 
 test('capa: edição com menos de 4 s é curta demais', () => {
-  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.42, 3.86]] }, { capa: CAPA }), /curto demais para gancho de capa/);
+  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.44, 3.86]] }, { capa: CAPA }), /curto demais para gancho de capa/);
 });
 
 test('capa: os estilos de 1 a 5 e de 7 a 9 levam a camada da capa com cópias mudas dos trechos dos primeiros 3 s', () => {
@@ -314,7 +387,7 @@ test('capa: os estilos de 1 a 5 e de 7 a 9 levam a camada da capa com cópias mu
 test('capa: trecho que começa dentro da capa é copiado só até o fim dela', () => {
   const dir = projeto('legenda-viva', { capa: { ...CAPA, queixo: 900 }, efeitos: false });
   try {
-    writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ ...corte, manter: [[0.42, 1.5], [2, 9.5]] }));
+    writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ ...corte, manter: [[0.44, 1.5], [2, 9.5]] }));
     montar(dir, () => {});
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     const copias = (html.match(/<video id="capa-trecho-\d+"[^>]*>/g) || []).map((v) => /data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/.exec(v).slice(1));
@@ -324,7 +397,7 @@ test('capa: trecho que começa dentro da capa é copiado só até o fim dela', (
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('capa: efeitos sonoros somem antes do fim da capa e entra um whoosh no começo da saída', () => {
+test('capa: efeitos sonoros somem antes do fim da capa e entra o whoosh grave no começo da saída', () => {
   const palavras = fala.map((w) => [w.text, w.start, w.end]);
   const trechos = [{ ini: 0, dur: 3.433, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }], total = 8.2;
   Object.keys(ESCOLHAS).forEach((estilo, i) => {
@@ -332,7 +405,7 @@ test('capa: efeitos sonoros somem antes do fim da capa e entra um whoosh no come
     assert.ok(EC.efeitos(estilo, d, trechos, total).some((e) => e.t < 3), `${estilo} sem capa tem efeito nos primeiros 3 s`);
     const capa = { estilo: CAPAS[i], texto: CAPA.texto, queixo: 840, fim: 3 };
     const ev = EC.efeitos(estilo, { ...d, capa }, trechos, total);
-    assert.deepEqual(ev.filter((e) => e.t < capa.fim), [{ t: capa.estilo === 'manchete' ? 2.7 : 2.6, som: 'whoosh-short' }], estilo);
+    assert.deepEqual(ev.filter((e) => e.t < capa.fim), [{ t: capa.estilo === 'manchete' ? 2.7 : 2.6, som: 'whoosh-grave' }], estilo);
     assert.ok(ev.some((e) => e.t >= capa.fim), estilo);
   });
 });
@@ -378,7 +451,7 @@ test('capa: texto colado com quebra de linha e espaços sobrando vira uma linha 
 });
 
 test('capa: a duração da edição curta sai com 2 casas (3,97 s não vira "4,0 s")', () => {
-  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.42, 4.39]] }, { capa: CAPA }), /tem 3,97 s, curto demais para gancho de capa/);
+  assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.44, 4.39]] }, { capa: CAPA }), /tem 3,97 s, curto demais para gancho de capa/);
 });
 
 test('capa: null ou false é o mesmo que sem capa', () => {
@@ -532,13 +605,16 @@ test('tela dividida: o vídeo ocupa a metade de baixo inteira e a legenda (no 8,
   assert.ok(painel.top + painel.alt <= caixa(molde('motion-dividido'), 'legenda').top, JSON.stringify(painel));
 });
 
-test('tela dividida: whoosh curto na entrada de cada cartão (no 9, de cada animação), sem som na legenda', () => {
-  const palavras = fala.map((w) => [w.text, w.start, w.end]);
-  const trechos = [{ ini: 0, dur: 3.432, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }];
+test('tela dividida: whoosh largo na entrada de cada cartão (no 9, de cada animação, e clique discreto em cada item seguinte), sem som na legenda', () => {
   for (const estilo of DIVIDIDOS) {
-    const ev = EC.efeitos(estilo, { palavras, ...ESCOLHAS[estilo] }, trechos, 8.2);
-    assert.deepEqual(ev.map((e) => e.som), ['whoosh-short', 'whoosh-short'], estilo);
-    assert.deepEqual(ev.map((e) => +e.t.toFixed(3)), [0.067, 3.5], estilo);
+    const ev = EC.efeitos(estilo, { palavras: PALAVRAS, ...ESCOLHAS[estilo] }, TRECHOS, 8.2);
+    const cartao = ev.filter((e) => e.som === 'whoosh-largo'), resto = ev.filter((e) => e.som !== 'whoosh-largo');
+    assert.deepEqual(cartao.map((e) => +e.t.toFixed(3)), [0.067, 3.5], estilo);
+    if (estilo !== 'motion-dividido') { assert.deepEqual(resto, [], estilo); continue; }
+    // os itens depois do primeiro (que entra com o título), no instante em que a animação mostra cada um
+    const itens = ESCOLHAS[estilo].cartoes.flatMap((c, i, cs) => EC.batidas(EC.mapear(PALAVRAS, TRECHOS, 8.2), c.itens, EC.naEdicao(c.de, 'ini', TRECHOS, 8.2), cs[i + 1] ? EC.naEdicao(cs[i + 1].de, 'ini', TRECHOS, 8.2) : 8.2).slice(1).map((b) => b.t));
+    assert.deepEqual(resto.map((e) => e.t), itens, estilo);
+    assert.deepEqual(resto.map((e) => e.som), ['tique', 'clique-suave', 'tique'], estilo);
   }
 });
 
@@ -722,4 +798,18 @@ test('aproximar: false desliga sem aviso; formato errado é erro em português',
     writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'legenda-viva', marca: MARCA, aproximar: 'a solução sai' }));
     assert.throws(() => montar(dir, () => {}), /"aproximar" é a lista das frases de ênfase/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('trechos encostados nunca se sobrepõem na linha do tempo (o lint acusaria duplicate_audio_track)', () => {
+  // Caso real da prova de 2026-10-24: trecho no quadro 2531 com 38 quadros; 84.367 + 1.266 passava de 85.633 no ponto flutuante
+  const manter = [];
+  for (let q = 0, i = 0; q < 2400; i++) { const n = 1 + ((i * 37) % 59); manter.push([q / 30, (q + n) / 30]); q += n + (i % 3); }
+  manter.push([2531 / 30, 2569 / 30], [2569 / 30, 2600 / 30]);
+  const dir = projeto('legenda-viva', { efeitos: false });
+  writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ limiar: -38, duracao: 90, manter }));
+  montar(dir, () => {});
+  const v = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/<video id="trecho-\d+"[^>]*data-start="([\d.]+)" data-duration="([\d.]+)"/g)].map((m) => [+m[1], +m[2]]);
+  assert.equal(v.length, manter.length);
+  v.slice(1).forEach(([ini], i) => assert.ok(v[i][0] + v[i][1] < ini, `trecho ${i + 1} (${v[i][0]} + ${v[i][1]}) passa do início do ${i + 2} (${ini})`));
+  rmSync(dir, { recursive: true, force: true });
 });

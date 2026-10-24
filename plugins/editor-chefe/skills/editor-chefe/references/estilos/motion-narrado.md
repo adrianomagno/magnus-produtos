@@ -70,7 +70,7 @@ Na pasta do vídeo, `Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/`, sempre
 4. **Antes de entregar**, além do que pede `entrega.md`:
    - a duração (`ffprobe`) entre 20 e 30 s e maior que o `end` da última palavra do `words.json`;
    - o áudio do MP4 em -16 LUFS (perto) e o pico verdadeiro abaixo de -1 dBTP: `ffmpeg -nostats -i <mp4> -af ebur128=peak=true -f null -` e leia o resumo (`I` e `Peak`);
-   - cada palavra-chave entrando quando é dita: `hf snapshot . --at <start da palavra + 0,05>` mostra a palavra já na tela.
+   - cada palavra-chave entrando quando é dita: `hf snapshot . --at <start da palavra + 0,05> --describe false` mostra a palavra já na tela.
 
 ## Cuidados
 

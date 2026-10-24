@@ -9,4 +9,17 @@ P=skills/hyperframes/scripts/plugin-cli.mjs
 if [ -n "${HYPERFRAMES_PLUGIN_ROOT:-}" ]; then L="${HYPERFRAMES_PLUGIN_ROOT%/}/$P"
 else L="$(ls -d "$EC"/../../hyperframes/*/$P 2>/dev/null | sort -V | tail -1 || true)"; fi
 [ -f "$L" ] || { echo "Editor Chefe: não achei a HyperFrames. Instale o plugin hyperframes do mesmo marketplace do Editor Chefe e abra uma conversa nova." >&2; exit 1; }
+# O snapshot da HyperFrames manda os quadros ao Gemini quando há GEMINI_API_KEY ou GOOGLE_API_KEY no ambiente
+# (opção --describe, ligada por padrão). O vídeo do dono não sai do computador: aqui ela é sempre --describe false.
+if [ "${1:-}" = snapshot ]; then
+  a=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --describe) shift; [ $# -gt 0 ] && shift ;;
+      --describe=*|--no-describe) shift ;;
+      *) a+=("$1"); shift ;;
+    esac
+  done
+  set -- "${a[@]}" --describe false
+fi
 exec node "$L" "$@"

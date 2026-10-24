@@ -1,11 +1,12 @@
 // Fonte de trabalho (passo 1 de references/audio-e-corte.md): 30 qps, um quadro-chave por segundo (com menos, a imagem
 // congela no render), lado maior até 1920 px (vídeo menor não é ampliado), HDR do celular (HLG ou PQ) convertido para
 // cor comum (SDR, BT.709) com mapeamento de tom e o áudio tratado em -16 LUFS. Opcionais: um visual de cor e a limpeza
-// de ruído de fundo.
+// de ruído de fundo. Se a pasta tem um borrar.json (do sigilo.mjs, passo 3b), as áreas dele saem borradas, toda vez.
+// As opções usadas ficam no fonte.json da pasta (o ultimo-estilo.mjs guarda o visual de cor e a limpeza de lá).
 // Uso: node fonte.mjs <original> [--cor <visual>] [--ruido]   grava fonte.mp4 na pasta do original
 //      node fonte.mjs <original> --medir                       só mede o ruído de fundo e diz se vale oferecer a limpeza
 import { spawnSync } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { realpathSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -84,13 +85,34 @@ export function medirRuido(arq) {
 
 // HDR do celular (HLG ou PQ) para cor comum (SDR, BT.709), com mapeamento de tom; a capa do perfil usa o mesmo
 export const HDR_SDR = "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p";
-export function filtros(arq, { cor, ruido } = {}) {
+// Borrão das áreas do borrar.json: cada uma { de, ate, caixa: [x, y, largura, altura] }, em segundos do original e em
+// fração do quadro já girado (o ffmpeg gira o vídeo do celular antes dos filtros, aqui e no sigilo.mjs). O pedaço é
+// recortado, borrado e colado de volta no mesmo lugar, só entre "de" e "ate"; a conta em px pares é a mesma no recorte e
+// na colagem (o mesmo quadro), então ele não escorrega. A força cresce com a altura da área: a letra some.
+export function borrao(areas) {
+  const par = (d, v) => `trunc(${d}*${v}/2)*2`;
+  return areas.map(({ de, ate, caixa: [x, y, w, h] }, i) => `split[b${i}][c${i}];[c${i}]crop=w=max(2\\,${par("iw", w)}):h=max(2\\,${par("ih", h)}):x=${par("iw", x)}:y=${par("ih", y)},` +
+    `boxblur=luma_radius=min(w\\,h)/5:luma_power=3[d${i}];[b${i}][d${i}]overlay=x=${par("W", x)}:y=${par("H", y)}:enable=between(t\\,${de}\\,${ate})`).join(",");
+}
+// Lê o borrar.json; arquivo estragado para a fonte (melhor parar que entregar o dado sem borrão)
+export function lerBorrar(arq) {
+  let j;
+  try { j = JSON.parse(readFileSync(arq, "utf8")); } catch { j = null; }
+  const ok = (a) => a && Number.isFinite(a.de) && Number.isFinite(a.ate) && a.de < a.ate && Array.isArray(a.caixa) && a.caixa.length === 4
+    && a.caixa.every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && a.caixa[2] > 0 && a.caixa[3] > 0 && a.caixa[0] + a.caixa[2] <= 1 && a.caixa[1] + a.caixa[3] <= 1;
+  if (!Array.isArray(j?.areas) || !j.areas.every(ok))
+    throw new Error(`fonte: o ${arq} está estragado. Grave de novo com o sigilo.mjs --borrar (passo 3b de references/audio-e-corte.md) ou, para tirar o borrão, apague o arquivo.`);
+  return j.areas;
+}
+
+export function filtros(arq, { cor, ruido, borrar } = {}) {
   if (cor != null && !Object.hasOwn(CORES, cor)) throw new Error(`fonte: o visual de cor "${cor}" não existe. Use: ${Object.keys(CORES).join(", ")}.`);
   const p = spawnSync(ffprobe(), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=color_transfer", "-of", "csv=p=0", arq], { encoding: "utf8", timeout: TEMPO_MAX });
   if (p.error || p.status !== 0) throw new Error(`fonte: não consegui ler o vídeo ${arq}.`);
   const hdr = ["arib-std-b67", "smpte2084"].includes(p.stdout.trim());
   const vf = ["scale=w=min(iw\\,1920):h=min(ih\\,1920):force_original_aspect_ratio=decrease:force_divisible_by=2"];
   if (hdr) vf.push(HDR_SDR);
+  if (borrar?.length) vf.push(borrao(borrar));
   if (cor) vf.push(CORES[cor]);
   // Limpeza: o afftdn aprende o ruído no meio segundo mais quieto do vídeo (colado antes do áudio e tirado depois) e o
   // reduz em 12 dB, o bastante para o chiado sumir sem a voz ficar metálica. Sem amostra, o afftdn quase não age.
@@ -104,11 +126,13 @@ export function filtros(arq, { cor, ruido } = {}) {
 }
 
 export function fonte(arq, opcoes = {}) {
-  const f = filtros(arq, opcoes), saida = join(dirname(arq), "fonte.mp4");
+  const arqB = join(dirname(arq), "borrar.json"), borrar = existsSync(arqB) ? lerBorrar(arqB) : [];
+  const f = filtros(arq, { ...opcoes, borrar }), saida = join(dirname(arq), "fonte.mp4");
   const r = spawnSync(ffmpeg(), ["-v", "error", "-y", "-i", arq, "-vf", f.vf, "-r", "30", "-c:v", "libx264", "-crf", "18", "-g", "30", "-keyint_min", "30", "-pix_fmt", "yuv420p",
     "-filter_complex", `[0:a:0]${f.af}[som]`, "-map", "0:v:0", "-map", "[som]", "-ar", "48000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", saida], { encoding: "utf8", timeout: TEMPO_MAX, maxBuffer: 1 << 26 });
   if (r.error || r.status !== 0) throw new Error(`fonte: o ffmpeg não gravou a fonte.mp4 (${ultima(r.error?.message ?? r.stderr)}).`);
-  return { saida, ...f };
+  writeFileSync(join(dirname(arq), "fonte.json"), JSON.stringify({ cor: opcoes.cor ?? null, ruido: !!opcoes.ruido }) + "\n");
+  return { saida, ...f, borradas: borrar.length };
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -121,7 +145,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
       console.log(m.oferecer ? `fonte: ruído de fundo a ${m.distancia_db} dB da fala; vale oferecer a limpeza de ruído.` : `fonte: ruído de fundo a ${m.distancia_db} dB da fala; não precisa de limpeza.`);
     } else {
       const r = fonte(resolve(arq), { cor: i >= 0 ? args[i + 1] : undefined, ruido: args.includes("--ruido") });
-      console.log(`fonte: fonte.mp4 pronta${r.hdr ? ", HDR convertido para cor comum" : ""}${i >= 0 ? `, visual ${args[i + 1]}` : ""}${r.amostra != null ? `, limpeza de ruído (amostra do ruído em ${r.amostra} s)` : ""}.`);
+      console.log(`fonte: fonte.mp4 pronta${r.hdr ? ", HDR convertido para cor comum" : ""}${i >= 0 ? `, visual ${args[i + 1]}` : ""}${r.amostra != null ? `, limpeza de ruído (amostra do ruído em ${r.amostra} s)` : ""}${r.borradas ? `, ${r.borradas} ${r.borradas > 1 ? "áreas borradas" : "área borrada"} (borrar.json)` : ""}.`);
     }
   } catch (e) {
     console.error(e.message);

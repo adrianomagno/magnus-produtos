@@ -57,7 +57,7 @@ Exemplo da Manchete com o `queixo` ajustado:
 
 - Aparece desde o primeiro quadro e termina de sumir aos 3 segundos (a saída começa em 2,6 s; na Manchete, em 2,7 s). Por isso a edição precisa ter pelo menos 4 segundos; mais curta, o montador para dizendo que ela é curta demais para gancho de capa.
 - O texto do próprio estilo (legenda, palavra, cartão) fica escondido enquanto a capa cobre a tela e volta quando ela sai.
-- Os efeitos sonoros que cairiam antes do fim da capa são tirados, e um som curto de passagem toca na saída da capa. Com `"efeitos": false`, não há som nenhum.
+- Os efeitos sonoros que cairiam antes do fim da capa são tirados, e o whoosh grave, som próprio da capa, toca na saída dela. Com `"efeitos": false`, não há som nenhum.
 - Faixa: o quadro inteiro desce a altura da tarja durante a capa. Nada do quadro fica sob a tarja, mas a parte de baixo é cortada por 3 segundos.
 - A cor de destaque da marca é ajustada sozinha quando não dá contraste suficiente para ler (mínimo de 4,6 para 1), então na capa ela pode sair um pouco mais escura ou mais clara que a da marca.
 
@@ -72,9 +72,9 @@ O script baixa o normal e o itálico do peso pedido. Sem esse arquivo, o `montar
 ## Conferência
 
 1. Monte (`node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .`). Se o montador reclamar do texto (palavra forte, mais de 8 palavras, estilo que não existe) ou de a edição ser curta demais, ajuste o `escolhas.json` e monte de novo.
-2. Olhe o primeiro quadro: `hf snapshot . --at 0` grava a imagem na pasta `snapshots/` do vídeo. Confira se o texto não cobre a boca nem o rosto.
+2. Olhe o primeiro quadro: `hf snapshot . --at 0 --describe false` grava a imagem na pasta `snapshots/` do vídeo. Confira se o texto não cobre a boca nem o rosto.
 3. Na Manchete, se o texto cobrir a boca, estime pela imagem a altura do queixo (a imagem tem 1080x1920; conte de cima para baixo), ponha em `"queixo"` e monte de novo. O texto passa a começar 160 pontos abaixo do queixo, nunca acima de 1000. Com o queixo depois de 1000, o montador para: o texto cairia embaixo dos botões do Instagram, o rosto está baixo demais para a Manchete; ofereça a Faixa ou a Editorial.
 4. Na Faixa o quadro inteiro desce a altura da tarja: confira que a boca e o queixo continuam dentro do quadro depois da descida; se saírem, diga ao dono e ofereça trocar de capa. Na Editorial o texto tem posição fixa: se cobrir a boca, diga ao dono e ofereça trocar de capa.
-5. Com capa, a imagem de 2 s mostra a capa e não o enquadramento do estilo. Para conferir o enquadramento do estilo (o `"foco"`, como mandam os arquivos de estilo), olhe depois da capa: `hf snapshot . --at 3.5`, e não `--at 2`.
+5. Com capa, a imagem de 2 s mostra a capa e não o enquadramento do estilo. Para conferir o enquadramento do estilo (o `"foco"`, como mandam os arquivos de estilo), olhe depois da capa: `hf snapshot . --at 3.5 --describe false`, e não `--at 2`.
 
 A prévia dos primeiros 10 segundos já sai com a capa; mostre-a ao dono olhando primeiro os 3 segundos da capa. Ajuste o texto ou troque de capa pelo que ele disser. O vídeo inteiro só sai com o ok dele.

@@ -11,7 +11,9 @@ claude plugin validate plugins/editor-chefe
 acha() { local s=0; git grep -nIE "$@" || s=$?; case $s in 0) return 0 ;; 1) return 1 ;; *) echo "git grep falhou ($s)"; exit 2 ;; esac; }
 # Só nos arquivos do Editor Chefe: o marketplace é compartilhado e outros produtos levam esses nomes de propósito
 if acha -f tests/.proibidos -- plugins/editor-chefe tests; then echo "nome proibido"; exit 1; fi
-if acha $'\xe2\x80\x94|\xe2\x80\x93'; then echo "travessão"; exit 1; fi # travessões em bytes, para este arquivo não achar a si mesmo
+if acha $'\xe2\x80\x94|\xe2\x80\x93'; then echo "travessão"; exit 1; fi
+# Snapshot da HyperFrames sem --describe false manda quadros do vídeo ao Gemini quando há chave do Google no ambiente
+if git grep -hoIE 'hf snapshot[^`]*' -- plugins/editor-chefe | grep -v -- '--describe false'; then echo "hf snapshot sem --describe false"; exit 1; fi # travessões em bytes, para este arquivo não achar a si mesmo
 [ ! -d plugins/editor-chefe/bin ]
 [ ! -e plugins/editor-chefe/hooks ] # sem gancho de sessão: o PATH do usuário só muda com o prefixo eval
 # Catálogo único dos estilos: cada estilo tem a referência e o molde, a lista bate com os arquivos e a SKILL não guarda lista própria

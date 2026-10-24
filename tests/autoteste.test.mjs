@@ -43,13 +43,36 @@ test('sem render: monta o projeto sintético na Legenda viva com efeitos, não g
   const pasta = join(raiz, 'sem-render'), dados = novosDados(), linhas = [];
   const r = autoteste(pasta, { render: false, baixarFonte: fonteFalsa, dados, avisar: (m) => linhas.push(m) });
   assert.equal(r.montagem.trechos, 2);
-  assert.ok(r.montagem.efeitos > 0, 'os efeitos sonoros da HyperFrames entram');
+  assert.ok(r.montagem.efeitos > 0, 'os efeitos sonoros entram');
+  assert.deepEqual(r.montagem.sons, ['whoosh-short', 'whoosh-rapido'], 'um som da hyperframes e um CC0 do pacote');
   assert.equal(r.montagem.aproximacoes, 1, 'a aproximação no rosto entra, no rastro de rosto de mentira');
   assert.match(linhas.join('\n'), /visual de cor forte/);
+  if (process.platform === 'darwin') assert.match(linhas.join('\n'), /leitura da tela achou o CPF de teste[^]*borrão ok/);
   assert.equal(linhas.at(-1), 'AUTOTESTE SEM RENDER OK');
   assert.ok(!existsSync(pasta));
   assert.ok(!existsSync(join(dados, 'pronto')));
   assert.equal(estaPronto(dados), false);
+});
+
+test('fora do Mac: confere só a fala, diz que a leitura da tela não está disponível e segue', () => {
+  const linhas = [];
+  autoteste(join(raiz, 'sem-tela'), { render: false, baixarFonte: fonteFalsa, dados: novosDados(), tela: false, avisar: (m) => linhas.push(m) });
+  assert.ok(linhas.includes('autoteste: dado pessoal: a fala foi conferida; a leitura da tela não está disponível neste computador (só no Mac)'), linhas.join('\n'));
+  assert.ok(!linhas.some((l) => /borrão/.test(l)));
+  assert.equal(linhas.at(-1), 'AUTOTESTE SEM RENDER OK');
+});
+
+test('Mac em que a leitura de texto do sistema não roda (macOS antigo): avisa, confere só a fala e segue', { skip: process.platform !== 'darwin' }, () => {
+  const falso = join(raiz, 'osascript-quebrado');
+  mkdirSync(falso, { recursive: true });
+  writeFileSync(join(falso, 'osascript'), '#!/bin/sh\necho "execution error: Vision indisponivel" >&2\nexit 1\n', { mode: 0o755 });
+  const antes = process.env.PATH, linhas = [];
+  process.env.PATH = falso + ':' + antes;
+  try {
+    autoteste(join(raiz, 'mac-antigo'), { render: false, baixarFonte: fonteFalsa, dados: novosDados(), avisar: (m) => linhas.push(m) });
+  } finally { process.env.PATH = antes; }
+  assert.ok(linhas.some((l) => /a leitura da tela não rodou neste Mac .*confere só a fala/.test(l)), linhas.join('\n'));
+  assert.ok(!linhas.some((l) => /borrão ok/.test(l)));
 });
 
 test('pasta de teste que já existe, de qualquer jeito: recusa e não apaga nada', () => {
@@ -67,7 +90,8 @@ test('render que passa do tempo máximo: para com erro em português que diz a e
   const pasta = join(raiz, 'trava'), dados = novosDados();
   process.env.DORMIR = '1';
   try {
-    assert.throws(() => autoteste(pasta, { baixarFonte: fonteFalsa, dados, tempo: 3000, avisar: () => {} }), /etapa "render".*passou do tempo máximo/s);
+    // Só o render com 3 s: com 3 s em toda etapa, uma etapa anterior estourava sob carga e o erro citava outra etapa
+    assert.throws(() => autoteste(pasta, { baixarFonte: fonteFalsa, dados, tempo: { render: 3000 }, avisar: () => {} }), /etapa "render".*passou do tempo máximo de 3 segundos/s);
   } finally { delete process.env.DORMIR; }
   assert.ok(!existsSync(pasta));
   assert.ok(!existsSync(join(dados, 'pronto')));

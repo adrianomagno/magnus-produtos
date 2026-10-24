@@ -46,4 +46,15 @@ test('HYPERFRAMES_PLUGIN_ROOT tem precedência sobre o cache', () => {
   assert.equal(r.stdout.trim(), 'clone doctor --json');
 });
 
+test('snapshot sempre sai com --describe false, mesmo pedindo outra coisa (os quadros não vão ao Gemini)', () => {
+  const dev = join(raiz, 'clone');
+  falsa(dev, 'clone');
+  const snap = (...a) => spawnSync('bash', [hf, 'snapshot', '.', '--at', '2', ...a], {
+    encoding: 'utf8', env: { ...process.env, HYPERFRAMES_PLUGIN_ROOT: dev, PATH: dirname(process.execPath) + delimiter + process.env.PATH },
+  }).stdout.trim();
+  for (const a of [[], ['--describe', 'o logo aparece?'], ['--describe=true'], ['--describe', 'false']])
+    assert.equal(snap(...a), 'clone snapshot . --at 2 --describe false', JSON.stringify(a));
+  assert.equal(rodar({ HYPERFRAMES_PLUGIN_ROOT: dev }).stdout.trim(), 'clone doctor --json'); // os outros comandos passam iguais
+});
+
 test.after(() => rmSync(raiz, { recursive: true, force: true }));

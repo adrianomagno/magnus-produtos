@@ -7,7 +7,7 @@ Este repositório é o marketplace de plugins `magnus`, com os produtos do progr
 O Editor Chefe edita vídeos curtos de quem tem um negócio: corta as pausas, legenda as falas, aplica o estilo que você escolher com a identidade visual do seu negócio e entrega o vídeo vertical em MP4.
 
 - **Onde roda:** no seu computador, pelo app Claude, na aba Code, numa conversa local.
-- **Privacidade:** o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala e alguns quadros para conferir o enquadramento.
+- **Privacidade:** o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala, o texto que aparece na tela (lido no próprio computador) e alguns quadros para conferir o enquadramento.
 - **Estilos:** veja a galeria em https://adrianomagno.github.io/magnus-produtos/galeria/
 - **Lista atual dos estilos e das capas:** o catálogo, em `plugins/editor-chefe/skills/editor-chefe/references/catalogo.md` (no GitHub: https://github.com/adrianomagno/magnus-produtos/blob/main/plugins/editor-chefe/skills/editor-chefe/references/catalogo.md).
 - **Requisitos:** cerca de 5 GB livres na primeira instalação. Ele baixa o Node.js e o FFmpeg portáteis (sem pedir senha de administrador), o detector de rosto (cerca de 15 MB), a HyperFrames, o Chrome que ela usa e o modelo de transcrição Parakeet; precisa de internet durante a instalação e em cada render.
@@ -25,7 +25,7 @@ A skill de copy do aluno da Mentoria High Level: roteiros de Reels, carrosséis,
 
 São duas conversas no app Claude, aba Code:
 - **MAGNUS** (no servidor): você pede o vídeo e ele prepara o pedido. Ele não edita.
-- **Editor Chefe** (Local, no seu computador, pasta Documentos): edita e mostra a prévia. O arquivo de vídeo fica no seu computador; o Claude lê o texto da fala e alguns quadros para conferir a edição.
+- **Editor Chefe** (Local, no seu computador, pasta Documentos): edita e mostra a prévia. O arquivo de vídeo fica no seu computador; o Claude lê o texto da fala, o texto que aparece na tela (lido no próprio computador) e alguns quadros para conferir a edição.
 
 ### 1. Abrir a conversa Local
 Aba Code, nova sessão. Escolha **o seu computador (Local)**, não o servidor do MAGNUS, e a pasta **Documentos**. Confira colando:

@@ -12,10 +12,10 @@
 
 ## Efeitos sonoros
 
-- **Whoosh curto** em cada aproximação do enquadramento (de 100% para 115%); a volta para 100% fica sem som.
-- **Pop** em cada palavra de ênfase, junto com o traço.
+- **Whoosh** em cada aproximação do enquadramento, revezando o curto e o rápido (de 100% para 115%); a volta para 100% fica sem som.
+- **Pop ou clique discreto** em cada palavra de ênfase, junto com o traço (revezando o pop, o pop da mão e o clique).
 
-Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licença Pixabay, uso comercial sem atribuição); o montador copia só os usados para a pasta `efeitos/` do vídeo. Volume 0,35, por baixo da voz (o impacto grave, 9 dB mais alto de origem, vai a 0,2); cada som começa um instante antes, para o pico cair quando o elemento aparece; dois efeitos a menos de 0,5 s um do outro: fica o mais forte. Ligados por padrão; `"efeitos": false` no `escolhas.json` desliga neste vídeo.
+Os sons são os do `sons/manifest.json` do plugin: os da pasta `sons/` (licença CC0, com a origem de cada um em `sons/LICENCAS.md`) e 3 do plugin hyperframes (`whoosh-short`, `pop` e `impact-bass-1`, licença Pixabay, uso comercial sem atribuição); o montador copia só os usados para a pasta `efeitos/` do vídeo. O volume de cada som foi medido no arquivo e todos ficam no mesmo nível, por baixo da voz. Cada som começa antes do movimento o tanto do pico medido dele, para o ponto mais forte do som cair no quadro em que o elemento aparece. Quando um momento tem mais de um som, eles se revezam, para não repetir o mesmo som seguido. Dois efeitos a menos de 0,5 s um do outro: fica o mais forte. Ligados por padrão; `"efeitos": false` no `escolhas.json` desliga neste vídeo.
 
 ## Como montar
 
@@ -27,7 +27,7 @@ Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licen�
 
    Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5 e de 7 a 9 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`. Neste estilo não use `"aproximar"`: o enquadramento já aproxima a cada frase.
 4. Monte: `node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .` grava `index.html` e `comum.js` na pasta e, com os efeitos ligados, copia os sons usados para `efeitos/`. Aviso de palavra "não foi achada na fala" quer dizer que ela não aparece no `transcript.json` na ordem pedida: corrija a palavra no `escolhas.json` e monte de novo.
-5. Confira o rosto com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`) e ajuste o `"foco"` se preciso.
+5. Confira o rosto com `hf snapshot . --at 2 --describe false` (com gancho de capa, `--at 3.5`) e ajuste o `"foco"` se preciso.
 
 ## Prévia, conferência e render
 
@@ -47,7 +47,7 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 ## Cuidados
 
 - **115% sobre vídeo deitado:** uma gravação de 1280x660 já fica quase 3 vezes maior em tela cheia; com o zoom, perde ainda mais nitidez. Para vídeo deitado, ofereça antes `painel-escuro` ou `editorial-claro`.
-- **O centro do zoom é o `"foco"`:** confira com `hf snapshot . --at <segundo>`, um pouco antes e um pouco depois de uma frase nova, que o rosto fica inteiro nos dois enquadramentos.
+- **O centro do zoom é o `"foco"`:** confira com `hf snapshot . --at <segundo> --describe false`, um pouco antes e um pouco depois de uma frase nova, que o rosto fica inteiro nos dois enquadramentos.
 - **Fonte sem peso 800:** o montador usa o peso mais pesado que houver em `fonts/` e avisa. Diga ao dono que a letra fica um pouco mais leve que a da marca.
 - **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.
 - **Sem o plugin hyperframes:** o montador para dizendo que não achou os efeitos sonoros. Instale o plugin hyperframes do mesmo marketplace e abra uma conversa nova; se não der, monte com `"efeitos": false`.

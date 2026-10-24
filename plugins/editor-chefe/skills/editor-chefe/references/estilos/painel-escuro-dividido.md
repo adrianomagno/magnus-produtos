@@ -12,10 +12,10 @@
 
 ## Efeitos sonoros
 
-- **Whoosh curto** na entrada de cada cartão.
+- **Whoosh largo** na entrada de cada cartão, um som só dos cartões.
 - A legenda em caixa fica sem som: ela troca a cada segundo.
 
-Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licença Pixabay, uso comercial sem atribuição); o montador copia só os usados para a pasta `efeitos/` do vídeo. Volume 0,35, por baixo da voz (o impacto grave, 9 dB mais alto de origem, vai a 0,2); cada som começa um instante antes, para o pico cair quando o elemento aparece; dois efeitos a menos de 0,5 s um do outro: fica o mais forte. Ligados por padrão; `"efeitos": false` no `escolhas.json` desliga neste vídeo.
+Os sons são os do `sons/manifest.json` do plugin: os da pasta `sons/` (licença CC0, com a origem de cada um em `sons/LICENCAS.md`) e 3 do plugin hyperframes (`whoosh-short`, `pop` e `impact-bass-1`, licença Pixabay, uso comercial sem atribuição); o montador copia só os usados para a pasta `efeitos/` do vídeo. O volume de cada som foi medido no arquivo e todos ficam no mesmo nível, por baixo da voz. Cada som começa antes do movimento o tanto do pico medido dele, para o ponto mais forte do som cair no quadro em que o elemento aparece. Quando um momento tem mais de um som, eles se revezam, para não repetir o mesmo som seguido. Dois efeitos a menos de 0,5 s um do outro: fica o mais forte. Ligados por padrão; `"efeitos": false` no `escolhas.json` desliga neste vídeo.
 
 ## Como montar
 
@@ -34,7 +34,7 @@ Os sons são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licen�
 
    Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 25%"` para começar neste estilo: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5 e de 7 a 9 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`. `"aproximar"` é opcional: a lista das frases de ênfase em que o vídeo aproxima no rosto, se o dono quis (veja `audio-e-corte.md`, passo 4b).
 4. Monte: `node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .` grava `index.html` e `comum.js` na pasta e, com os efeitos ligados, copia os sons usados para `efeitos/`.
-5. Confira o rosto com `hf snapshot . --at 2` (com gancho de capa, `--at 3.5`): a cabeça precisa começar abaixo da legenda da emenda (a caixa desce até uns 1010 px). Se a legenda encostar no cabelo ou na testa, diminua o segundo número do `"foco"` (de 25% para 20%, 15%...), que desce a pessoa; se o queixo sair por baixo, aumente.
+5. Confira o rosto com `hf snapshot . --at 2 --describe false` (com gancho de capa, `--at 3.5`): a cabeça precisa começar abaixo da legenda da emenda (a caixa desce até uns 1010 px). Se a legenda encostar no cabelo ou na testa, diminua o segundo número do `"foco"` (de 25% para 20%, 15%...), que desce a pessoa; se o queixo sair por baixo, aumente.
 
 ## Prévia, conferência e render
 
@@ -57,5 +57,5 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 - **Título longo:** com mais de 8 palavras, o título desce para 88 px e passa de 4 linhas, pesado para ler nos poucos segundos do cartão. Corte o trecho.
 - **Fonte sem peso 800:** o montador usa o peso mais pesado que houver em `fonts/` e avisa. Diga ao dono que a letra fica um pouco mais leve que a da marca.
 - **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.
-- **Sem o plugin hyperframes:** o montador para dizendo que não achou os efeitos sonoros. Instale o plugin hyperframes do mesmo marketplace e abra uma conversa nova; se não der, monte com `"efeitos": false`.
+- **Sem o plugin hyperframes:** os efeitos sonoros deste estilo são todos da pasta `sons/` do Editor Chefe, então a montagem não para por falta deles (o render continua precisando da HyperFrames).
 - **Teste de referência:** 15 s de gravação viraram 13,2 s de edição com 4 cartões; render em cerca de 25 s num Mac M1 Pro; com os 4 efeitos, áudio em -16,5 LUFS.

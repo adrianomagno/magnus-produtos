@@ -125,32 +125,50 @@
   const SAIDA = { faixa: 2.6, manchete: 2.7, editorial: 2.6 };
 
   // Efeitos sonoros de cada estilo, nos mesmos instantes em que o molde mostra o elemento: [{ t, som }] no tempo da edição.
-  // d: os dados do molde (palavras, chaves, apice, enfase, cartoes, capa). Efeitos a menos de 0,5 s um do outro: fica o mais forte.
-  // Com gancho de capa, os efeitos do estilo só começam depois dela, e a saída da capa ganha um whoosh.
+  // d: os dados do molde (palavras, chaves, apice, identidade, enfase, cartoes, capa). Cada momento tem uma família de som
+  // (SONS: os nomes do sons/manifest.json); a família com mais de um som reveza, na ordem, para não repetir o mesmo som
+  // seguido. Efeitos a menos de 0,5 s um do outro: fica o da família mais forte (FORCA).
+  // Com gancho de capa, os efeitos do estilo só começam depois dela, e a saída da capa ganha o som dela.
   // A Caixinha de pergunta não tem efeito nenhum (só a edição básica): não entra em nenhum ramo e a lista sai vazia.
-  const FORCA = { "impact-bass-1": 3, pop: 2, "whoosh-short": 1 };
+  const SONS = {
+    frase: ["whoosh-short", "whoosh-rapido"], // começo de frase, palavra forte, aproximação do enquadramento
+    destaque: ["pop", "pop-mao", "clique"], // palavra de ênfase
+    item: ["tique", "clique-suave"], // item da animação do Motion dividido, quando é dito
+    cartao: ["whoosh-largo"], // entrada de cartão (no Motion dividido, de cada animação)
+    capa: ["whoosh-grave"], // saída do gancho de capa
+    apice: ["impacto-suave"], // ápice da Palavra-chave na identidade keynote
+    "apice-stomp": ["impact-bass-1"], // ápice na identidade stomp
+  };
+  const FORCA = { item: 0, frase: 1, destaque: 2, cartao: 3, capa: 3, apice: 4, "apice-stomp": 4 };
   function efeitos(estilo, d, trechos, total) {
     const pal = mapear(d.palavras, trechos, total), ev = [];
     if (estilo === "legenda-viva") // começo de cada frase
-      agrupar(pal, 4, 18).forEach((g, i, gs) => { if (!i || /[.?!]$/.test(gs[i - 1][gs[i - 1].length - 1].txt)) ev.push({ t: g[0].ini, som: "whoosh-short" }); });
-    if (estilo === "palavra-chave") { // cada palavra forte; o ápice com impacto grave
-      const a = marcar(pal, d.chaves), ka = a[d.chaves.indexOf(d.apice)];
-      a.filter((i) => i >= 0).forEach((k) => ev.push({ t: pal[k].ini, som: k === ka ? "impact-bass-1" : "whoosh-short" }));
+      agrupar(pal, 4, 18).forEach((g, i, gs) => { if (!i || /[.?!]$/.test(gs[i - 1][gs[i - 1].length - 1].txt)) ev.push({ t: g[0].ini, f: "frase" }); });
+    if (estilo === "palavra-chave") { // cada palavra forte; o ápice com impacto
+      const a = marcar(pal, d.chaves), ka = a[d.chaves.indexOf(d.apice)], apice = d.identidade === "stomp" ? "apice-stomp" : "apice";
+      a.filter((i) => i >= 0).forEach((k) => ev.push({ t: pal[k].ini, f: k === ka ? apice : "frase" }));
     }
     if (estilo === "corte-seco-zoom") { // cada aproximação do enquadramento; estalo nas palavras de ênfase
-      trocas(pal, trechos, total).forEach((t, n) => n % 2 || ev.push({ t, som: "whoosh-short" }));
-      marcar(pal, d.enfase).filter((i) => i >= 0).forEach((i) => ev.push({ t: pal[i].ini, som: "pop" }));
+      trocas(pal, trechos, total).forEach((t, n) => n % 2 || ev.push({ t, f: "frase" }));
+      marcar(pal, d.enfase).filter((i) => i >= 0).forEach((i) => ev.push({ t: pal[i].ini, f: "destaque" }));
     }
-    if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação)
-      d.cartoes.forEach((c) => ev.push({ t: naEdicao(c.de, "ini", trechos, total), som: "whoosh-short" }));
-    const todos = d.capa ? [...ev.filter((e) => e.t >= d.capa.fim), { t: SAIDA[d.capa.estilo], som: "whoosh-short" }] : ev;
-    const fica = [];
+    if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação, e cada item seguinte quando é dito)
+      d.cartoes.forEach((c, i) => {
+        const ini = naEdicao(c.de, "ini", trechos, total);
+        ev.push({ t: ini, f: "cartao" });
+        if (estilo === "motion-dividido") {
+          const fim = d.cartoes[i + 1] ? naEdicao(d.cartoes[i + 1].de, "ini", trechos, total) : total;
+          batidas(pal, c.itens, ini, fim).slice(1).forEach((b) => ev.push({ t: b.t, f: "item" }));
+        }
+      });
+    const todos = d.capa ? [...ev.filter((e) => e.t >= d.capa.fim), { t: SAIDA[d.capa.estilo], f: "capa" }] : ev;
+    const fica = [], vez = {};
     todos.filter((e) => e.t < total).sort((x, y) => x.t - y.t).forEach((e) => {
       const ant = fica[fica.length - 1];
       if (!ant || e.t - ant.t >= 0.5) fica.push(e);
-      else if (FORCA[e.som] > FORCA[ant.som]) fica[fica.length - 1] = e;
+      else if (FORCA[e.f] > FORCA[ant.f]) fica[fica.length - 1] = e;
     });
-    return fica;
+    return fica.map(({ t, f }) => { const n = vez[f] = (vez[f] ?? -1) + 1; return { t, som: SONS[f][n % SONS[f].length] }; });
   }
 
   // Contraste WCAG entre duas cores (#RRGGBB ou [r, g, b])
@@ -273,7 +291,7 @@
     }
   }
 
-  const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
+  const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, SONS, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.EditorChefe = api;
 })(this);
