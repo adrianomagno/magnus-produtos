@@ -118,7 +118,7 @@ test('o trecho começa no quadro de antes e termina no de depois (o fim da palav
     montar(dir, () => {});
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     const v = [...html.matchAll(/<video id="trecho-\d+"[^>]* data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/g)].map((m) => m.slice(1));
-    assert.deepEqual(v, [['0.000', '3.466', '0.400'], ['3.467', '5.632', '3.867']]);
+    assert.deepEqual(v, [['0.000', '3.465', '0.400'], ['3.466', '5.633', '3.867']]); // a emenda no quadro 104 (3,4667 s) arredonda para baixo
     semMidiaRepetida(html);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -391,7 +391,7 @@ test('capa: trecho que começa dentro da capa é copiado só até o fim dela', (
     montar(dir, () => {});
     const html = readFileSync(join(dir, 'index.html'), 'utf8');
     const copias = (html.match(/<video id="capa-trecho-\d+"[^>]*>/g) || []).map((v) => /data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/.exec(v).slice(1));
-    assert.deepEqual(copias, [['0.000', '1.065', '0.433'], ['1.067', '1.933', '2.000']]); // a 1ª cabe inteira na capa: 1 ms a menos que o trecho
+    assert.deepEqual(copias, [['0.000', '1.064', '0.433'], ['1.066', '1.934', '2.000']]); // a 1ª cabe inteira na capa: 1 ms a menos que o trecho
     semMidiaRepetida(html);
     assert.equal(JSON.parse(/const D = (.*);/.exec(html)[1]).capa.queixo, 900);
   } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -811,5 +811,9 @@ test('trechos encostados nunca se sobrepõem na linha do tempo (o lint acusaria 
   const v = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/<video id="trecho-\d+"[^>]*data-start="([\d.]+)" data-duration="([\d.]+)"/g)].map((m) => [+m[1], +m[2]]);
   assert.equal(v.length, manter.length);
   v.slice(1).forEach(([ini], i) => assert.ok(v[i][0] + v[i][1] < ini, `trecho ${i + 1} (${v[i][0]} + ${v[i][1]}) passa do início do ${i + 2} (${ini})`));
+  // e nenhum quadro cai no milésimo entre um trecho e o seguinte: sem isso, o quadro sai sem vídeo, só com o fundo (medido na
+  // prova de 2026-10-24: os quadros 101 e 404, nas emendas de 3,367 s e 13,467 s, saíram vazios)
+  const fim = v[v.length - 1][0] + v[v.length - 1][1];
+  for (let q = 0; q / 30 < fim; q++) assert.ok(v.some(([ini, dur]) => q / 30 >= ini && q / 30 < ini + dur), `o quadro ${q} (${(q / 30).toFixed(4)} s) fica sem vídeo`);
   rmSync(dir, { recursive: true, force: true });
 });

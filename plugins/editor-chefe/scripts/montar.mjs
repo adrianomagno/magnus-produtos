@@ -557,8 +557,10 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     if (!(n >= 1)) throw new Error(`montar: o trecho ${i + 1} do trechos.json (${a} a ${b} s) tem menos de 1 quadro. Confira o início e o fim dele.`);
     // como o molde os lê na página (os números já arredondados das marcas do <video>). Início e duração em milissegundos
     // inteiros, a duração até 1 ms antes do início do trecho seguinte: arredondar os dois em separado deixava a soma passar
-    // do início seguinte no ponto flutuante (84.367 + 1.266 > 85.633), e o lint acusa duplicate_audio_track
-    const ms = (q) => Math.round((q * 1000) / F);
+    // do início seguinte no ponto flutuante (84.367 + 1.266 > 85.633), e o lint acusa duplicate_audio_track. O milésimo da
+    // emenda arredonda para baixo: arredondado para cima (13,4667 s virava 13,467), o quadro caía no milésimo vazio entre os
+    // dois trechos e saía sem vídeo, em 1 de cada 3 emendas
+    const ms = (q) => Math.floor((q * 1000) / F + 1e-6);
     const t = { ini: ms(pos) / 1000, dur: (ms(pos + n) - ms(pos) - 1) / 1000, src: +(fa / F).toFixed(3) };
     pos += n; fimAnt = fa + n;
     return t;
