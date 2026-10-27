@@ -330,8 +330,9 @@ const SR = 48000;
 const ALVO_DB = { principal: -2, curto: -6, longo: -8 }; // em relação à voz: o principal ao máximo dela; os outros ao instante
 const COM_CORPO = ["click", "pop", "ping"]; // curtos que ganham a camada de impacto grave por baixo
 const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg";
-function ff(args, input) {
-  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", ...args], { input, maxBuffer: 1 << 30, timeout: TEMPO_MAX });
+// -nostdin e o áudio por arquivo: pela entrada padrão o ffmpeg chegou a travar até o tempo máximo com a máquina carregada
+function ff(args) {
+  const r = spawnSync(ffmpeg(), ["-v", "error", "-nostdin", "-y", ...args], { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1 << 30, timeout: TEMPO_MAX });
   if (r.error || r.status !== 0) throw new Error(`montar: o ffmpeg falhou ao preparar o áudio (${String(r.error?.message ?? r.stderr).trim().split("\n").pop()}).`);
   return r.stdout;
 }
@@ -343,7 +344,11 @@ function pcm(arq, filtro = "") {
   const b = ff(["-i", arq, "-af", af, "-ar", String(SR), "-f", "f32le", "-"]);
   return new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
 }
-const gravar = (x, arq) => ff(["-f", "f32le", "-ar", String(SR), "-ac", "2", "-i", "-", "-c:a", "pcm_s24le", arq], Buffer.from(x.buffer, x.byteOffset, x.byteLength));
+const gravar = (x, arq) => {
+  const raw = `${arq}.f32`;
+  writeFileSync(raw, Buffer.from(x.buffer, x.byteOffset, x.byteLength));
+  try { ff(["-f", "f32le", "-ar", String(SR), "-ac", "2", "-i", raw, "-c:a", "pcm_s24le", arq]); } finally { rmSync(raw, { force: true }); }
+};
 const pico = (x) => { let m = 0, k = 0; for (let i = 0; i < x.length; i++) if (Math.abs(x[i]) > m) { m = Math.abs(x[i]); k = i; } return { m, k: k >> 1 }; };
 const aoPico = (x, db) => { const g = 10 ** (db / 20) / (pico(x).m || 1); return x.map((v) => v * g); };
 // ebur128: momentâneo de 100 em 100 ms (janela de 400 ms que termina em t), integrado e pico verdadeiro
@@ -706,7 +711,8 @@ ${copias.join("\n")}
     FUNDO_CLARO: marca.cores.fundo_claro, FUNDO_ESCURO: marca.cores.fundo_escuro, TEXTO: marca.cores.texto, DESTAQUE: marca.cores.destaque,
     TITULO: html(marca.fontes.titulo), CORPO: html(marca.fontes.corpo ?? ""), FONTE_DESTAQUE: html(marca.fontes.destaque ?? ""),
     FOCO: foco, VEU: String(veu),
-    DURACAO: (pos / F).toFixed(3), TRECHOS: trechosHtml,
+    // no milésimo de baixo: arredondada para cima (2786 / 30 = 92,86667 virava 92,867), a HyperFrames gravava um quadro a mais, só com o fundo
+    DURACAO: (Math.floor((pos * 1000) / F + 1e-6) / 1000).toFixed(3), TRECHOS: trechosHtml,
     DADOS: JSON.stringify(dados).replace(/</g, "\\u003c"),
     ASSINATURA: html(marca.assinatura ?? marca.nome ?? ""),
     EFEITOS: efeitos.join("\n"), CAPA: camada,

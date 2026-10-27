@@ -817,3 +817,13 @@ test('trechos encostados nunca se sobrepõem na linha do tempo (o lint acusaria 
   for (let q = 0; q / 30 < fim; q++) assert.ok(v.some(([ini, dur]) => q / 30 >= ini && q / 30 < ini + dur), `o quadro ${q} (${(q / 30).toFixed(4)} s) fica sem vídeo`);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test('a duração da edição vai no milésimo de baixo: o render não ganha um último quadro só com o fundo', () => {
+  // 2786 quadros: 92,86667 s; arredondado para cima (92,867) a HyperFrames gravava o quadro 2786, já sem trecho
+  const dir = projeto('legenda-viva', { efeitos: false });
+  writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ limiar: -38, duracao: 95, manter: [[0, 2786 / 30]] }));
+  montar(dir, () => {});
+  const d = +/id="raiz"[^>]*data-duration="([\d.]+)"/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1];
+  assert.equal(d, 92.866);
+  rmSync(dir, { recursive: true, force: true });
+});
