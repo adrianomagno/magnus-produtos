@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Editor Chefe: estilos e capas</title>
-<meta name="description" content="Os dez estilos de edição do Editor Chefe, três deles de tela dividida e um sem gravação, e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
+<meta name="description" content="Os doze estilos de edição do Editor Chefe, três deles de tela dividida, um sem gravação e dois animados pela fala, e as três capas de gancho. Escolha pelo número na conversa com o Claude.">
 <style>
   :root {
     --fundo: #f4f3f0;
@@ -68,7 +68,7 @@
 <body>
 <main>
   <h1>Editor Chefe: estilos e capas</h1>
-  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. São dez: os seis abaixo, os três de <a href="#tela-dividida">tela dividida</a> e um <a href="#sem-gravacao">sem gravação</a>, mais abaixo. Nos estilos de 1 a 5 e de 7 a 9, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> no fim da página. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
+  <p class="abertura">Na conversa com o Claude, você escolhe o estilo do seu vídeo pelo número. São doze: os seis abaixo, os três de <a href="#tela-dividida">tela dividida</a>, um <a href="#sem-gravacao">sem gravação</a> e dois <a href="#animado-pela-fala">animados pela fala</a>, mais abaixo. Nos estilos de 1 a 5, de 7 a 9, 11 e 12, você ainda pode pôr um gancho de capa nos primeiros segundos: veja as <a href="#capas">três capas</a> no fim da página. No 6, a própria caixinha faz esse papel. Personagens fictícias criadas por inteligência artificial.</p>
   <ol>
     <li>
       <video src="legenda-viva.mp4" poster="legenda-viva.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Legenda viva"></video>
@@ -88,7 +88,7 @@
     <li>
       <video src="painel-escuro.mp4" poster="painel-escuro.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Painel escuro"></video>
       <h2><span class="num">4</span> Painel escuro</h2>
-      <p class="linha">fundo escuro, cartões de informação, legenda em caixa.</p>
+      <p class="linha">fundo escuro, cartões de informação, legenda branca dentro do vídeo.</p>
     </li>
     <li>
       <video src="editorial-claro.mp4" poster="editorial-claro.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Editorial claro"></video>
@@ -104,12 +104,12 @@
   <p class="rodape">Amostras de 8 segundos, sem som. Personagens fictícias criadas por inteligência artificial.</p>
 
   <h2 class="secao" id="tela-dividida">Tela dividida</h2>
-  <p class="abertura">A tela fica dividida ao meio: a pessoa aparece grande na metade de baixo, em toda a largura, e a metade de cima leva o texto ou a animação. A legenda fica no meio, entre as duas metades, longe do rosto.</p>
+  <p class="abertura">A tela fica dividida ao meio: a pessoa aparece grande na metade de baixo, em toda a largura, e a metade de cima leva o texto ou a animação. No 7 e no 9, a legenda branca fica dentro do vídeo, embaixo, longe do rosto; no 8, uma palavra por vez fica no meio, entre as duas metades.</p>
   <ol>
     <li>
       <video src="painel-escuro-dividido.mp4" poster="painel-escuro-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Painel escuro dividido"></video>
       <h2><span class="num">7</span> Painel escuro dividido</h2>
-      <p class="linha">fundo escuro em cima, com os cartões de informação, e a legenda em caixa no meio.</p>
+      <p class="linha">fundo escuro em cima, com os cartões de informação, e a legenda branca embaixo, dentro do vídeo.</p>
     </li>
     <li>
       <video src="editorial-claro-dividido.mp4" poster="editorial-claro-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Editorial claro dividido"></video>
@@ -119,7 +119,7 @@
     <li>
       <video src="motion-dividido.mp4" poster="motion-dividido.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Motion dividido"></video>
       <h2><span class="num">9</span> Motion dividido</h2>
-      <p class="linha">em cima, uma animação com ícones para cada ideia, feita com as palavras da fala.</p>
+      <p class="linha">em cima, uma animação com ícones para cada ideia, feita com as palavras da fala; a legenda branca fica dentro do vídeo.</p>
     </li>
   </ol>
   <p class="rodape">Amostras de 8 segundos, sem som, com a mesma personagem fictícia dos estilos 4 e 5.</p>
@@ -136,8 +136,24 @@
   </ol>
   <p class="rodape">Amostra inteira, com voz: toque em Ligar o som. Marca e texto fictícios, narrados por uma voz pronta da ElevenLabs.</p>
 
+  <h2 class="secao" id="animado-pela-fala">Animado pela fala</h2>
+  <p class="abertura">O texto da fala entra na tela no instante em que a pessoa fala, sem cobrir o rosto.</p>
+  <ol>
+    <li>
+      <video src="destaques-tipograficos.mp4" poster="destaques-tipograficos.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Destaques tipográficos"></video>
+      <h2><span class="num">11</span> Destaques tipográficos</h2>
+      <p class="linha">peças animadas acima da cabeça (ou logo abaixo do queixo, quando em cima não cabe) no instante da palavra (selo, lista com check, capítulo, "Comenta", objeto, ícone do aplicativo citado, janela com print, esquema) e a frase forte num cartão branco, com a legenda de uma palavra por vez, que sai da tela enquanto a peça está embaixo do queixo. Os objetos vêm em duas famílias: a sóbria, de traço nas cores da marca (a da amostra), e a 3D.</p>
+    </li>
+    <li>
+      <video src="papelaria.mp4" poster="papelaria.jpg" autoplay muted loop playsinline preload="metadata" width="540" height="960" aria-label="Amostra do estilo Papelaria"></video>
+      <h2><span class="num">12</span> Papelaria</h2>
+      <p class="linha">cartões brancos em letra de mão acima da pessoa, e cada item da lista ganha o check (ou é riscado) no instante em que é dito; a legenda branca fica embaixo.</p>
+    </li>
+  </ol>
+  <p class="rodape">Amostras sem som (a do 11 inteira, a do 12 com 8 segundos), com as mesmas personagens fictícias: a dos estilos 1 a 3 no 11 e a dos estilos 4, 5 e 7 a 9 no 12.</p>
+
   <h2 class="secao" id="capas">Capas</h2>
-  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5 e de 7 a 9 e é opcional (no 6, a caixinha já é a capa; no 10, a primeira palavra-chave). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
+  <p class="abertura">O gancho de capa é uma frase curta, de até 8 palavras, escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem. Vale para os estilos de 1 a 5, de 7 a 9, 11 e 12 e é opcional (no 6, a caixinha já é a capa; no 10, a primeira palavra-chave). Na conversa com o Claude, você escolhe a capa pelo número, e a palavra forte da frase ganha destaque.</p>
   <ol>
     <li>
       <img src="capa-1-faixa.jpg" width="540" height="960" loading="lazy" decoding="async" alt="Capa Faixa: tarja na cor de destaque no topo, com a frase Emagrecer é só comer menos? em letras maiúsculas, e o vídeo logo abaixo">
