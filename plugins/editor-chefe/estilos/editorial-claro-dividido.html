@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="gsap.min.js"></script>
     <script src="comum.js"></script>
     <style>
 {{FONTES}}
@@ -50,7 +50,7 @@
     </div>
     <script>
       const D = {{DADOS}};
-      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = EC.iniciar(D.palavras);
+      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = C;
       const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
       const tl = gsap.timeline({ paused: true });
 
@@ -74,14 +74,16 @@
       // Uma palavra por vez na emenda, alternando a fonte de título (pesada) e a de destaque (itálica).
       // Monta mesmo se uma fonte não carregar (a medida sai com a fonte de reserva, mas a animação não congela)
       Promise.all([document.fonts.load(`800 92px "{{TITULO}}"`), document.fonts.load(`italic 400 112px "{{FONTE_DESTAQUE}}"`)]).catch(() => {}).then(() => {
+        // Opção de teste (2026-10-26): a legenda corrida do Corte seco dentro do vídeo, no lugar da palavra grande da emenda
+        if (D.legenda === "corrida") EC.legendaCorrida(tl, C, { fortes: D.fortes, familia: "{{TITULO}}", reforcar: {{VEU}} === 1 });
         const emenda = document.getElementById("palavra");
-        PAL.forEach((p, i) => {
+        if (emenda) PAL.forEach((p, i) => {
           const el = emenda.appendChild(novo("div", i % 2 ? "pv b" : "pv a", `palavra-${i + 1}`));
           const aba = el.appendChild(novo("span", "aba", `palavra-${i + 1}-aba`, p.txt.replace(/[.,;:]+$/, "")));
           if (aba.offsetWidth > 1000) aba.style.fontSize = Math.floor((parseFloat(getComputedStyle(aba).fontSize) * (1000 - 96)) / (aba.offsetWidth - 96)) + "px";
           const prox = PAL[i + 1], sai = prox && prox.ini - p.fim < 0.4 ? prox.ini : Math.min(prox ? prox.ini : TOTAL, p.fim + 0.4);
           tl.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: Math.min(0.08, (sai - p.ini) / 2), ease: "power2.out" }, p.ini);
-          tl.set(el, { opacity: 0 }, sai);
+          tl.set(el, { opacity: 0, display: "none" }, sai); // display none: sem ele, a gravação rápida da HyperFrames (900 quadros ou mais) mostrava a palavra que animou y ou scale com a pintura velha
         });
         if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);

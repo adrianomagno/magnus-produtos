@@ -1,0 +1,1050 @@
+{
+ "objetos": {
+  "acordo": {
+   "arquivo": "objetos/acordo.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Handshake/3D/handshake_3d.png",
+   "sha256": "fd0c3ae54cf208f371636263f4c972b54ac929fef0455b9d15ce72c04fee0f2b",
+   "palavras": [
+    "acordo",
+    "negociar",
+    "negociação",
+    "negocia",
+    "parceria",
+    "parceiro",
+    "sociedade",
+    "fechar negócio"
+   ],
+   "sobrio": {
+    "arquivo": "icones/acordo.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/handshake-duotone.svg",
+    "sha256": "4f8827d067f5b777902e4e6e0f1e6ccc6b60c5d34605d65ecb8020137072ebb9"
+   }
+  },
+  "alerta": {
+   "arquivo": "objetos/alerta.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Warning/3D/warning_3d.png",
+   "sha256": "318f534c5d93100443f6e48defc47d76140473d797087af5821587f0feb8003c",
+   "palavras": [
+    "atenção",
+    "cuidado",
+    "risco",
+    "riscos",
+    "perigo",
+    "alerta",
+    "golpe",
+    "multa"
+   ],
+   "sobrio": {
+    "arquivo": "icones/alerta.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/warning-duotone.svg",
+    "sha256": "5ae0c2cd3e764e0e82f03685657353b65499d6b231745af8516c140e8b1ba4af"
+   }
+  },
+  "alvo": {
+   "arquivo": "objetos/alvo.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Bullseye/3D/bullseye_3d.png",
+   "sha256": "2b2a2d9eec76c5649b8207b050f9135ce666c9d94694e5577aade50c53768437",
+   "palavras": [
+    "meta",
+    "metas",
+    "objetivo",
+    "objetivos",
+    "foco",
+    "alvo",
+    "público"
+   ],
+   "sobrio": {
+    "arquivo": "icones/alvo.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/target-duotone.svg",
+    "sha256": "f7e6e8cb3ff844db1ac5b65e34257651d7a55f68eb97da574ac369fcc259343f"
+   }
+  },
+  "ampulheta": {
+   "arquivo": "objetos/ampulheta.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Hourglass not done/3D/hourglass_not_done_3d.png",
+   "sha256": "ab4183328a0ec7a0440a6fb48113fdb9145f51235e960c7f17097ebb9f13af97",
+   "palavras": [
+    "espera",
+    "esperar",
+    "esperando",
+    "demora",
+    "demorar",
+    "anos",
+    "paciência",
+    "aguentar"
+   ],
+   "sobrio": {
+    "arquivo": "icones/ampulheta.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/hourglass-medium-duotone.svg",
+    "sha256": "a551caeac5d364285f82dd57f6d2dbc38a5f28482a36f0ca11af12beaa0bf1a9"
+   }
+  },
+  "balanca": {
+   "arquivo": "objetos/balanca.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Balance scale/3D/balance_scale_3d.png",
+   "sha256": "442cfa3f13a9052484475e388e021f248fc39d20a8a7f36b30ea70adcad0d217",
+   "palavras": [
+    "justiça",
+    "juiz",
+    "juíza",
+    "direito",
+    "direitos",
+    "lei",
+    "leis",
+    "processo",
+    "ação",
+    "tribunal",
+    "advogado",
+    "advogada",
+    "sentença"
+   ],
+   "sobrio": {
+    "arquivo": "icones/balanca.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/scales-duotone.svg",
+    "sha256": "e31256959626a331a7949762141f67020126347e9421c66f04ed696b008002b6"
+   }
+  },
+  "cadeado": {
+   "arquivo": "objetos/cadeado.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Locked/3D/locked_3d.png",
+   "sha256": "8c8e9209b8420ac7caf8c94fde6586044d9b91e85728aaaf4b98c2482761ea16",
+   "palavras": [
+    "segurança",
+    "seguro",
+    "senha",
+    "sigilo",
+    "proteção",
+    "proteger",
+    "protegido",
+    "privacidade"
+   ],
+   "sobrio": {
+    "arquivo": "icones/cadeado.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/lock-duotone.svg",
+    "sha256": "08412a11cc0ebb4d842904f2930ebdf66d12439e95bfe6c5a7174505c0280149"
+   }
+  },
+  "calendario": {
+   "arquivo": "objetos/calendario.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Spiral calendar/3D/spiral_calendar_3d.png",
+   "sha256": "bdb3fc64cb0faa458cc6830407ad2d6a1e875082b3eb262104eb0034f86e2725",
+   "palavras": [
+    "prazo",
+    "prazos",
+    "data",
+    "calendário",
+    "agendamento",
+    "agendar",
+    "agenda",
+    "semana",
+    "mês",
+    "meses",
+    "mensal"
+   ],
+   "sobrio": {
+    "arquivo": "icones/calendario.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/calendar-duotone.svg",
+    "sha256": "e01b6303beb8d1d8a77b36087ab663bb3f6591fbc7256fda281406ed3bc9b5e1"
+   }
+  },
+  "cama": {
+   "arquivo": "objetos/cama.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Bed/3D/bed_3d.png",
+   "sha256": "cf1bab4ad8cda94825bcc96874cad6b06459097455ea84c22a27d6d84ee510ea",
+   "palavras": [
+    "sono",
+    "dormir",
+    "dorme",
+    "descanso",
+    "descansar",
+    "cama",
+    "insônia",
+    "noite"
+   ],
+   "sobrio": {
+    "arquivo": "icones/cama.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/bed-duotone.svg",
+    "sha256": "eae20fa01ef5de4f014fbe56fbfbdcd47a627b0cc299d3f5b34393fcd363009a"
+   }
+  },
+  "cartao": {
+   "arquivo": "objetos/cartao.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Credit card/3D/credit_card_3d.png",
+   "sha256": "8988e8c1f850752f517c28b46f7745c54621c79679cfa1b387e73741d2ba4935",
+   "palavras": [
+    "cartão",
+    "crédito",
+    "parcela",
+    "parcelas",
+    "parcelado",
+    "débito"
+   ],
+   "sobrio": {
+    "arquivo": "icones/cartao.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/credit-card-duotone.svg",
+    "sha256": "27169bdb3b0d960c41a01e44ee1c7bf9c3b102ba1403e7c72cbae63be8e704f7"
+   }
+  },
+  "casa": {
+   "arquivo": "objetos/casa.png",
+   "origem": "fluent-emoji",
+   "original": "assets/House/3D/house_3d.png",
+   "sha256": "0279b073321551b55c86a10dc2fff5bf66c8dec895672004da43482c5a1de87c",
+   "palavras": [
+    "casa",
+    "apartamento",
+    "imóvel",
+    "imóveis",
+    "lar",
+    "aluguel",
+    "moradia"
+   ],
+   "sobrio": {
+    "arquivo": "icones/casa.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/house-duotone.svg",
+    "sha256": "bd9f3502ab7d63c3cc8a3cf91657e5974188ede3bd1ac7249333d9ce5d0d932f"
+   }
+  },
+  "celular": {
+   "arquivo": "objetos/celular.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Mobile phone/3D/mobile_phone_3d.png",
+   "sha256": "c72cf9f888cb74cb8852679184e0dac945ed0340839c98a86c653f51e1e3504d",
+   "palavras": [
+    "celular",
+    "telefone",
+    "ligar",
+    "ligação",
+    "mensagem",
+    "mensagens",
+    "aplicativo"
+   ],
+   "sobrio": {
+    "arquivo": "icones/celular.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/device-mobile-duotone.svg",
+    "sha256": "dd1f130cc18a988d9e606f5253fb96f2c2b9502f1153b3685a4dd49628995b87"
+   }
+  },
+  "chave": {
+   "arquivo": "objetos/chave.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Key/3D/key_3d.png",
+   "sha256": "ae59ce2b8dcfaa1afcdfe91bde7cc88cf06a8493686a6676706d1c891bb349eb",
+   "palavras": [
+    "chave",
+    "chaves",
+    "acesso",
+    "entrada"
+   ],
+   "sobrio": {
+    "arquivo": "icones/chave.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/key-duotone.svg",
+    "sha256": "c84fa84d090e51e1a43b2eebf3182c3cfb2c98cf64a2a7fab35b748ee2744c77"
+   }
+  },
+  "check": {
+   "arquivo": "objetos/check.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Check mark button/3D/check_mark_button_3d.png",
+   "sha256": "256e3dd950cf1705ab72511ab242472b4bd7db519aa402a6182c1aaf8c58def9",
+   "palavras": [
+    "certo",
+    "pronto",
+    "resolvido",
+    "aprovado",
+    "garantido",
+    "feito"
+   ],
+   "sobrio": {
+    "arquivo": "icones/check.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/check-circle-duotone.svg",
+    "sha256": "d9c7016e83a81c8ef1a250a307acc6d29d5c492fc46066ab5e5e7446a65b48f6"
+   }
+  },
+  "contrato": {
+   "arquivo": "objetos/contrato.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Memo/3D/memo_3d.png",
+   "sha256": "bddf602ea6a0988a77ef51187a3ac8b526791a614a8bb7123705359319a81dcd",
+   "palavras": [
+    "contrato",
+    "contratos",
+    "assinatura",
+    "assinar",
+    "cláusula",
+    "cláusulas",
+    "acordo escrito",
+    "distrato",
+    "rescisão"
+   ],
+   "sobrio": {
+    "arquivo": "icones/contrato.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/note-pencil-duotone.svg",
+    "sha256": "42e4e6d15c523016812041aa4e692c8ab9b6d6488c7b8864adb537fefc083fee"
+   }
+  },
+  "coracao": {
+   "arquivo": "objetos/coracao.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Red heart/3D/red_heart_3d.png",
+   "sha256": "7218cb9f08ed1ef38fcd83fe699a1125d07f50725f4c87a68cb7c9f4efb3c32b",
+   "palavras": [
+    "coração",
+    "amor",
+    "carinho",
+    "cuidado",
+    "família"
+   ],
+   "sobrio": {
+    "arquivo": "icones/coracao.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/heart-duotone.svg",
+    "sha256": "b1bc538e4f7626a2af3b3ac3dca543d8f8e628e9b45991fc7acb63ccaf2c289e"
+   }
+  },
+  "dente": {
+   "arquivo": "objetos/dente.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Tooth/3D/tooth_3d.png",
+   "sha256": "a8465ebc90cfdb2c5854d00b5cfbfb324509dd3af9ccb88be1b445cc26bc7a69",
+   "palavras": [
+    "dente",
+    "dentes",
+    "dentista",
+    "sorriso",
+    "implante",
+    "canal",
+    "aparelho",
+    "odontologia"
+   ],
+   "sobrio": {
+    "arquivo": "icones/dente.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/tooth-duotone.svg",
+    "sha256": "9331f2069955b7efc8cb1ec4283eeaba52fa5ab99e4115fd467c0c68710a0ef8"
+   }
+  },
+  "dinheiro": {
+   "arquivo": "objetos/dinheiro.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Money bag/3D/money_bag_3d.png",
+   "sha256": "cec19b9cf0beac5bbd27a07dcbe1e68c54b04112b4641165705ccb920f230292",
+   "palavras": [
+    "dinheiro",
+    "grana",
+    "pagamento",
+    "pagar",
+    "pago",
+    "preço",
+    "valor",
+    "reais",
+    "lucro",
+    "faturamento",
+    "faturar",
+    "custo",
+    "custa",
+    "investimento",
+    "honorários"
+   ],
+   "sobrio": {
+    "arquivo": "icones/dinheiro.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/money-duotone.svg",
+    "sha256": "4cf293632438f3e67c15e57181c9fb2ec2ad4f7d16d4e23e3fe8ef9f3af7dbc2"
+   }
+  },
+  "documento": {
+   "arquivo": "objetos/documento.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Page facing up/3D/page_facing_up_3d.png",
+   "sha256": "f212d11ed09cfef2ca9cfd3b6b35b29ad7a57eb677aa6611fe284763303a1c57",
+   "palavras": [
+    "documento",
+    "documentos",
+    "papel",
+    "papéis",
+    "laudo",
+    "certidão",
+    "comprovante",
+    "relatório",
+    "exame",
+    "exames"
+   ],
+   "sobrio": {
+    "arquivo": "icones/documento.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/file-text-duotone.svg",
+    "sha256": "6b0867a397af11f3c0a66091a4e17e3c172a42f48812ba99fc8157d9093cb7ea"
+   }
+  },
+  "envelope": {
+   "arquivo": "objetos/envelope.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Envelope/3D/envelope_3d.png",
+   "sha256": "9671859aa64b65b6977b7ab6adc2e64220e75edf531a8e67c4b76e01ace04230",
+   "palavras": [
+    "carta",
+    "e-mail",
+    "email",
+    "correspondência",
+    "notificação"
+   ],
+   "sobrio": {
+    "arquivo": "icones/envelope.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/envelope-duotone.svg",
+    "sha256": "8ae92e57426296fbd6a103ae896fd0ebcefc1c79bb31ff871eb88ef1e0fad308"
+   }
+  },
+  "erro": {
+   "arquivo": "objetos/erro.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Cross mark/3D/cross_mark_3d.png",
+   "sha256": "2753b89dcd790c7f25fa3c5fd5641821860257364163abd87a2f57bb268466b9",
+   "palavras": [
+    "errado",
+    "erro",
+    "erros",
+    "reprovado",
+    "negado",
+    "proibido"
+   ],
+   "sobrio": {
+    "arquivo": "icones/erro.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/x-circle-duotone.svg",
+    "sha256": "62a1dc9fb293f84fd6671cc44ebeecbea30a52a671264d2a737b3e687d3d601f"
+   }
+  },
+  "estetoscopio": {
+   "arquivo": "objetos/estetoscopio.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Stethoscope/3D/stethoscope_3d.png",
+   "sha256": "5396b7ca1ffa1a040b260f2dc900fdfba087500ed2b51e8920ce45d745b5192e",
+   "palavras": [
+    "médico",
+    "médica",
+    "consulta",
+    "consultas",
+    "diagnóstico",
+    "saúde",
+    "sintoma",
+    "sintomas"
+   ],
+   "sobrio": {
+    "arquivo": "icones/estetoscopio.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/stethoscope-duotone.svg",
+    "sha256": "2b0c8777e6ea43ec2a831670f2dbd58063b77bca79baca9c4f42cd18985e1274"
+   }
+  },
+  "foguete": {
+   "arquivo": "objetos/foguete.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Rocket/3D/rocket_3d.png",
+   "sha256": "4636925a1dfc76a45dc83c08b983699d39143a0978f794a4e2dfb6cbffdcd7ab",
+   "palavras": [
+    "rápido",
+    "rápida",
+    "acelerar",
+    "lançamento",
+    "decolar",
+    "escalar"
+   ],
+   "sobrio": {
+    "arquivo": "icones/foguete.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/rocket-duotone.svg",
+    "sha256": "c3be115f1b9ec08db65b9ad3214407eb6cf2da1a5943b7425a5410b490c8059b"
+   }
+  },
+  "grafico": {
+   "arquivo": "objetos/grafico.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Chart increasing/3D/chart_increasing_3d.png",
+   "sha256": "dd5e6b29aa4067c5a4d9e152119497832d70e094b380998e5f5b0c51abbb3a64",
+   "palavras": [
+    "crescer",
+    "crescimento",
+    "resultado",
+    "resultados",
+    "vendas",
+    "aumentar",
+    "aumento",
+    "subir"
+   ],
+   "sobrio": {
+    "arquivo": "icones/grafico.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/chart-line-up-duotone.svg",
+    "sha256": "86b5bfdff2eb2bc6fc8545a71950aef4185356ee9bde18191d543fee97ff4e30"
+   }
+  },
+  "hospital": {
+   "arquivo": "objetos/hospital.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Hospital/3D/hospital_3d.png",
+   "sha256": "efdd62ac17fe3d726f82c67fe22b08d14138402648409ef4fe48d3e89f80d837",
+   "palavras": [
+    "hospital",
+    "clínica",
+    "internação",
+    "plano de saúde"
+   ],
+   "sobrio": {
+    "arquivo": "icones/hospital.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/hospital-duotone.svg",
+    "sha256": "52ae7d49f5d5b846a0c168e5bbf4c7ae2da2fe3232f828625a80deb5b236fdba"
+   }
+  },
+  "lampada": {
+   "arquivo": "objetos/lampada.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Light bulb/3D/light_bulb_3d.png",
+   "sha256": "df7b09aa18301507e6fb8c279df66d9afa465b6fed3e63d2efa84dacebdbbf79",
+   "palavras": [
+    "ideia",
+    "ideias",
+    "dica",
+    "dicas",
+    "solução",
+    "segredo",
+    "estratégia"
+   ],
+   "sobrio": {
+    "arquivo": "icones/lampada.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/lightbulb-duotone.svg",
+    "sha256": "498e42a870d662fd36e7dba9b53fc82c3cdbe05452ad0534f3de8033dd07a2a6"
+   }
+  },
+  "lupa": {
+   "arquivo": "objetos/lupa.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Magnifying glass tilted left/3D/magnifying_glass_tilted_left_3d.png",
+   "sha256": "e8fea91e4652a36486aa9392a67873c987a13389afdae06bbcdae78ab30b4f4f",
+   "palavras": [
+    "analisar",
+    "análise",
+    "pesquisa",
+    "pesquisar",
+    "procurar",
+    "detalhe",
+    "detalhes",
+    "investigar",
+    "avaliação"
+   ],
+   "sobrio": {
+    "arquivo": "icones/lupa.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/magnifying-glass-duotone.svg",
+    "sha256": "7a840ea2341e75cf1d9187e07223be4501d6c6078a064a4097be07c1b3a52fb6"
+   }
+  },
+  "megafone": {
+   "arquivo": "objetos/megafone.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Megaphone/3D/megaphone_3d.png",
+   "sha256": "78fd3bd1d93600888d4b06e157672c2dfb8058aaeb0f924fc461ca6af6e44c29",
+   "palavras": [
+    "anúncio",
+    "anúncios",
+    "divulgar",
+    "divulgação",
+    "marketing",
+    "propaganda",
+    "avisar"
+   ],
+   "sobrio": {
+    "arquivo": "icones/megafone.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/megaphone-duotone.svg",
+    "sha256": "04f73a1727252b5650265cb294d713988c5b353e83714c8674d64376170f678c"
+   }
+  },
+  "moeda": {
+   "arquivo": "objetos/moeda.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Coin/3D/coin_3d.png",
+   "sha256": "17e2a0c226342fe2cdd2612c56f5dd188870d1435076f47600313c04876f843b",
+   "palavras": [
+    "moeda",
+    "economia",
+    "economizar",
+    "troco",
+    "banco"
+   ],
+   "sobrio": {
+    "arquivo": "icones/moeda.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/coin-duotone.svg",
+    "sha256": "cb9ae57d422bc770b183a9ef57de191e0f04d5cf0fff1f222ccac5a979cb10f6"
+   }
+  },
+  "obra": {
+   "arquivo": "objetos/obra.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Building construction/3D/building_construction_3d.png",
+   "sha256": "eb5fefdc87925b3a86084672c3bfa9c25d4b41dab01d19a1c3877ec6f2213b2b",
+   "palavras": [
+    "construtora",
+    "obra",
+    "obras",
+    "reforma",
+    "construção",
+    "entrega"
+   ],
+   "sobrio": {
+    "arquivo": "icones/obra.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/crane-duotone.svg",
+    "sha256": "ff65488554f6d202340ec07791f1bbbd08f57c6f7f194bf778b02f4b3eba7161"
+   }
+  },
+  "pasta": {
+   "arquivo": "objetos/pasta.png",
+   "origem": "fluent-emoji",
+   "original": "assets/File folder/3D/file_folder_3d.png",
+   "sha256": "d07ff91df2a4ad9f08e281e9b99ad66924b6db0c0afd2a938feca4dd6b7a9039",
+   "palavras": [
+    "pasta",
+    "arquivo",
+    "arquivos",
+    "organizar",
+    "organização"
+   ],
+   "sobrio": {
+    "arquivo": "icones/pasta.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/folder-duotone.svg",
+    "sha256": "13b80de6bee262ba8d1e1230d9926b1f3df1e25b91430a4d9c2c36e8a456c820"
+   }
+  },
+  "predio": {
+   "arquivo": "objetos/predio.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Office building/3D/office_building_3d.png",
+   "sha256": "a7bb5b154e6ea40eb22c2221333d51522c65ae0021320801383fe50ae32b0649",
+   "palavras": [
+    "empresa",
+    "empresas",
+    "prédio",
+    "escritório",
+    "condomínio",
+    "sede"
+   ],
+   "sobrio": {
+    "arquivo": "icones/predio.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/buildings-duotone.svg",
+    "sha256": "d6843f7a68d132f539effacbfc5151d6a506ee983f1a409ad98a868d8be14713"
+   }
+  },
+  "presente": {
+   "arquivo": "objetos/presente.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Wrapped gift/3D/wrapped_gift_3d.png",
+   "sha256": "fc9c446401c9fb347f4e9f47e6023247208126047d9ec32059d5e14e127fb562",
+   "palavras": [
+    "presente",
+    "bônus",
+    "grátis",
+    "gratuito",
+    "brinde",
+    "cortesia"
+   ],
+   "sobrio": {
+    "arquivo": "icones/presente.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/gift-duotone.svg",
+    "sha256": "8d1c765396fa149ee4d709be754945860dd1b034dab8572fa51a95c074f7a3bb"
+   }
+  },
+  "queda": {
+   "arquivo": "objetos/queda.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Chart decreasing/3D/chart_decreasing_3d.png",
+   "sha256": "def4556976f4ea37549cdff95a9e677994acb2fe359a1b21dcd38ebc92b82925",
+   "palavras": [
+    "queda",
+    "perda",
+    "perdas",
+    "cair",
+    "caiu",
+    "prejuízo",
+    "diminuir"
+   ],
+   "sobrio": {
+    "arquivo": "icones/queda.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/chart-line-down-duotone.svg",
+    "sha256": "25367ce9cacc457857b13ca56c89e167c1a4022ec275a3a557c772d1bb3568d5"
+   }
+  },
+  "recibo": {
+   "arquivo": "objetos/recibo.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Receipt/3D/receipt_3d.png",
+   "sha256": "3a0d1b4ab48e5f181211f55d954de2e915db0a9749258c75cae8cff92f1983ba",
+   "palavras": [
+    "nota fiscal",
+    "imposto",
+    "impostos",
+    "recibo",
+    "boleto",
+    "fatura",
+    "conta",
+    "contas",
+    "tributo"
+   ],
+   "sobrio": {
+    "arquivo": "icones/recibo.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/receipt-duotone.svg",
+    "sha256": "48bd25a0c53d8c5e49105a4208fd1297d30d89024eb04c5825983433fe256cc6"
+   }
+  },
+  "relogio": {
+   "arquivo": "objetos/relogio.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Alarm clock/3D/alarm_clock_3d.png",
+   "sha256": "1aa6929e1baa440db535fd321868dc76ddd888bf3e4f4333d37800ff2ec41c74",
+   "palavras": [
+    "hora",
+    "horas",
+    "horário",
+    "minutos",
+    "relógio",
+    "atraso",
+    "atrasado",
+    "pontualidade"
+   ],
+   "sobrio": {
+    "arquivo": "icones/relogio.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/alarm-duotone.svg",
+    "sha256": "ed36a5bc7f4f5a27785ebe7ff5cd8f9b09d582305c4081a077e763fcf5d1afd6"
+   }
+  },
+  "remedio": {
+   "arquivo": "objetos/remedio.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Pill/3D/pill_3d.png",
+   "sha256": "39fea3b43ec3fcd7f42cd014f69fb145b2f87540ad823ac99f6c64b3288a76b4",
+   "palavras": [
+    "remédio",
+    "remédios",
+    "medicamento",
+    "medicamentos",
+    "comprimido",
+    "tratamento",
+    "receita"
+   ],
+   "sobrio": {
+    "arquivo": "icones/remedio.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/pill-duotone.svg",
+    "sha256": "6221d6ff170ed8968322929de181b427b55f24eb0a6947a74d5b0e408d8f45ca"
+   }
+  },
+  "seringa": {
+   "arquivo": "objetos/seringa.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Syringe/3D/syringe_3d.png",
+   "sha256": "e0c3e61d61f380fc6e25dfdf715735a316d2efc1d4307e77cd3fd548d1824434",
+   "palavras": [
+    "vacina",
+    "vacinas",
+    "injeção",
+    "aplicação",
+    "aplicar"
+   ],
+   "sobrio": {
+    "arquivo": "icones/seringa.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/syringe-duotone.svg",
+    "sha256": "932ae1adfeee87a73dcec5d6908b158c2d23c9d277533a7b29d29bdfac38cfb2"
+   }
+  },
+  "trofeu": {
+   "arquivo": "objetos/trofeu.png",
+   "origem": "fluent-emoji",
+   "original": "assets/Trophy/3D/trophy_3d.png",
+   "sha256": "7c4a9805f354eb2aec35063a95a4043306efc726324c0d128883f24497857bbc",
+   "palavras": [
+    "vitória",
+    "ganhar",
+    "ganhou",
+    "venceu",
+    "conquista",
+    "prêmio",
+    "sucesso"
+   ],
+   "sobrio": {
+    "arquivo": "icones/trofeu.svg",
+    "origem": "phosphor",
+    "original": "assets/duotone/trophy-duotone.svg",
+    "sha256": "3e9f32441fc0315f359dbab71322d9e069cada283527918360d6789a84c7bf14"
+   }
+  }
+ },
+ "apps": {
+  "whatsapp": {
+   "arquivo": "apps/whatsapp.png",
+   "origem": "meta-whatsapp",
+   "palavras": [
+    "whatsapp",
+    "whats",
+    "zap",
+    "zapzap",
+    "zap zap"
+   ],
+   "sha256": "f4dc3b7492335d9913590a821384936daa5102b0e3d233692eeaada02e6ec948"
+  },
+  "instagram": {
+   "arquivo": "apps/instagram.png",
+   "origem": "meta-instagram",
+   "palavras": [
+    "instagram",
+    "insta"
+   ],
+   "sha256": "76c3a3560130c1a00d841a2adf82feb1660876c212b2b07887178fa376fed12b"
+  },
+  "facebook": {
+   "arquivo": "apps/facebook.png",
+   "origem": "meta-facebook",
+   "palavras": [
+    "facebook"
+   ],
+   "sha256": "c9970eb48415e2b571467757decfb27aa4f0726c8a3bae9aeb2f7d7f93c40069"
+  },
+  "youtube": {
+   "arquivo": "apps/youtube.png",
+   "origem": "youtube",
+   "palavras": [
+    "youtube"
+   ],
+   "sha256": "70c537eca613ff8fed878503ab9dec17b73dfbd8a5c7ec3f423bb6c6993f0eb8"
+  },
+  "linkedin": {
+   "arquivo": "apps/linkedin.png",
+   "origem": "linkedin",
+   "palavras": [
+    "linkedin",
+    "linked in"
+   ],
+   "sha256": "54b841dffcf059cc58c50ea86174ec5fec7cfba64f24dc05695550a54830fda8"
+  },
+  "google-agenda": {
+   "arquivo": "apps/google-agenda.png",
+   "origem": "google",
+   "palavras": [
+    "google agenda",
+    "agenda do google",
+    "google calendar"
+   ],
+   "sha256": "1319378d2dd9f50ff4ff4023b6c883f09016bed2c9b33e86a4842adf534f3e90"
+  },
+  "gmail": {
+   "arquivo": "apps/gmail.png",
+   "origem": "google",
+   "palavras": [
+    "gmail"
+   ],
+   "sha256": "6c372a49b9cf26d735af370b3cd3b04554ae0f8c990814a92e9408f6c0d76cb2"
+  },
+  "threads": {
+   "arquivo": "apps/threads.svg",
+   "origem": "meta-threads",
+   "palavras": [
+    "threads"
+   ],
+   "sha256": "82b6bfe6c7f21bec096ad95c08fa2348f9105a8f9f910691b46eb0599f8f5f40"
+  },
+  "telegram": {
+   "arquivo": "apps/telegram.png",
+   "origem": "telegram",
+   "palavras": [
+    "telegram"
+   ],
+   "sha256": "9040036de4d538984e05acac721c537a7a5893585ec1162bfbbadf411cd239e9"
+  },
+  "perplexity": {
+   "arquivo": "apps/perplexity.svg",
+   "origem": "perplexity",
+   "palavras": [
+    "perplexity"
+   ],
+   "sha256": "7926f92739b096d9d5428787b52ae794bd604b48f88120272a9ea84ebe69946b"
+  },
+  "trello": {
+   "arquivo": "apps/trello.svg",
+   "origem": "atlassian-trello",
+   "palavras": [
+    "trello"
+   ],
+   "sha256": "8e0693f3d8c757c43cf702bb34e7d57012792355f1a8799207d006cf7d84f211"
+  },
+  "claude": {
+   "arquivo": "apps/claude.svg",
+   "origem": "anthropic",
+   "palavras": [
+    "claude"
+   ],
+   "sha256": "6d53db4be375e899c937c26cf16684a80d6e869b1928d72b37748bef2560e219"
+  },
+  "chatgpt": {
+   "arquivo": "apps/chatgpt.svg",
+   "origem": "wikimedia-commons",
+   "palavras": [
+    "chatgpt",
+    "chat gpt",
+    "gpt"
+   ],
+   "sha256": "a66ba245fc68677ae1a47a5f726d60d691e4c8d5942028328dc2beb3b8ceb4dc"
+  },
+  "gemini": {
+   "arquivo": "apps/gemini.png",
+   "origem": "google",
+   "palavras": [
+    "gemini",
+    "gêmini"
+   ],
+   "sha256": "81cede6427ce0435ee492be395161044038c7cfdc9e0640c68174b06a9499efd"
+  },
+  "google-drive": {
+   "arquivo": "apps/google-drive.png",
+   "origem": "google",
+   "palavras": [
+    "google drive",
+    "drive do google",
+    "pasta do drive",
+    "link do drive"
+   ],
+   "sha256": "fc9344d627df663ff7f05c930b9fa20bf017f864ecf16c48ffabd7ff17f99924"
+  },
+  "google-meet": {
+   "arquivo": "apps/google-meet.png",
+   "origem": "google",
+   "palavras": [
+    "google meet",
+    "pelo meet",
+    "no meet",
+    "via meet",
+    "link do meet",
+    "sala do meet"
+   ],
+   "sha256": "b4d699ec16d7404ec0971b3e4b1128fcff52e1891d3c30b2f74ec7c43c07b586"
+  },
+  "google-planilhas": {
+   "arquivo": "apps/google-planilhas.png",
+   "origem": "google",
+   "palavras": [
+    "google planilhas",
+    "planilha do google",
+    "planilhas do google",
+    "planilha google",
+    "planilhas google",
+    "google sheets"
+   ],
+   "sha256": "1faac32349b1256d50da72f32d30b8db29251f4228ae0a40cbbffd69b0dc51c5"
+  },
+  "google-docs": {
+   "arquivo": "apps/google-docs.png",
+   "origem": "google",
+   "palavras": [
+    "google docs",
+    "google doc",
+    "google documentos",
+    "documento do google",
+    "docs do google"
+   ],
+   "sha256": "4dc6d1f0efd8e73583ca1d5e69927131e5aa392a7e645af9834352d42e9e393d"
+  },
+  "tiktok": {
+   "arquivo": "apps/tiktok.png",
+   "origem": "tiktok",
+   "palavras": [
+    "tiktok",
+    "tik tok"
+   ],
+   "sha256": "3cf460314549f1551cdcb21c35a50a42d325711c1ed6c27462b5dfaa48739789"
+  },
+  "x": {
+   "arquivo": "apps/x.png",
+   "origem": "x",
+   "palavras": [
+    "twitter",
+    "rede x"
+   ],
+   "sha256": "069fe74f4365344b73bdb18d2763417cd5e2cbeed3bbb16044d2a8b8a27d73a1"
+  },
+  "pinterest": {
+   "arquivo": "apps/pinterest.png",
+   "origem": "pinterest",
+   "palavras": [
+    "pinterest"
+   ],
+   "sha256": "5410764149903d1db37bbd92d37aa6e08ff4c129bd13d7d9e65762312d4da774"
+  },
+  "notion": {
+   "arquivo": "apps/notion.png",
+   "origem": "notion",
+   "palavras": [
+    "notion"
+   ],
+   "sha256": "40221dcb710183f514149c29245e6de8aa6437f4be1be4826ae3a90b6e990d04"
+  },
+  "canva": {
+   "arquivo": "apps/canva.png",
+   "origem": "wikimedia-commons",
+   "palavras": [
+    "canva"
+   ],
+   "sha256": "0c9ec52ebb20a6cc1e0b7eaf5d1b00a2b76560564a539e88e4a43f8712e45f8a"
+  },
+  "zoom": {
+   "arquivo": "apps/zoom.svg",
+   "origem": "zoom",
+   "palavras": [
+    "pelo zoom",
+    "via zoom",
+    "entra no zoom",
+    "reunião no zoom",
+    "reunião de zoom",
+    "chamada no zoom",
+    "chamada de zoom",
+    "aula no zoom",
+    "link do zoom",
+    "sala do zoom",
+    "app do zoom",
+    "aplicativo zoom"
+   ],
+   "sha256": "d5360d67eeb221a0d918c6724e4a468c158ff01f1b3a4fa69f796da8a5bd325d"
+  }
+ }
+}

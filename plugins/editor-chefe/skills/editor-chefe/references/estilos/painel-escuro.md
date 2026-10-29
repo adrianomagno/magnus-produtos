@@ -1,19 +1,20 @@
 # Painel escuro
 
-**Quando usar:** fundo escuro, cartões de informação, legenda em caixa.
+**Quando usar:** fundo escuro, cartões de informação e a legenda do Corte seco, sem caixa, dentro da janela do vídeo.
 
 **Fluxo da HyperFrames:** `talking-head-recut`, tema escuro, layout `stack` (cartão em cima, vídeo no meio), quadro `hairline` em volta do vídeo e cartões no estilo `audit` (cabeçalho com filete, título pesado com uma palavra marcada), no molde `estilos/painel-escuro.html` do plugin, que o `scripts/montar.mjs` preenche com a marca, a fala, os trechos e os cartões. A composição segue a `hyperframes-core`, com os cortes pelas receitas `Hard cut` e `Trim in/out`; os cartões saem de uma lista, no lugar dos fragmentos `public/cards/` da skill.
 
 ## Desenho
 
-- **Layout:** fundo inteiro em `cores.fundo_escuro`, 1080x1920. Cartão na faixa de 120 a 760 px, encostado embaixo, a 64 px das bordas. Vídeo numa janela de 984x600 a partir de 790 px do topo, cantos de 18 px, filete fino em volta. Legenda numa caixa escura centrada na borda de baixo da janela, até 4 palavras e 22 letras.
-- **Tipografia:** cabeçalho do cartão em `fontes.corpo`, 24 px, caixa alta, com o `nome` da marca à esquerda e a numeração (01 / 04) à direita. Título em `fontes.titulo`, peso 800, 88 px. Legenda em `fontes.titulo`, peso 800, 54 px.
-- **Cores:** textos em `cores.fundo_claro`. A palavra marcada no título e a palavra falada na legenda saem em `cores.destaque`; se essa cor não tiver contraste de 3:1 com `cores.fundo_escuro`, o molde clareia o título e põe a palavra falada numa caixa em `cores.destaque`.
+- **Layout:** fundo inteiro em `cores.fundo_escuro`, 1080x1920. Cartão na faixa de 120 a 760 px, encostado embaixo, a 64 px das bordas. Vídeo numa janela de 984x600 a partir de 790 px do topo, cantos de 18 px, filete fino em volta.
+- **Legenda:** a do Corte seco, sem caixa (com muitos elementos na tela, a legenda vai só branca com um leve contorno). Linhas de até 5 palavras, em `fontes.titulo`, peso 800, 60 px, no `cores.fundo_claro` com um leve contorno no escuro da marca e sombra, dentro da janela do vídeo, embaixo, de 1262 a 1380 px. A palavra de ênfase ganha um traço de 8 px na cor de destaque no instante em que é dita: por padrão, a palavra forte (entre asteriscos) de cada cartão, dita no tempo dele; `"enfase"` no `escolhas.json` (palavras da fala, na ordem, como no Corte seco) troca. Quando a faixa da legenda é clara no vídeo, mesmo só em parte (jaleco, camisa branca, parede), o montador mede e reforça o contorno e a sombra, e diz isso no fim da montagem ("contorno da legenda reforçado"); não volta a caixa.
+- **Tipografia:** cabeçalho do cartão em `fontes.corpo`, 24 px, caixa alta, com o `nome` da marca à esquerda e a numeração (01 / 04) à direita. Título em `fontes.titulo`, peso 800, 88 px.
+- **Cores:** textos em `cores.fundo_claro`. A palavra marcada no título sai em `cores.destaque`; se essa cor não tiver contraste de 3:1 com `cores.fundo_escuro`, o molde clareia o título.
 
 ## Efeitos sonoros
 
 - **Whoosh largo** na entrada de cada cartão, um som só dos cartões.
-- A legenda em caixa fica sem som: ela troca a cada segundo.
+- A legenda fica sem som: ela troca a cada segundo.
 
 Os sons são os do `sons/manifest.json` do plugin: os da pasta `sons/` (licença CC0, com a origem de cada um em `sons/LICENCAS.md`) e 3 do plugin hyperframes (`whoosh-short`, `pop` e `impact-bass-1`, licença Pixabay, uso comercial sem atribuição); o montador copia só os usados para a pasta `efeitos/` do vídeo. O volume de cada som foi medido no arquivo e todos ficam no mesmo nível, por baixo da voz. Cada som começa antes do movimento o tanto do pico medido dele, para o ponto mais forte do som cair no quadro em que o elemento aparece. Quando um momento tem mais de um som, eles se revezam, para não repetir o mesmo som seguido. Dois efeitos a menos de 0,5 s um do outro: fica o mais forte. Ligados por padrão; `"efeitos": false` no `escolhas.json` desliga neste vídeo.
 
@@ -32,7 +33,7 @@ Os sons são os do `sons/manifest.json` do plugin: os da pasta `sons/` (licença
          ]
        }
 
-   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5 e de 7 a 9 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`. `"aproximar"` é opcional: a lista das frases de ênfase em que o vídeo aproxima no rosto, se o dono quis (veja `audio-e-corte.md`, passo 4b).
+   Campos que valem para todo estilo: `"estilo"`, `"foco"` (a posição do rosto, `"50% 40%"` para começar: o primeiro número vai de 0%, que mostra a borda esquerda do vídeo, a 100%, a direita; o segundo, de 0%, o topo, a 100%, a base). O montador lê a marca em `../marca.json` (troque com `"marca": "<caminho>"`). `"efeitos"` é opcional: `true` (padrão) ou `false`. `"capa"` é opcional e vale para os estilos de 1 a 5, de 7 a 9, 11 e 12 (a Caixinha de pergunta não leva capa): se o dono escolheu um gancho de capa, veja `capas.md`. `"aproximar"` é opcional: a lista das frases de ênfase em que o vídeo aproxima no rosto, se o dono quis (veja `audio-e-corte.md`, passo 4b).
 4. Monte: `node "${CLAUDE_PLUGIN_ROOT}/scripts/montar.mjs" .` grava `index.html` e `comum.js` na pasta e, com os efeitos ligados, copia os sons usados para `efeitos/`. Aviso de palavra "não foi achada na fala" quer dizer que ela não aparece no `transcript.json` na ordem pedida: corrija a palavra no `escolhas.json` e monte de novo.
 5. Confira o rosto com `hf snapshot . --at 2 --describe false` (com gancho de capa, `--at 3.5`) e ajuste o `"foco"` se preciso.
 
@@ -56,6 +57,6 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 - **Vídeo deitado cabe melhor aqui:** a janela de 984x600 aproveita uma gravação deitada sem ampliar demais. Vídeo em pé perde o corpo e fica só o rosto: use o segundo número do `"foco"` perto de 25% e confira com `hf snapshot . --at 2 --describe false` (com gancho de capa, `--at 3.5`).
 - **Título longo:** com mais de 8 palavras, o título passa de 3 linhas e fica pesado para ler nos poucos segundos do cartão. Corte o trecho, não diminua a letra.
 - **Fonte sem peso 800:** o montador usa o peso mais pesado que houver em `fonts/` e avisa. Diga ao dono que a letra fica um pouco mais leve que a da marca.
-- **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.
+- **O render não precisa de internet:** o GSAP vem no plugin (`estilos/gsap.min.js`, conferido pelo SHA-256), e o montador copia o arquivo para a pasta do vídeo.
 - **Sem o plugin hyperframes:** os efeitos sonoros deste estilo são todos da pasta `sons/` do Editor Chefe, então a montagem não para por falta deles (o render continua precisando da HyperFrames).
 - **Teste de referência:** 15 s de gravação viraram 12,2 s de edição com 4 cartões; render em cerca de 16 s num Mac M1 Pro; com os 4 efeitos, áudio em -15,8 LUFS.

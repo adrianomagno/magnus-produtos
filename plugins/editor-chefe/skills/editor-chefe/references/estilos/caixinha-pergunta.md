@@ -56,7 +56,7 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
        HF_VIDEO_COVERAGE_THRESHOLD=0 hf render . -c previa.html -o previa.mp4
        rm previa.html
 
-   A variável vale só na prévia: ela aceita o trecho que passa dos 10 s. Apague o `previa.html` logo depois; com ele na pasta, o `lint` acusa `multiple_root_compositions`. Mostre a prévia olhando primeiro o quadro do começo: é ele que vira a capa no feed.
+   A variável vale só na prévia: ela aceita o trecho que passa dos 10 s. Apague o `previa.html` logo depois; com ele na pasta, o `lint` acusa `multiple_root_compositions`. Mostre a prévia olhando primeiro o quadro do começo: é ele que vira a capa no feed. Para a grade do perfil não se monta capa com título: a caixinha já é a capa, e o dono só escolhe um bom quadro da pessoa ao postar (`references/capa-perfil.md`).
 2. Ajuste pelo que o dono disser no `escolhas.json` ou no `transcript.json` e rode o `montar.mjs` de novo; não edite o `index.html` à mão.
 3. Antes do render final: `hf lint .` e `hf check . --strict`, os dois sem erro e sem aviso.
 4. Render final: `hf render . -o "../prontos/<AAAA-MM-DD>-<nome curto>.mp4"`, depois as conferências de `entrega.md`.
@@ -69,5 +69,5 @@ Na pasta do vídeo (`hf` é a HyperFrames, como manda o passo 3 da SKILL):
 - **Não é a marca:** a caixinha copia o visual do Instagram de propósito, para parecer uma pergunta de verdade. Não troque as cores nem a letra pelas da marca; a marca aparece na legenda.
 - **Pergunta grande demais:** com mais de 3 linhas a letra encolheria até ficar pequena demais para ler no celular. Por isso o limite de 110 caracteres; prefira perguntas curtas, de até umas 65 letras, que ficam no tamanho cheio.
 - **Fonte sem peso 800:** o montador usa o peso mais pesado que houver em `fonts/` para a legenda e avisa. Diga ao dono que a letra da legenda fica um pouco mais leve que a da marca.
-- **O render precisa de internet:** o molde carrega o GSAP da CDN jsDelivr na hora do render. Confira a conexão antes de renderizar.
+- **O render não precisa de internet:** o GSAP vem no plugin (`estilos/gsap.min.js`, conferido pelo SHA-256), e o montador copia o arquivo para a pasta do vídeo.
 - **Teste de referência:** 15 s de gravação viraram 14,3 s de edição; render em cerca de 30 s num Mac M1 Pro; sem efeitos, áudio em -16,8 LUFS.

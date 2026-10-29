@@ -31,6 +31,13 @@ para o `manifest.json` (duração, instante e nível do pico, momentâneo máxim
 - Licença: CC0, no `License.txt` do pacote ("License: (Creative Commons Zero, CC0)
   http://creativecommons.org/publicdomain/zero/1.0/ ... Support us by crediting Kenney or www.kenney.nl (this is not mandatory)")
 
+**Kenney, Interface Sounds 1.0** (Kenney, kenney.nl)
+- Página: https://kenney.nl/assets/interface-sounds
+- Pacote: https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip
+  (SHA-256 `f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232`), baixado em 2026-10-25 e conferido de novo em 2026-10-26
+- Licença: CC0, no `License.txt` do pacote ("License: (Creative Commons Zero, CC0)
+  http://creativecommons.org/publicdomain/zero/1.0/ ... Support us by crediting Kenney or www.kenney.nl (this is not mandatory)")
+
 ## Arquivos
 
 | Arquivo | Origem | Nome original | SHA-256 do original | Licença |
@@ -43,6 +50,8 @@ para o `manifest.json` (duração, instante e nível do pico, momentâneo máxim
 | `impacto-suave.mp3` | Kenney Impact Sounds | `Audio/impactSoft_heavy_000.ogg` | `49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1` | CC0 1.0 |
 | `clique.wav` | Kenney UI Audio | `Audio/click3.ogg` | `e3e7fc7ccd9c5cfdf77bffa05aee10d4973812076c76dc889ba2b16ea434127f` | CC0 1.0 |
 | `clique-suave.wav` | Kenney UI Audio | `Audio/click1.ogg` | `59175ac17cd49a68dd736285738441287636112a84a6f7ce0d89921bda5a5360` | CC0 1.0 |
+| `notificacao.wav` | Kenney Interface Sounds | `Audio/glass_001.ogg` | `183eebee20eb0a532b0b85104d139cbf2673eb66d95c3cc733ac9ea98362e7e8` | CC0 1.0 |
+| `pronto.mp3` | Kenney Interface Sounds | `Audio/confirmation_002.ogg` | `33b17a9a9a2397c62b285c52c33a907fdffb476909c99e42dde603f6a7a8b12c` | CC0 1.0 |
 
 Os 3 sons com origem `hyperframes` no `manifest.json` (`whoosh-short`, `pop`, `impact-bass-1`) não estão nesta pasta:
 são do plugin hyperframes (`skills/media-use/audio/assets/sfx/`, licença Pixabay) e o Editor Chefe só copia os usados
@@ -61,6 +70,8 @@ WAV de 16 bits, porque mp3 de poucos quadros não é reconhecido sozinho pelo ff
 - `tique.wav`: `atrim=start=0.0140:end=0.0600,asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=0.0360:d=0.01,volume=9.41dB`
 - `impacto-suave.mp3`: `atrim=start=0.0000:end=0.5193,asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=0.5093:d=0.01,volume=-0.08dB,pan=mono|c0=c0`
 - `clique.wav`: `atrim=start=0.0000:end=0.0932,asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=0.0832:d=0.01,volume=-0.20dB`
+- `notificacao.wav`: `atrim=start=0.0000:end=0.2784,asetpts=PTS-STARTPTS,afade=t=out:st=0.2684:d=0.01,volume=0.03dB` (sem a rampa de entrada: o pico do som está nos primeiros 3 ms e a rampa de 5 ms o tirava)
+- `pronto.mp3`: `atrim=start=0.0000:end=0.5390,asetpts=PTS-STARTPTS,afade=t=out:st=0.5290:d=0.01,volume=-0.04dB` (sem a rampa de entrada, pelo mesmo motivo)
 - `clique-suave.wav`: `atrim=start=0.0000:end=0.1009,asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=0.0909:d=0.01,volume=0.54dB`
 
 Som novo nesta pasta: arquivo da origem com licença livre, uma linha na tabela acima e uma entrada no `manifest.json`

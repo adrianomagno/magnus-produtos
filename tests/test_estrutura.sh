@@ -21,7 +21,7 @@ SK=plugins/editor-chefe/skills/editor-chefe
 CAT=$SK/references/catalogo.md
 [ -f "$CAT" ] || { echo "falta $CAT"; exit 1; }
 PARES=$(awk '/^## Estilos/{d=1;next} /^## /{d=0} d' "$CAT" | sed -nE 's/^([0-9]+)\. \*\*[^*]+\*\* \(`([a-z0-9-]+)`\).*/\1:\2/p')
-[ "$(printf '%s\n' "$PARES" | cut -d: -f1 | paste -sd, -)" = "1,2,3,4,5,6,7,8,9,10" ] || { echo "catálogo: os estilos precisam ser os números de 1 a 10, em ordem"; exit 1; }
+[ "$(printf '%s\n' "$PARES" | cut -d: -f1 | paste -sd, -)" = "1,2,3,4,5,6,7,8,9,10,11,12" ] || { echo "catálogo: os estilos precisam ser os números de 1 a 12, em ordem"; exit 1; }
 for id in $(printf '%s\n' "$PARES" | cut -d: -f2); do
   { [ -f "$SK/references/estilos/$id.md" ] && [ -f "plugins/editor-chefe/estilos/$id.html" ]; } || { echo "catálogo: falta a referência ou o molde de $id"; exit 1; }
 done

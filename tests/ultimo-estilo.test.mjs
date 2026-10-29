@@ -18,10 +18,12 @@ test.after(() => rmSync(raiz, { recursive: true, force: true }));
 const editor = (nome) => { const e = join(raiz, nome), v = join(e, '2026-10-24-video'); mkdirSync(v, { recursive: true }); return [e, v]; };
 const node = (...a) => spawnSync(process.execPath, [SCRIPT, ...a], { encoding: 'utf8' });
 
-test('o catálogo dá os 10 estilos e as 3 capas com número e nome', () => {
+test('o catálogo dá os 12 estilos e as 3 capas com número e nome', () => {
   assert.deepEqual(ESTILOS['legenda-viva'], { n: 1, nome: 'Legenda viva' });
   assert.deepEqual(ESTILOS['motion-narrado'], { n: 10, nome: 'Motion narrado' });
-  assert.equal(Object.keys(ESTILOS).length, 10);
+  assert.equal(Object.keys(ESTILOS).length, 12);
+  assert.deepEqual(ESTILOS.papelaria, { n: 12, nome: 'Papelaria' });
+  assert.deepEqual(ESTILOS['destaques-tipograficos'], { n: 11, nome: 'Destaques tipográficos' });
   assert.deepEqual(Object.keys(CAPAS), ['faixa', 'manchete', 'editorial']);
 });
 
@@ -93,4 +95,16 @@ test('a SKILL pergunta o último estilo quando o pedido não trouxe o estilo e a
   assert.match(sk, /scripts\/ultimo-estilo\.mjs" ler/);
   assert.match(sk, /pedido não trouxe o estilo/);
   assert.match(en, /scripts\/ultimo-estilo\.mjs" guardar \./);
+});
+
+test('nos Destaques tipográficos guarda o estilo dos objetos (3D ou sóbrio) e põe na pergunta; arquivo de antes vale como 3D', () => {
+  const [e, v] = editor('icones');
+  writeFileSync(join(v, 'escolhas.json'), JSON.stringify({ estilo: 'destaques-tipograficos', efeitos: true, icones: 'sobrio', pecas: [{ tipo: 'objeto', objeto: 'casa', fala: 'a casa' }] }));
+  const s = guardar(v);
+  assert.equal(s.icones, 'sobrio');
+  assert.ok(!JSON.stringify(JSON.parse(readFileSync(join(e, 'ultimo-estilo.json'), 'utf8'))).includes('casa')); // a peça é conteúdo: não vai
+  assert.match(pergunta(ler(e)), /Estilo 11, Destaques tipográficos, .*objetos no estilo sóbrio\?$/);
+  assert.equal(normalizar({ estilo: 'destaques-tipograficos', efeitos: true, capa: null, cor: null, ruido: false, aproximar: false }).icones, '3d');
+  assert.equal(normalizar({ estilo: 'destaques-tipograficos', efeitos: true, capa: null, cor: null, ruido: false, aproximar: false, icones: 'emoji' }), null);
+  assert.equal(normalizar({ estilo: 'legenda-viva', efeitos: true, capa: null, cor: null, ruido: false, aproximar: false }).icones, undefined); // só no estilo 11
 });

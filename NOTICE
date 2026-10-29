@@ -36,6 +36,40 @@ Efeitos sonoros CC0 (Woven SFX e Kenney)
     pacote): clique e clique-suave.
   - Kenney, Impact Sounds 1.0, kenney.nl/assets/impact-sounds, baixado em 2026-10-24 (CC0 pelo
     License.txt do pacote): impacto-suave.
+  - Kenney, Interface Sounds 1.0, kenney.nl/assets/interface-sounds, baixado em 2026-10-25 (CC0 pelo
+    License.txt do pacote): notificacao e pronto.
+
+Objetos 3D: Fluent Emoji (Microsoft)
+  Licença MIT: https://github.com/microsoft/fluentui-emoji/blob/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/LICENSE
+  Copyright (c) Microsoft Corporation. 38 PNG de 256 px do commit 1ffb34c, sem alteração, em
+  plugins/editor-chefe/pecas/objetos/, com o texto da licença, o nome original e o SHA-256 de cada um em
+  plugins/editor-chefe/pecas/LICENCAS.md.
+
+Ícones sóbrios: Phosphor Icons
+  Licença MIT: https://github.com/phosphor-icons/core/blob/2b75f3ad12b420c9504ef05df8d2564a28f8500e/LICENSE
+  Copyright (c) 2023 Phosphor Icons. 38 SVG do estilo duotone, do commit 2b75f3a, sem alteração, em
+  plugins/editor-chefe/pecas/icones/, com o texto da licença, o nome original e o SHA-256 de cada um em
+  plugins/editor-chefe/pecas/LICENCAS.md.
+
+Logos de aplicativo (24: WhatsApp, Instagram, Facebook, Threads, YouTube, LinkedIn, Telegram, Perplexity, Trello, Claude,
+  ChatGPT, Gemini, Google Drive, Gmail, Google Agenda, Google Meet, Google Planilhas, Google Docs, TikTok, X, Pinterest, Notion,
+  Canva, Zoom)
+  Marcas dos donos, em plugins/editor-chefe/pecas/apps/, baixadas da página de marca ou de imprensa da empresa, do site oficial
+  dela ou do Wikimedia Commons. A fonte, a data, o SHA-256 e o preparo de cada arquivo estão em
+  plugins/editor-chefe/pecas/LICENCAS.md.
+
+Banco central de peças (biblioteca/)
+  Objetos 3D do Fluent Emoji e ícones do Phosphor (licença MIT, os mesmos repositórios e commits fixados acima), com a
+  origem, a licença, a fonte e o SHA-256 de cada arquivo em biblioteca/catalogo.json; propostas de peças novas em
+  biblioteca/propostas/, no mesmo formato.
+
+GSAP 3.14.2 (GreenSock, Webflow)
+  Licença "Standard 'no charge' license" (https://gsap.com/standard-license), copiada em
+  plugins/editor-chefe/estilos/gsap-LICENCA.txt. Arquivo plugins/editor-chefe/estilos/gsap.min.js, o dist/gsap.min.js do
+  pacote npm gsap@3.14.2 (https://registry.npmjs.org/gsap/-/gsap-3.14.2.tgz, integrity
+  sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==), baixado em 2026-10-26,
+  sem alteração. SHA-256: c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280. O montar.mjs confere o SHA-256
+  antes de copiar o arquivo para a pasta do vídeo.
 
 ONNX Runtime Web 1.30.0 (Microsoft)
   Licença MIT: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
@@ -44,6 +78,17 @@ ONNX Runtime Web 1.30.0 (Microsoft)
   ort-wasm-simd-threaded.wasm) na pasta de dados do plugin, no computador do cliente.
   Roda o detector de rosto do enquadramento que segue o rosto. Não é copiado para este
   repositório.
+
+Caveat (Impallari Type), letra de mão do estilo Papelaria
+  Licença SIL Open Font License 1.1: https://github.com/google/fonts/blob/main/ofl/caveat/OFL.txt
+  Baixada do Google Fonts pelo scripts/baixar-fonte.mjs para a pasta fonts/ de cada vídeo, no
+  computador do cliente, como as fontes da marca. Não é copiada para este repositório.
+
+Anton (The Anton Project Authors), letra condensada da legenda e das peças do estilo Destaques tipográficos
+  Licença SIL Open Font License 1.1: https://github.com/google/fonts/blob/main/ofl/anton/OFL.txt
+  Baixada do Google Fonts pelo scripts/baixar-fonte.mjs para a pasta fonts/ de cada vídeo, no
+  computador do cliente, quando a fonte de título da marca não é condensada. Não é copiada para
+  este repositório.
 
 YuNet (Shiqi Yu, OpenCV Zoo), modelo face_detection_yunet_2026may.onnx
   Licença MIT: https://github.com/opencv/opencv_zoo/blob/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/LICENSE

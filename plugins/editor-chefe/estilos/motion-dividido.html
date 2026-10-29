@@ -3,27 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="gsap.min.js"></script>
     <script src="comum.js"></script>
     <style>
 {{FONTES}}
       :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
       html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
       #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); color: var(--fundo-claro); }
-      /* Metade de cima (0 a 960): cabeçalho com a marca, painel de 230 a 870 com o título da ideia e a animação */
+      /* Metade de cima (0 a 960): cabeçalho com a marca no fundo escuro, painel branco de 230 a 870 com o título da ideia e a animação */
       #cabeca { position: absolute; left: 64px; top: 150px; height: 40px; display: flex; align-items: center; gap: 18px; }
-      #cabeca-filete { width: 48px; height: 6px; border-radius: 3px; background: var(--linha); }
+      #cabeca-filete { width: 48px; height: 6px; border-radius: 3px; background: var(--filete); }
       #cabeca-nome { font-weight: 800; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fundo-claro); }
-      #painel { position: absolute; left: 48px; top: 230px; width: 984px; height: 640px; box-sizing: border-box; border-radius: 28px; background: var(--painel); border: 2px solid var(--traco-apagado); }
+      #painel { position: absolute; left: 48px; top: 230px; width: 984px; height: 640px; box-sizing: border-box; border-radius: 28px; background: var(--painel); }
       #ideias { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; }
       .ideia { position: absolute; inset: 0; opacity: 0; }
-      .ideia-num { position: absolute; right: 64px; top: 150px; height: 40px; line-height: 40px; font-weight: 800; font-size: 26px; letter-spacing: 0.08em; color: var(--apagado); }
-      .ideia-tit { position: absolute; left: 88px; right: 88px; top: 262px; height: 136px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 56px; line-height: 1.1; letter-spacing: -0.015em; color: var(--fundo-claro); }
+      .ideia-num { position: absolute; right: 64px; top: 150px; height: 40px; line-height: 40px; font-weight: 800; font-size: 26px; letter-spacing: 0.08em; color: var(--num-cabeca); }
+      .ideia-tit { position: absolute; left: 88px; right: 88px; top: 262px; height: 136px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 56px; line-height: 1.1; letter-spacing: -0.015em; color: var(--texto-painel); }
       .ideia-tit em { font-style: normal; color: var(--linha); }
       .anim { position: absolute; left: 88px; right: 88px; top: 410px; height: 420px; display: flex; align-items: center; justify-content: center; }
-      .rot { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.12; text-align: center; color: var(--fundo-claro); overflow-wrap: normal; }
-      .caixa-anim { box-sizing: border-box; border: 3px solid var(--linha); border-radius: 22px; background: var(--painel-2); display: flex; align-items: center; justify-content: center; }
-      .caixa-anim.forte { background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      .rot { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.12; text-align: center; color: var(--texto-painel); overflow-wrap: normal; }
+      .caixa-anim { box-sizing: border-box; border: 3px solid var(--linha); border-radius: 22px; background: var(--painel); display: flex; align-items: center; justify-content: center; }
+      .caixa-anim.forte { background: var(--forte); }
       /* figura: o item com ícone, sem caixa (o desenho e o rótulo embaixo) */
       .figura { box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
       .icone { display: block; flex: 0 0 auto; overflow: visible; }
@@ -33,7 +33,7 @@
       .etapa { position: relative; flex: 1 1 0; min-width: 0; height: 240px; padding: 38px 14px 16px; }
       .etapa.figura { height: 300px; padding: 0 8px; }
       .etapa .rot { width: 100%; }
-      .etapa-num { position: absolute; top: -28px; left: calc(50% - 28px); width: 56px; height: 56px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--linha); font-weight: 800; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+      .etapa-num { position: absolute; top: -28px; left: calc(50% - 28px); width: 56px; height: 56px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--texto-painel); font-weight: 800; font-size: 24px; display: flex; align-items: center; justify-content: center; }
       .seta { flex: 0 0 auto; display: block; }
       /* antes-depois e comparação: dois lados */
       .lado { flex: 1 1 0; min-width: 0; height: 260px; padding: 20px 22px; }
@@ -60,26 +60,21 @@
       /* pergunta: balão com a pergunta e, se houver, balão com a resposta, em conversa no meio do painel */
       .anim.pergunta { flex-direction: column; }
       .conversa { display: flex; flex-direction: column; gap: 40px; max-width: 100%; }
-      .balao { position: relative; align-self: flex-start; margin-right: 60px; max-width: 720px; box-sizing: border-box; padding: 26px 40px; border-radius: 26px; border: 3px solid var(--linha); background: var(--painel-2); display: flex; align-items: center; gap: 22px; }
-      .balao.resposta { align-self: flex-end; margin: 0 0 0 60px; background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      .balao { position: relative; align-self: flex-start; margin-right: 60px; max-width: 720px; box-sizing: border-box; padding: 26px 40px; border-radius: 26px; border: 3px solid var(--linha); background: var(--painel); display: flex; align-items: center; gap: 22px; }
+      .balao.resposta { align-self: flex-end; margin: 0 0 0 60px; background: var(--forte); }
       .balao:only-child { margin: 0; }
-      .balao-cauda { position: absolute; left: 50px; bottom: -15px; width: 26px; height: 26px; box-sizing: border-box; background: var(--painel-2); border-right: 3px solid var(--linha); border-bottom: 3px solid var(--linha); transform: rotate(45deg); }
-      .balao.resposta .balao-cauda { left: auto; right: 50px; background: color-mix(in srgb, var(--linha) 18%, var(--painel)); }
+      .balao-cauda { position: absolute; left: 50px; bottom: -15px; width: 26px; height: 26px; box-sizing: border-box; background: var(--painel); border-right: 3px solid var(--linha); border-bottom: 3px solid var(--linha); transform: rotate(45deg); }
+      .balao.resposta .balao-cauda { left: auto; right: 50px; background: var(--forte); }
       .balao-sinal { position: absolute; right: -26px; top: -26px; width: 60px; height: 60px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--linha); font-weight: 800; font-size: 40px; display: flex; align-items: center; justify-content: center; }
       .balao .rot { min-width: 0; text-transform: none; text-align: left; letter-spacing: 0; font-size: 48px; line-height: 1.18; }
       /* Metade de baixo (960 a 1920): o vídeo em toda a largura */
       #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
-      /* A emenda: filete na cor de destaque e a legenda centrada nela (870 a 1050, meio em 960) */
-      #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--linha); }
-      #legenda { position: absolute; left: 48px; right: 48px; top: 870px; height: 180px; }
-      .grupo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
-      .grupo .caixa {
-        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.24em; max-width: 984px; padding: 14px 32px; border-radius: 16px;
-        background: var(--fundo-escuro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent), 0 12px 30px color-mix(in srgb, var(--fundo-escuro) 45%, transparent);
-        font-weight: 800; font-size: 58px; line-height: 1.15; color: var(--fundo-claro);
-      }
+      /* A emenda: filete na cor de destaque */
+      #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--filete); }
+      /* A legenda corrida do Corte seco, sem caixa, dentro da metade do vídeo, embaixo e longe do rosto (1500 a 1650) */
+      #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }
     </style>
   </head>
   <body>
@@ -99,23 +94,24 @@
     </div>
     <script>
       const D = {{DADOS}};
-      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, PAL, CLARO, ESCURO, DESTAQUE } = C;
+      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, PAL, CLARO, ESCURO } = C;
       const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
       const tl = gsap.timeline({ paused: true });
 
-      // Cores da marca no painel: traço, título e número na cor destaque, clareada até 3,2:1 contra o painel se preciso;
-      // texto ainda não dito (lista) apagado, mas também com 3,2:1. Nenhum texto fica sobre preenchimento da cor destaque:
-      // todo texto lê contra o próprio painel, também nas entradas e saídas, quando a caixa ainda está transparente
-      const em = (x) => `rgb(${x.join(",")})`, raizCss = document.documentElement.style;
-      const PAINEL = EC.mistura(ESCURO, CLARO, 0.05), LINHA = EC.legivel(DESTAQUE, CLARO, PAINEL, 3.2);
+      // Cores do painel branco (EC.coresMotion): texto escuro, traço e número na cor destaque (escurecida se for clara
+      // demais). Nenhum texto fica sobre preenchimento da cor destaque: todo texto lê contra o branco ou contra o tom
+      // claro da caixa forte, também nas entradas e saídas, quando a caixa ainda está transparente
+      const em = (x) => `rgb(${x.join(",")})`, raizCss = document.documentElement.style, P = EC.coresMotion(C), LINHA = P.LINHA;
       const SOBRE_LINHA = EC.contraste(LINHA, ESCURO) >= EC.contraste(LINHA, CLARO) ? ESCURO : CLARO;
-      raizCss.setProperty("--painel", em(PAINEL));
-      raizCss.setProperty("--painel-2", em(EC.mistura(ESCURO, CLARO, 0.09)));
+      const TEXTO_PAINEL = em(P.TEXTO), APAGADO = em(P.APAGADO), TRACO_APAGADO = em(P.TRACO_APAGADO);
+      raizCss.setProperty("--painel", em(P.PAINEL));
+      raizCss.setProperty("--forte", em(P.FORTE));
       raizCss.setProperty("--linha", em(LINHA));
-      raizCss.setProperty("--apagado", em(EC.legivel(EC.mistura(CLARO, PAINEL, 0.55), CLARO, PAINEL, 3.2)));
-      raizCss.setProperty("--traco-apagado", em(EC.mistura(CLARO, PAINEL, 0.78)));
-      const APAGADO = getComputedStyle(document.documentElement).getPropertyValue("--apagado").trim();
-      const TRACO_APAGADO = getComputedStyle(document.documentElement).getPropertyValue("--traco-apagado").trim();
+      raizCss.setProperty("--texto-painel", TEXTO_PAINEL);
+      raizCss.setProperty("--apagado", APAGADO);
+      raizCss.setProperty("--traco-apagado", TRACO_APAGADO);
+      raizCss.setProperty("--num-cabeca", em(P.NUM_CABECA));
+      raizCss.setProperty("--filete", em(P.FILETE));
       document.getElementById("cabeca-nome").textContent = D.nome;
 
       // Texto mais largo ou mais alto que o espaço encolhe de 2 em 2 px até 26 px (palavra longa numa caixa estreita);
@@ -138,10 +134,10 @@
         tl.to(ponta, { opacity: 1, duration: 0.08, ease: "none" }, t - 0.04);
         return s;
       }
-      // Ícone da biblioteca (EC.ICONES, grade de 64x64): traço principal na cor destaque, detalhe ("~") mais apagado.
+      // Ícone da biblioteca (EC.ICONES, grade de 64x64): traço principal na cor destaque, detalhe ("~") num cinza.
       // pathLength 1 deixa o traço se desenhar do mesmo jeito em qualquer ícone (stroke-dashoffset de 1 a 0); a espessura
       // acompanha o tamanho para o traço ter sempre 6 px na tela.
-      const DETALHE = em(EC.legivel(EC.mistura(CLARO, PAINEL, 0.45), CLARO, PAINEL, 2.2));
+      const DETALHE = em(P.DETALHE);
       function icone(pai, nome, id, tam, cor = em(LINHA)) {
         const el = svg(pai, "svg", id, { class: "icone", width: tam, height: tam, viewBox: "0 0 64 64", fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" });
         const tracos = EC.ICONES[nome].map((d, k) => svg(el, "path", `${id}-traco-${k + 1}`, {
@@ -224,7 +220,7 @@
             r.style.fontSize = tam + "px";
             caber(r, itens.length > 3 ? 84 : 96);
             tl.fromTo(e, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, entra);
-            tl.to(r, { color: CLARO, x: 10, duration: 0.25, ease: "power2.out" }, ts[k]);
+            tl.to(r, { color: TEXTO_PAINEL, x: 10, duration: 0.25, ease: "power2.out" }, ts[k]);
           });
         },
         // Número que cresce: conta de zero até o número dito, com uma barra que enche junto; o segundo item é o rótulo.
@@ -307,8 +303,8 @@
           tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
         });
 
-        // Legenda em caixa escura na emenda; a palavra falada na cor destaque (clareada, se faltar contraste)
-        EC.legendaEmCaixa(tl, C);
+        // Legenda corrida do Corte seco, sem caixa, dentro do vídeo; traço na cor destaque nas palavras de ênfase (o montar.mjs escolhe)
+        EC.legendaCorrida(tl, C, { fortes: D.fortes, familia: "{{TITULO}}", reforcar: {{VEU}} === 1 });
         if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;

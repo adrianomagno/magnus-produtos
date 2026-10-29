@@ -1,13 +1,20 @@
-// tests/montar.test.mjs: monta os 9 estilos (e o gancho de capa) com a marca de teste e uma fala de exemplo neutra
+// tests/montar.test.mjs: monta os estilos (e o gancho de capa) com a marca de teste e uma fala de exemplo neutra
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, utimesSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, utimesSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { montar } from '../plugins/editor-chefe/scripts/montar.mjs';
+import { montar, planoDestaques, lerPecas, GSAP_SHA256 } from '../plugins/editor-chefe/scripts/montar.mjs';
+import { zonas, cobre } from '../plugins/editor-chefe/scripts/conferir.mjs';
+
+// banco local de peças só deste arquivo de teste (o montador guarda ali as peças e o logo do cliente)
+const BIB_TESTE = mkdtempSync(join(tmpdir(), 'biblioteca-'));
+process.env.EDITOR_CHEFE_BIBLIOTECA = BIB_TESTE;
+test.after(() => rmSync(BIB_TESTE, { recursive: true, force: true }));
 
 const EC = createRequire(import.meta.url)('../plugins/editor-chefe/estilos/comum.js');
 const MANIFESTO = JSON.parse(readFileSync(new URL('../plugins/editor-chefe/sons/manifest.json', import.meta.url), 'utf8'));
@@ -42,6 +49,10 @@ const ESCOLHAS = {
     { de: 0.5, titulo: 'Resposta no *mesmo dia*', animacao: 'etapas', itens: ['todo cliente', 'recebe resposta', 'no mesmo dia'] },
     { de: 4.8, titulo: 'Antes do *almoço*', animacao: 'antes-depois', itens: ['chega de manhã', 'antes do almoço'] },
   ] },
+  // Animado pela fala (11): as frases fortes, com a palavra-chave entre asteriscos (depois dos 3 s da capa, para valer com ela)
+  'destaques-tipograficos': { destaques: ['Se a *dúvida* chega', 'a *solução* sai antes do almoço'] },
+  // Papelaria (12): cartões em letra de mão; o segundo com a lista que ganha o check item por item
+  papelaria: { cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta*' }, { de: 4.8, titulo: 'Antes do *almoço*', lista: ['chega de manhã', 'antes do almoço'] }] },
 };
 // Sexto estilo, fora da lista acima (sem efeitos sonoros e sem gancho de capa): a caixinha de perguntas do Instagram
 const CAIXINHA = { estilo: 'caixinha-pergunta', caixinha: { pergunta: 'Emagrecer é só comer menos?', chamada: 'Pergunta aqui sobre emagrecimento' } };
@@ -49,7 +60,7 @@ const CAIXINHA = { estilo: 'caixinha-pergunta', caixinha: { pergunta: 'Emagrecer
 function projeto(estilo, extra = {}) {
   const dir = mkdtempSync(join(tmpdir(), `montar-${estilo}-`));
   mkdirSync(join(dir, 'fonts'));
-  for (const f of ['Montserrat-800.woff2', 'Inter-400.woff2', 'Inter-700.woff2', 'PlayfairDisplay-400-italic.woff2']) writeFileSync(join(dir, 'fonts', f), WOFF2);
+  for (const f of ['Montserrat-800.woff2', 'Inter-400.woff2', 'Inter-700.woff2', 'PlayfairDisplay-400-italic.woff2', 'Caveat-700.woff2', 'Anton-400.woff2']) writeFileSync(join(dir, 'fonts', f), WOFF2);
   writeFileSync(join(dir, 'fonte.mp4'), '');
   writeFileSync(join(dir, 'transcript.json'), JSON.stringify(fala));
   writeFileSync(join(dir, 'trechos.json'), JSON.stringify(corte));
@@ -206,13 +217,15 @@ test('efeitos ligados (padrão): um <audio> por efeito, por baixo da voz, e os s
 // Os trechos do corte como o molde os lê (os mesmos do montar.mjs para este trechos.json)
 const TRECHOS = [{ ini: 0, dur: 3.432, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }];
 const PALAVRAS = fala.map((w) => [w.text, w.start, w.end]);
+// Os dados que o montador grava no molde (const D), para conferir os efeitos com o que o vídeo usa de fato
+const lerD = (dir) => JSON.parse(/const D = (.*);/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1]);
 
 test('cada efeito começa no instante do movimento menos o pico medido do som, com o volume e a duração do manifesto', () => {
   for (const estilo of Object.keys(ESCOLHAS)) {
     const dir = projeto(estilo);
     try {
       const r = montar(dir, () => {});
-      const ev = EC.efeitos(estilo, { palavras: PALAVRAS, ...ESCOLHAS[estilo] }, TRECHOS, 8.2);
+      const ev = EC.efeitos(estilo, lerD(dir), TRECHOS, 8.2);
       const audios = [...readFileSync(join(dir, 'index.html'), 'utf8').matchAll(/<audio id="efeito-\d+" class="clip" src="efeitos\/([^"]+)" data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="\d+" data-volume="([\d.]+)">/g)];
       assert.equal(audios.length, ev.length, estilo);
       assert.deepEqual(r.sons, ev.map((e) => e.som), estilo);
@@ -288,9 +301,11 @@ test('efeitos que se sobrepõem ficam em faixas diferentes (o impacto grave dura
 });
 
 // Véu atrás do texto: liga só com a faixa do texto clara na fonte.mp4 (precisa de ffmpeg e ffprobe no PATH)
+// cor "jaleco": fundo escuro com as pontas brancas (60 px de cada lado), como a legenda que cai no pescoço e no jaleco
 function comFonte(estilo, cor, extra = {}) {
-  const dir = projeto(estilo, extra);
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=${cor}:s=360x640:d=1:r=30`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', join(dir, 'fonte.mp4')]);
+  const dir = projeto(estilo, extra), jaleco = cor === 'jaleco';
+  const vf = jaleco ? ['-vf', 'drawbox=x=0:y=0:w=60:h=640:color=white:t=fill,drawbox=x=300:y=0:w=60:h=640:color=white:t=fill'] : [];
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=${jaleco ? '0x202020' : cor}:s=360x640:d=1:r=30`, ...vf, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', join(dir, 'fonte.mp4')]);
   return dir;
 }
 const opacidade = (dir) => /#veu-legenda \{[^}]*opacity: (\d)/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1];
@@ -302,6 +317,7 @@ test('véu atrás do texto: liga com a faixa clara (jaleco branco), desliga com 
     // a palavra-chave do teste é stomp, que já escurece o vídeo: luma ~153 fica sem véu, branco (~235) liga
     ['palavra-chave', '0xA0A0A0', {}, '0'], ['palavra-chave', 'white', {}, '1'],
     ['caixinha-pergunta', 'white', CAIXINHA, '1'], ['caixinha-pergunta', '0x202020', CAIXINHA, '0'],
+    ['legenda-viva', 'jaleco', {}, '0'], // nos estilos com véu, a medida continua a média da faixa (como na 0.8.1)
   ]) {
     const dir = comFonte(estilo, cor, extra), avisos = [];
     try {
@@ -333,7 +349,7 @@ test('sem ffmpeg e ffprobe (fora do PATH e sem as variáveis do ambiente.sh), o 
 
 // Gancho de capa: frase curta por cima do vídeo nos primeiros 3 s, numa camada própria (cópias mudas dos trechos)
 const CAPA = { estilo: 'faixa', texto: 'Emagrecer é só *comer menos*?' };
-const CAPAS = ['faixa', 'manchete', 'editorial', 'faixa', 'manchete', 'editorial', 'faixa', 'manchete'];
+const CAPAS = ['faixa', 'manchete', 'editorial', 'faixa', 'manchete', 'editorial', 'faixa', 'manchete', 'editorial', 'faixa'];
 
 test('capa: estilo que não existe é erro que lista os 3', () => {
   assert.match(erro('legenda-viva', 'fonte.mp4', '', { capa: { ...CAPA, estilo: 'banner' } }), /"banner".*faixa, manchete, editorial/);
@@ -359,7 +375,7 @@ test('capa: edição com menos de 4 s é curta demais', () => {
   assert.match(erro('legenda-viva', 'trechos.json', { ...corte, manter: [[0.44, 3.86]] }, { capa: CAPA }), /curto demais para gancho de capa/);
 });
 
-test('capa: os estilos de 1 a 5 e de 7 a 9 levam a camada da capa com cópias mudas dos trechos dos primeiros 3 s', () => {
+test('capa: os estilos de 1 a 5, de 7 a 9, 11 e 12 levam a camada da capa com cópias mudas dos trechos dos primeiros 3 s', () => {
   Object.keys(ESCOLHAS).forEach((estilo, i) => {
     const capa = { estilo: CAPAS[i], texto: CAPA.texto };
     const dir = projeto(estilo, { capa, efeitos: false }), avisos = [];
@@ -401,8 +417,11 @@ test('capa: efeitos sonoros somem antes do fim da capa e entra o whoosh grave no
   const palavras = fala.map((w) => [w.text, w.start, w.end]);
   const trechos = [{ ini: 0, dur: 3.433, src: 0.433 }, { ini: 3.433, dur: 4.766, src: 4.733 }], total = 8.2;
   Object.keys(ESCOLHAS).forEach((estilo, i) => {
-    const d = { palavras, ...ESCOLHAS[estilo] };
-    assert.ok(EC.efeitos(estilo, d, trechos, total).some((e) => e.t < 3), `${estilo} sem capa tem efeito nos primeiros 3 s`);
+    let d = { palavras, ...ESCOLHAS[estilo] };
+    if (estilo === 'destaques-tipograficos') { // o plano das frases sai do montador; as do exemplo começam depois dos 3 s da capa
+      const dir = projeto(estilo);
+      try { montar(dir, () => {}); d = lerD(dir); } finally { rmSync(dir, { recursive: true, force: true }); }
+    } else assert.ok(EC.efeitos(estilo, d, trechos, total).some((e) => e.t < 3), `${estilo} sem capa tem efeito nos primeiros 3 s`);
     const capa = { estilo: CAPAS[i], texto: CAPA.texto, queixo: 840, fim: 3 };
     const ev = EC.efeitos(estilo, { ...d, capa }, trechos, total);
     assert.deepEqual(ev.filter((e) => e.t < capa.fim), [{ t: capa.estilo === 'manchete' ? 2.7 : 2.6, som: 'whoosh-grave' }], estilo);
@@ -410,7 +429,7 @@ test('capa: efeitos sonoros somem antes do fim da capa e entra o whoosh grave no
   });
 });
 
-test('sem capa, os estilos de 1 a 5 e de 7 a 9 ficam sem camada e sem cópia de vídeo', () => {
+test('sem capa, os estilos de 1 a 5, de 7 a 9, 11 e 12 ficam sem camada e sem cópia de vídeo', () => {
   for (const estilo of Object.keys(ESCOLHAS)) {
     const dir = projeto(estilo);
     try {
@@ -592,14 +611,14 @@ const DIVIDIDOS = ['painel-escuro-dividido', 'editorial-claro-dividido', 'motion
 const molde = (estilo) => readFileSync(new URL(`../plugins/editor-chefe/estilos/${estilo}.html`, import.meta.url), 'utf8');
 const caixa = (html, id) => { const m = new RegExp(`#${id} \\{[^}]*?top: (\\d+)px;[^}]*?height: (\\d+)px;`).exec(html); return m && { top: +m[1], alt: +m[2] }; };
 
-test('tela dividida: o vídeo ocupa a metade de baixo inteira e a legenda (no 8, a palavra grande) fica centrada na emenda', () => {
-  for (const estilo of DIVIDIDOS) {
+test('tela dividida: o vídeo ocupa a metade de baixo inteira; a legenda fica dentro dela, embaixo, e no 8 a palavra grande fica na emenda', () => {
+  for (const estilo of [...DIVIDIDOS, 'papelaria']) {
     const html = molde(estilo);
     assert.match(html, /#janela \{ position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; \}/, estilo);
     assert.match(html, /\.trecho \{[^}]*object-fit: cover; object-position: \{\{FOCO\}\};/, estilo);
-    const leg = caixa(html, estilo === 'editorial-claro-dividido' ? 'palavra' : 'legenda');
-    assert.ok(leg, estilo);
-    assert.equal(leg.top + leg.alt / 2, 960, estilo);
+    if (estilo === 'editorial-claro-dividido') { const p = caixa(html, 'palavra'); assert.equal(p.top + p.alt / 2, 960, estilo); continue; } // a identidade do 8, centrada na emenda
+    const leg = caixa(html, 'legenda');
+    assert.deepEqual([leg.top, leg.top + leg.alt], [1500, 1650], estilo); // inteira dentro do vídeo, sem cruzar a divisa, abaixo do rosto
   }
   const painel = caixa(molde('motion-dividido'), 'painel'); // a animação fica sempre em cima, acima da legenda
   assert.ok(painel.top + painel.alt <= caixa(molde('motion-dividido'), 'legenda').top, JSON.stringify(painel));
@@ -722,15 +741,116 @@ test('ícones: nome fora da biblioteca e ícone em só parte da fileira ou da li
   assert.match(erro('motion-dividido', 'escolhas.json', c('lista', [{ icone: 'pessoa' }, 'resposta'])), /pede "itens".*\{ "texto": "\.\.\.", "icone": "\.\.\." \}/);
 });
 
+// Motion dividido com painel branco (0.8.1): o fundo fica no escuro da marca e o painel da animação fica branco
+const MARCAS_MOTION = {
+  'destaque escuro': { CLARO: '#F5F1EA', ESCURO: '#141414', DESTAQUE: '#9A6A5A' }, // a de tests/marca-teste.json
+  'destaque claro (amarelo)': { CLARO: '#FAF7F0', ESCURO: '#14213D', DESTAQUE: '#F2C200' },
+  'escuro e destaque claros demais': { CLARO: '#FFFFFF', ESCURO: '#7A7A7A', DESTAQUE: '#FFE066' }, // o escuro também escurece no painel
+};
+test('motion: no painel branco o texto lê com 4,5:1, traço e destaque com 3:1 (a cor clara escurecida) e o cabeçalho lê no escuro', () => {
+  const BRANCO = [255, 255, 255], c = EC.contraste;
+  for (const [nome, m] of Object.entries(MARCAS_MOTION)) {
+    const P = EC.coresMotion(m);
+    assert.deepEqual(P.PAINEL, BRANCO, nome);
+    for (const fundo of [BRANCO, P.FORTE]) assert.ok(c(P.TEXTO, fundo) >= 4.5, `${nome}: texto ${c(P.TEXTO, fundo)}`); // o tom forte fica embaixo de texto
+    assert.ok(c(P.APAGADO, BRANCO) >= 4.5 && c(P.APAGADO, BRANCO) < c(P.TEXTO, BRANCO), `${nome}: apagado ${c(P.APAGADO, BRANCO)}`);
+    for (const k of ['LINHA', 'DETALHE']) assert.ok(c(P[k], BRANCO) >= 3, `${nome}: ${k} ${c(P[k], BRANCO)}`);
+    assert.ok(c(P.TRACO_APAGADO, BRANCO) >= 2, `${nome}: traço apagado ${c(P.TRACO_APAGADO, BRANCO)}`);
+    for (const k of ['NUM_CABECA', 'FILETE']) assert.ok(c(P[k], m.ESCURO) >= 3, `${nome}: ${k} no fundo escuro ${c(P[k], m.ESCURO)}`);
+    const antes = EC.mistura(m.ESCURO, m.CLARO, 0.05); // fora do painel nada muda: as contas da 0.8.0, contra o painel de antes
+    assert.deepEqual([P.NUM_CABECA, P.FILETE], [EC.legivel(EC.mistura(m.CLARO, antes, 0.55), m.CLARO, antes, 3.2), EC.legivel(m.DESTAQUE, m.CLARO, antes, 3.2)], nome);
+  }
+  // destaque que já lê no branco fica a cor da marca; o amarelo escurece no mesmo matiz e o filete do cabeçalho segue amarelo
+  assert.deepEqual(EC.coresMotion(MARCAS_MOTION['destaque escuro']).LINHA, [0x9a, 0x6a, 0x5a]);
+  const amarela = EC.coresMotion(MARCAS_MOTION['destaque claro (amarelo)']);
+  assert.ok(amarela.LINHA.every((v, i) => v <= [0xf2, 0xc2, 0x00][i]) && amarela.LINHA[2] === 0, String(amarela.LINHA));
+  assert.deepEqual(amarela.FILETE, [0xf2, 0xc2, 0x00]);
+});
+
+test('motion: o molde usa as cores do painel branco dentro dele e as do fundo escuro fora', () => {
+  const html = molde('motion-dividido'), regra = (sel) => new RegExp(`(^|\\n)\\s*${sel.replace(/[.*]/g, '\\$&')} \\{([^}]*)\\}`).exec(html)?.[2] ?? assert.fail(sel);
+  assert.match(regra('#painel'), /background: var\(--painel\); $/);
+  for (const sel of ['.ideia-tit', '.rot', '.etapa-num']) assert.match(regra(sel), /[^-]color: var\(--texto-painel\)/, sel);
+  assert.match(regra('.ideia-num'), /color: var\(--num-cabeca\)/); // fora do painel, no fundo escuro
+  for (const sel of ['#cabeca-filete', '#emenda']) assert.match(regra(sel), /background: var\(--filete\)/, sel);
+  for (const sel of ['.caixa-anim', '.balao', '.balao-cauda']) assert.match(regra(sel), /background: var\(--painel\)/, sel);
+  for (const sel of ['.caixa-anim.forte', '.balao.resposta', '.balao.resposta .balao-cauda']) assert.match(regra(sel), /background: var\(--forte\)/, sel);
+  assert.doesNotMatch(html, /--painel-2|color-mix\(in srgb, var\(--linha\)/);
+  assert.match(html, /tl\.to\(r, \{ color: TEXTO_PAINEL, x: 10/); // o item dito da lista acende no texto escuro, não no claro
+  assert.match(html, /P = EC\.coresMotion\(C\)/);
+});
+
 test('tela dividida: no Editorial claro dividido a marca aparece uma vez só (na assinatura, no alto)', () => {
   const html = molde('editorial-claro-dividido');
   assert.match(html, /<div id="assinatura-texto">\{\{ASSINATURA\}\}<\/div>/);
   assert.doesNotMatch(html, /D\.nome/);
 });
 
-test('legenda em caixa escura (estilos 4, 7 e 9): a caixa é opaca, porque o contraste da palavra falada é conferido contra o fundo escuro puro', () => {
-  for (const estilo of ['painel-escuro', 'painel-escuro-dividido', 'motion-dividido']) // com a caixa a 92%, o vídeo claro vazava e a palavra caía para 2,99:1
-    assert.match(molde(estilo), /\.grupo \.caixa \{[^}]*background: var\(--fundo-escuro\);/, estilo);
+test('legenda do Corte seco nos estilos com muitos elementos (4, 7, 9 e 12): sem caixa, dentro do vídeo, com o traço na ênfase', () => {
+  for (const estilo of ['painel-escuro', 'painel-escuro-dividido', 'motion-dividido', 'papelaria']) {
+    const html = molde(estilo);
+    assert.match(html, /EC\.legendaCorrida\(tl, C, \{ fortes: D\.fortes, familia: "\{\{TITULO\}\}",[^}]*reforcar: \{\{VEU\}\} === 1 \}\);/, estilo);
+    assert.doesNotMatch(html, /legendaEmCaixa|\.grupo|\.caixa \{/, estilo);
+  }
+  // no 4, a legenda fica dentro da janela do vídeo, embaixo
+  const j = caixa(molde('painel-escuro'), 'janela'), l = caixa(molde('painel-escuro'), 'legenda');
+  assert.ok(l.top >= j.top && l.top + l.alt <= j.top + j.alt, JSON.stringify({ j, l }));
+  // a legenda: linha corrida no claro da marca, com o contorno numa camada de trás e um fio dele na letra, e o traço de 8 px
+  const js = readFileSync(new URL('../plugins/editor-chefe/estilos/comum.js', import.meta.url), 'utf8');
+  assert.match(js, /#legenda \.p::before \{ content: attr\(data-t\);[^`]*-webkit-text-stroke: \$\{reforcar \? 10 : 5\}px/);
+  assert.match(js, /#legenda \.sublinha \{[^}]*height: 8px;[^}]*background: \$\{c\.DESTAQUE\};/);
+  assert.match(js, /tl\.set\(el, \{ opacity: 0, display: "none" \}, sai\);/);
+});
+
+test('legenda do Corte seco: a ênfase sai da palavra forte de cada cartão, dita no tempo dele, ou do "enfase" do escolhas.json', () => {
+  const dir = projeto('painel-escuro'), avisos = [];
+  try {
+    montar(dir, (m) => avisos.push(m));
+    const D = lerD(dir), txt = (i) => D.palavras[i][0];
+    assert.deepEqual(D.fortes.map(txt), ['resposta', 'solução']); // "Todo cliente recebe *resposta*", "A *solução* sai"
+    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'painel-escuro', marca: MARCA, ...ESCOLHAS['painel-escuro'], enfase: ['cliente', 'almoço.', 'garantia'] }));
+    montar(dir, (m) => avisos.push(m));
+    assert.deepEqual(lerD(dir).fortes.map(txt), ['cliente', 'almoço.']);
+    assert.match(avisos.join('\n'), /"garantia" \(enfase\) não foi achada na fala/);
+    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'painel-escuro', marca: MARCA, ...ESCOLHAS['painel-escuro'], enfase: 'cliente' }));
+    assert.throws(() => montar(dir, () => {}), /"enfase" é a lista das palavras da fala que ganham o traço na legenda/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('legenda do Corte seco: com a faixa da legenda clara no vídeo, o contorno e a sombra ficam reforçados (nunca volta a caixa)', () => {
+  // "jaleco": a média da faixa fica abaixo de 130, mas as pontas no branco pedem o reforço (o 90º percentil da luma)
+  for (const [estilo, cor, esperado] of [['painel-escuro', 'white', 1], ['painel-escuro', '0x202020', 0], ['painel-escuro-dividido', 'white', 1], ['motion-dividido', '0x202020', 0], ['papelaria', 'white', 1],
+    ['painel-escuro', 'jaleco', 1], ['motion-dividido', 'jaleco', 1], ['motion-dividido', '0x808080', 0]]) {
+    const dir = comFonte(estilo, cor), avisos = [];
+    try {
+      const r = montar(dir, (m) => avisos.push(m));
+      assert.equal(r.veu, !!esperado, `${estilo} ${cor}`);
+      assert.equal(r.reforco, !!esperado, `${estilo} ${cor}`);
+      assert.match(readFileSync(join(dir, 'index.html'), 'utf8'), new RegExp(`reforcar: ${esperado} === 1`), `${estilo} ${cor}`);
+      assert.deepEqual(avisos, []);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('estilo 8: a palavra grande na emenda continua o padrão; "legenda": "corrida" é a opção de teste com a legenda do Corte seco', () => {
+  const dir = projeto('editorial-claro-dividido');
+  try {
+    montar(dir, () => {});
+    let html = readFileSync(join(dir, 'index.html'), 'utf8');
+    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a palavra na tela', 880, 1040]]);
+    assert.equal(lerD(dir).legenda, undefined);
+    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda: 'corrida' }));
+    montar(dir, () => {});
+    html = readFileSync(join(dir, 'index.html'), 'utf8');
+    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a legenda', 1500, 1650]]); // a conferência vê a faixa nova
+    assert.match(html, /<div id="legenda"><\/div>/);
+    assert.doesNotMatch(html, /<div id="palavra"><\/div>/);
+    const D = lerD(dir);
+    assert.equal(D.legenda, 'corrida');
+    assert.deepEqual(D.fortes.map((i) => D.palavras[i][0]), ['resposta', 'solução']);
+    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda: 'caixa' }));
+    assert.throws(() => montar(dir, () => {}), /"legenda" no Editorial claro dividido é "palavra" \(a palavra grande na emenda, o padrão\) ou "corrida"/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 // Aproximação no rosto: fonte.mp4 de verdade (1080x1920, para o montador medir) e o rosto.json gravado depois dela
@@ -748,7 +868,8 @@ const aproxima = (dir) => {
 
 test('aproximar: a frase de ênfase vira uma aproximação no rosto, com o invólucro #aproximar em volta dos trechos', () => {
   for (const estilo of ['legenda-viva', 'painel-escuro-dividido', 'painel-escuro']) {
-    const dir = comRosto(estilo, { aproximar: ['a solução sai'] }), avisos = [];
+    // no dividido o rosto de teste fica no alto da metade de vídeo, acima da legenda (que fica embaixo, de 1500 a 1650)
+    const dir = comRosto(estilo, { aproximar: ['a solução sai'] }, estilo === 'painel-escuro-dividido' ? [540, 760, 300, 300] : undefined), avisos = [];
     try {
       const r = montar(dir, (m) => avisos.push(m));
       const { html, lista } = aproxima(dir);
@@ -818,12 +939,320 @@ test('trechos encostados nunca se sobrepõem na linha do tempo (o lint acusaria 
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('a duração da edição vai no milésimo de baixo: o render não ganha um último quadro só com o fundo', () => {
-  // 2786 quadros: 92,86667 s; arredondado para cima (92,867) a HyperFrames gravava o quadro 2786, já sem trecho
+// Destaques tipográficos (estilo 11): a frase forte em letra grande acima da cabeça, palavra por palavra no tempo da fala,
+// e a legenda pequena embaixo com as outras palavras
+const PAL_ED = EC.mapear(PALAVRAS, TRECHOS, 8.2);
+const cabeca = (topo) => () => [540, topo + 0.75 * 300, 300, 300]; // rosto de 300 px com o alto da cabeça (caixa e cabelo) em "topo"
+const trecho = (a, b) => PAL_ED.slice(a, b + 1).map((p) => p.txt).join(' ');
+
+test('destaques: cada frase vira as palavras da fala, a palavra-chave e o instante da primeira; sai 1,5 s depois ou 0,35 s antes da seguinte', () => {
+  const r = planoDestaques(['Se a *dúvida* chega', 'a *solução* sai antes do almoço'], PAL_ED, { total: 8.2 });
+  assert.deepEqual(r.destaques.map((x) => trecho(x.de, x.ate)), ['Se a dúvida chega', 'a solução sai antes do almoço.']);
+  assert.deepEqual(r.destaques.map((x) => trecho(...x.chave)), ['dúvida', 'solução']);
+  r.destaques.forEach((x) => assert.equal(x.t, +PAL_ED[x.de].ini.toFixed(3)));
+  assert.equal(r.destaques[0].sai, +(PAL_ED[r.destaques[1].de].ini - 0.35).toFixed(3)); // a seguinte vem antes de 1,5 s
+  assert.equal(r.destaques[1].sai, 8.2); // a última fica até o fim do vídeo (menos de 1,5 s depois)
+  // sem rastro do rosto: o vídeo não aproxima e a faixa é fixa, de 240 a 640 px; a conferência recebe a faixa com o tempo da frase
+  assert.deepEqual([r.z, r.abre], [1, []]);
+  assert.deepEqual(r.faixas.map((f) => [f.y0, f.y1, f.x0, f.x1]), [[240, 640, 90, 990], [240, 640, 90, 990]]);
+  r.faixas.forEach((f, i) => assert.deepEqual([f.de, f.ate], [+(r.destaques[i].t - 0.15).toFixed(3), +(r.destaques[i].sai + 0.25).toFixed(3)]));
+  assert.match(r.faixas[0].nome, /a frase em destaque "Se a dúvida chega"/);
+});
+
+test('destaques: sem moldura, a frase fica acima da cabeça se ali couber inteira (com o vídeo aproximado ancorado no alto, se preciso); senão vai para logo abaixo do queixo', () => {
+  const f = ['a *solução* sai antes do almoço'], plano = (caixa, avisos = [], extra = {}) => planoDestaques(f, PAL_ED, { total: 8.2, caixa, ...extra }, (m) => avisos.push(m));
+  const baixa = plano(cabeca(700));
+  assert.deepEqual([baixa.z, baixa.destaques[0].lado, baixa.destaques[0].y1, baixa.abre, baixa.semLegenda], [1, 'cima', 670, [], []]); // cabeça baixa: o vídeo fica como foi gravado, e a legenda também
+  // cabeça em 450: os 540 px acima dela (240 + 270 + 30) pedem 1,2; um ponto y vai para y * 1,2
+  const media = plano(cabeca(450));
+  assert.deepEqual([media.z, media.destaques[0].lado, media.destaques[0].y1, media.semLegenda], [1.2, 'cima', 510, []]);
+  assert.deepEqual(media.abre, [[+(media.destaques[0].t - 0.4).toFixed(3), +Math.min(8.2, media.destaques[0].sai + 0.25).toFixed(3)]]);
+  // a frase em duas linhas cheias precisa de 270 px: em vídeo já ampliado (até 1,15) ou com o queixo segurando a aproximação
+  // (rosto de 600 px, queixo em 1200: 1290 / 1200), não cabe em cima; vai para logo abaixo do queixo, sem aproximar
+  for (const [nome, r, queixo] of [['contida', plano(cabeca(450), [], { teto: 1.15 }), 825], ['grande', plano(() => [540, 900, 450, 600]), 1200]]) {
+    const d = r.destaques[0];
+    assert.deepEqual([r.z, r.abre, d.lado, d.y0, d.y1], [1, [], 'baixo', queixo + 30, queixo + 30 + 270], nome);
+    assert.equal(r.semLegenda.length, 1, nome); // a legenda sai enquanto a frase está embaixo do queixo
+  }
+  // a selfie comum (alto da cabeça em 110, queixo em 485) e a cabeça cortada no alto: a frase encosta 30 px abaixo do
+  // queixo (nunca acima de 240, o cabeçalho do Instagram), sem aviso
+  for (const [topo, y0] of [[110, 515], [-200, 240]]) {
+    const avisos = [], alta = plano(cabeca(topo), avisos), d = alta.destaques[0];
+    assert.deepEqual([alta.z, alta.abre, d.lado, d.y0, d.y1], [1, [], 'baixo', y0, y0 + 270], String(topo));
+    assert.deepEqual(avisos, []);
+  }
+  // queixo em 1500: embaixo dele sobram 120 px até o piso de 1650, e em cima nada; a faixa fica nos 150 px do mínimo, com aviso
+  const avisos = [], miuda = plano(() => [540, 900, 300, 1200], avisos);
+  assert.deepEqual([miuda.destaques[0].lado, miuda.destaques[0].y0, miuda.destaques[0].y1], ['baixo', 1500, 1650]);
+  assert.match(avisos.join('\n'), /ficou apertada embaixo do queixo/);
+  // a cabeça que sobe durante a frase puxa a faixa para cima; fora dela, não conta
+  const sobe = plano((t) => [540, (t > 5.5 && t < 6.5 ? 560 : 700) + 225, 300, 300]);
+  assert.deepEqual([sobe.z, sobe.destaques[0].y1], [1, 530]);
+  const antes = plano((t) => [540, (t < 1 ? 300 : 700) + 225, 300, 300]); // alta em menos de 15% do vídeo: não aproxima
+  assert.deepEqual([antes.z, antes.destaques[0].y1], [1, 670]);
+  // alta em 24% do vídeo: aproxima para ela (o queixo, 85º percentil em 1075, segura em 1,2), e a faixa vai ao máximo
+  const muito = plano((t) => [540, (t < 2 ? 300 : 700) + 225, 300, 300]);
+  assert.deepEqual([muito.z, muito.destaques[0].y1], [1.2, 760]);
+});
+
+test('destaques: nenhum plano descobre borda do vídeo; escala de 1 para cima, ancorada no alto, sem deslocamento, e nada cobre o rosto aproximado', () => {
+  // O molde: só a escala muda no #enquadramento, ancorada no alto, e nada de cor sólida pode aparecer em volta do vídeo
+  const html = molde('destaques-tipograficos');
+  assert.match(html, /#enquadramento \{[^}]*transform-origin: 50% 0; \}/);
+  assert.match(html, /for \(const \[a, b\] of D\.abre\) \{\s*const ab = \{ scale: D\.z \}, fe = \{ scale: 1 \};/);
+  assert.doesNotMatch(html, /emenda-topo|--borda|borderRadius|D\.desce|translate/);
+  // Os planos: rostos de 200 a 900 px, do alto cortado ao meio da tela, parados e se mexendo, com frase e com peças, nos dois tetos
+  const pecas = [{ tipo: 'janela', print: 'prints/tela.png', fala: 'Aqui na loja' }, ...lerPecas([{ tipo: 'selo', selo: 'aprovado', fala: 'Se a dúvida' }, { tipo: 'objeto', objeto: 'relogio', fala: 'antes do almoço' }], null)];
+  let n = 0;
+  for (const h of [200, 300, 450, 600, 900]) for (const topo of [-150, 0, 60, 150, 300, 450, 700]) for (const anda of [0, 140]) for (const teto of [1.25, 1.15]) for (const comPecas of [false, true]) {
+    const caixa = (t) => [540, topo + 0.75 * h + anda * Math.sin(t), 0.75 * h, h], avisos = [];
+    const r = comPecas ? planoDestaques(undefined, PAL_ED, { total: 8.2, caixa, pecas, teto }, (m) => avisos.push(m)) : planoDestaques(['a *solução* sai antes do almoço'], PAL_ED, { total: 8.2, caixa, teto }, (m) => avisos.push(m));
+    const caso = JSON.stringify({ h, topo, anda, teto, comPecas, z: r.z });
+    n++;
+    // com a origem no alto e escala s, a borda do vídeo vai para 0 (em cima), 1920 * s (embaixo) e 540 -/+ 540 * s (dos
+    // lados): cobre a tela só com s de 1 para cima, e sem deslocamento nenhum
+    assert.ok(r.z >= 1 && r.z <= teto, caso);
+    assert.equal(r.desce, undefined, caso);
+    assert.equal(r.borda, undefined, caso);
+    if (r.z > 1) assert.ok(r.abre.length > 0, caso);
+    else assert.deepEqual(r.abre, [], caso);
+    // a legenda (caminho 2): fora da tela durante toda frase ou peça embaixo do queixo; na tela durante a janela, que não
+    // mostra a fala, e a janela fora da faixa da legenda (1310 a 1480)
+    const grupos = EC.palavraPorVez(PAL_ED.map((p, k) => ({ ...p, k })), new Set(), 8.2, r.semLegenda);
+    for (const f of r.faixas.filter((x) => x.lado && x.lado !== 'cima')) {
+      if (!/janela/.test(f.nome)) { assert.deepEqual(grupos.filter((g) => g.ini < f.ate && g.sai > f.de), [], `${caso} ${f.nome}: legenda na tela com ela embaixo do queixo`); continue; }
+      const [a, b] = [f.de + 0.15, f.ate - 0.25];
+      assert.ok(f.legenda && !r.semLegenda.some(([x, y]) => x < b && y > a), `${caso} ${f.nome}: a legenda saiu durante a janela`);
+      if (f.legendaY == null) assert.ok(f.y1 <= 1310 || f.y0 >= 1480, `${caso} ${f.nome}: a janela cobre a legenda (${f.y0} a ${f.y1})`);
+      else { // a janela embaixo do queixo: a legenda sobe, entre 240 e 20 px acima da cabeça em todo instante dela, sem tocar a janela
+        assert.ok(f.legendaY >= 240 && f.legendaY + 170 <= f.y0, `${caso} legenda no alto em ${f.legendaY}, janela em ${f.y0}`);
+        for (let t = f.de; t <= f.ate; t += 0.1) { const c = caixa(t), s = r.abre.some(([x, y]) => t >= x && t <= y + 0.45) ? r.z : 1; assert.ok((c[1] - 0.75 * c[3]) * s - (f.legendaY + 170) >= 20 - 1e-9, `${caso} legenda a menos de 20 px da cabeça em ${t.toFixed(1)} s`); }
+      }
+      for (const p of PAL_ED.filter((x) => x.ini >= a && x.ini < b)) assert.ok(grupos.some((g) => g.ini <= p.ini && g.sai > p.ini), `${caso} "${p.txt}" sem legenda na janela`);
+    }
+    // o rosto (a caixa, sem o cabelo) na posição de cada instante, com a escala do momento, fora de toda faixa de frase e de
+    // peça; quando a pessoa ocupa o quadro todo, o montador avisa que ficou apertada
+    if (avisos.some((m) => /apertada/.test(m))) continue;
+    for (const f of r.faixas) for (let t = f.de + 0.15; t <= f.ate - 0.25; t += 0.1) {
+      const [cx, cy, w, hh] = caixa(t), s = r.abre.some(([a, b]) => t >= a + 0.4 && t <= b) ? r.z : 1;
+      const x0 = 540 + (cx - w / 2 - 540) * s, x1 = 540 + (cx + w / 2 - 540) * s, y0 = (cy - hh / 2) * s, y1 = (cy + hh / 2) * s;
+      assert.ok(f.x1 <= x0 || f.x0 >= x1 || f.y1 <= y0 || f.y0 >= y1, `${caso} ${f.nome} em ${t.toFixed(1)} s: faixa ${[f.y0, f.y1]} e rosto ${[Math.round(y0), Math.round(y1)]}`);
+    }
+  }
+  assert.equal(n, 280);
+});
+
+test('destaques: frase fora da fala, no gancho de capa ou colada na anterior fica de fora com aviso; formato errado é erro em português', () => {
+  const avisos = [], r = planoDestaques(['todo cliente recebe *garantia*', 'Aqui na *loja*', 'Se a *dúvida* chega', 'de *manhã*, a solução'], PAL_ED, { total: 8.2, desde: 3 }, (m) => avisos.push(m));
+  assert.deepEqual(r.destaques.map((x) => trecho(x.de, x.ate)), ['Se a dúvida chega']);
+  assert.equal(avisos.length, 3, avisos.join('\n'));
+  assert.match(avisos[0], /"todo cliente recebe garantia" não foi achada na fala, na ordem; ficou de fora/);
+  assert.match(avisos[1], /"Aqui na loja" cai no gancho de capa/);
+  assert.match(avisos[2], /"de manhã, a solução" começa menos de meio segundo depois da anterior; ficou de fora/);
+  assert.throws(() => planoDestaques([], PAL_ED, { total: 8.2 }), /pedem "destaques"/);
+  assert.throws(() => planoDestaques('Se a *dúvida*', PAL_ED, { total: 8.2 }), /pedem "destaques"/);
+  for (const f of ['Se a dúvida chega', '*Se* a *dúvida* chega', 'Se a *dúvida chega'])
+    assert.throws(() => planoDestaques([f], PAL_ED, { total: 8.2 }), /exatamente uma palavra-chave entre asteriscos/, f);
+  assert.throws(() => planoDestaques(['*dúvida*'], PAL_ED, { total: 8.2 }), /tem 1 palavra e 6 caracteres; use de 2 a 10/);
+  assert.throws(() => planoDestaques(['Aqui na loja, todo cliente recebe *resposta* no mesmo dia. Se'], PAL_ED, { total: 8.2 }), /tem 11 palavras/);
+  assert.match(erro('destaques-tipograficos', 'escolhas.json', { estilo: 'destaques-tipograficos', marca: MARCA }), /pedem "destaques"/);
+});
+
+test('destaques: whoosh na entrada de cada frase e pop na palavra-chave (o mais forte fica, a menos de 0,5 s); nada na legenda pequena', () => {
+  const d = { palavras: PALAVRAS, ...planoDestaques(['Se a *dúvida* chega', 'a solução sai antes do *almoço*'], PAL_ED, { total: 8.2 }) };
+  const ev = EC.efeitos('destaques-tipograficos', d, TRECHOS, 8.2).map((e) => [+e.t.toFixed(3), e.som]);
+  assert.deepEqual(ev, [[3.8, 'pop'], [5, 'whoosh-short'], [6.5, 'pop-mao']]); // "Se" (3,433) fica sem som: "dúvida" vem 0,37 s depois
+});
+
+test('destaques: o montador lê o rosto.json e grava a faixa de cada frase; a conferência enxerga a faixa e reprova o rosto embaixo dela', () => {
+  const dir = comRosto('destaques-tipograficos', {}), avisos = []; // rosto em 900, com 300 px: o alto da cabeça em 675
+  try {
+    const r = montar(dir, (m) => avisos.push(m));
+    assert.deepEqual(avisos, []);
+    assert.equal(r.destaques, 2);
+    const html = readFileSync(join(dir, 'index.html'), 'utf8'), D = lerD(dir);
+    assert.equal(D.z, 1);
+    assert.deepEqual(D.destaques.map((x) => x.y1), [645, 645]);
+    const z = zonas(html, 8.2), frase = z.filter((a) => /frase em destaque/.test(a.nome));
+    assert.equal(z[0].nome, 'a legenda'); // a legenda de uma palavra, do molde
+    assert.deepEqual([z[0].y0, z[0].y1], [1310, 1480]);
+    assert.deepEqual(frase.map((a) => [a.y0, a.y1, a.de, a.ate]), D.faixas.map((f) => [240, 645, f.de, f.ate]));
+    const meio = (D.destaques[1].t + D.destaques[1].sai) / 2;
+    assert.equal(cobre({ x: 540, y: 500, w: 300, h: 300 }, meio, z).length, 1, 'rosto que subiu para baixo da frase');
+    assert.equal(cobre({ x: 540, y: 900, w: 300, h: 300 }, meio, z).length, 0, 'rosto abaixo da frase');
+    assert.equal(cobre({ x: 540, y: 500, w: 300, h: 300 }, 1, z).length, 0, 'sem frase na tela, nada cobre');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('destaques: no cartão branco a frase lê com 4,5:1 e a palavra-chave com 3:1, com o destaque claro escurecido rumo ao preto', () => {
+  const BRANCO = [255, 255, 255], c = EC.contraste;
+  for (const [nome, m] of Object.entries(MARCAS_MOTION)) {
+    const K = EC.coresMotion(m);
+    assert.ok(c(K.TEXTO, BRANCO) >= 4.5, `${nome}: frase ${c(K.TEXTO, BRANCO)}`);
+    assert.ok(c(K.LINHA, BRANCO) >= 3, `${nome}: palavra-chave ${c(K.LINHA, BRANCO)}`);
+  }
+  assert.deepEqual(EC.coresMotion(MARCAS_MOTION['destaque escuro']).LINHA, [0x9a, 0x6a, 0x5a]); // já lê no branco: fica a cor da marca
+  const amarela = EC.coresMotion(MARCAS_MOTION['destaque claro (amarelo)']).LINHA; // o amarelo escurece no mesmo matiz (mostarda)
+  assert.ok(amarela.every((v, i) => v < [0xf2, 0xc2, 0x00][i] || v === 0) && amarela[0] > amarela[1] && amarela[2] === 0, String(amarela));
+  assert.equal(EC.coresDestaques, undefined); // o véu escuro saiu
+});
+
+test('destaques: o molde põe cada palavra no instante dela, a legenda de uma palavra sem as palavras grandes e a aproximação sem moldura', () => {
+  const html = molde('destaques-tipograficos');
+  assert.match(html, /\{ opacity: 1, y: 0, duration: 0\.24, ease: "power3\.out" \}, PAL\[i\]\.ini\)/);
+  assert.match(html, /EditorChefePecas\.legenda\(tl, EC\.semDestaques\(PAL\.map\(\(p, k\) => \(\{ \.\.\.p, k \}\)\), D\.destaques\), new Set\(D\.chaves \?\? \[\]\), C\.TOTAL, D\.semLegenda \?\? \[\], D\.legendaNoAlto \?\? \[\]\);/);
+  assert.match(html, /if \(x\.lado === "baixo"\) caixa\.style\.justifyContent = "flex-start";/); // embaixo do queixo, o cartão encosta nele
+  assert.doesNotMatch(html, /legendaEmCaixa|\.grupo/);
+  assert.match(html, /K = EC\.coresMotion\(C\);\s*raizCss\.setProperty\("--texto-frase", em\(K\.TEXTO\)\);\s*raizCss\.setProperty\("--chave", em\(K\.LINHA\)\);/);
+  assert.match(html, /\.destaque-frase \{[^]*?background: #fff;[^]*?overflow: hidden;[^]*?color: var\(--texto-frase\);\s*\}/); // a frase num cartão branco, que recorta a entrada das palavras
+  // o cartão não encolhe com a faixa (com overflow hidden, o flex o deixaria do tamanho dela e recortaria a segunda linha):
+  // a letra é que encolhe até caber
+  assert.match(html, /\.destaque-frase \{\s*flex: none;/);
+  assert.match(html, /while \(s > 56 && \(frase\.offsetHeight > alt/);
+  assert.doesNotMatch(html, /destaque-veu|destaque liso|--chave-liso/);
+  assert.match(html, /for \(const \[a, b\] of D\.abre\)[\s\S]*?scale: D\.z/); // aproxima e volta nos intervalos do plano
+  const d = planoDestaques(['Se a *dúvida* chega', 'a *solução* sai antes do almoço'], PAL_ED, { total: 8.2 });
+  assert.deepEqual(EC.semDestaques(PAL_ED, d.destaques).map((p) => p.txt), ['Aqui', 'na', 'loja,', 'todo', 'cliente', 'recebe', 'resposta', 'no', 'mesmo', 'dia.', 'de', 'manhã,']);
+});
+
+test('destaques: o vídeo só aproxima para a frase depois do gancho de capa, e a aproximação no rosto que cai com ela fica de fora, com aviso', () => {
+  const dir = comRosto('destaques-tipograficos', { capa: CAPA, aproximar: ['a solução sai'] }, [540, 675, 300, 300]), avisos = []; // cabeça em 450
+  try {
+    montar(dir, (m) => avisos.push(m));
+    const html = readFileSync(join(dir, 'index.html'), 'utf8'), D = lerD(dir);
+    assert.equal(D.z, 1.2); // 540 px acima da cabeça (240 + 270 + 30) / 450
+    assert.match(html, /\.capa-trecho \{[^}]*transform: translateY\(var\(--desce, 0px\)\); \}/); // sem --desce no molde: a capa fica no vídeo fechado
+    assert.doesNotMatch(html, /setProperty\("--desce"/);
+    assert.ok(D.abre.every(([a]) => a >= 3), JSON.stringify(D.abre));
+    assert.ok(D.destaques.every((x) => x.y1 === 450 * 1.2 - 30), JSON.stringify(D.destaques));
+    assert.equal(D.aproximar, undefined);
+    assert.match(avisos.join('\n'), /a aproximação em [\d,]+ s cai com uma frase ou peça acima da cabeça \(o vídeo já está aproximado para ela ali\)/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// Papelaria (estilo 12): cartões brancos em letra de mão acima da pessoa e a lista que ganha o check (ou o risco) item por item
+const papel = (cartoes) => ({ estilo: 'papelaria', marca: MARCA, cartoes });
+
+test('papelaria: título, lista e marca do cartão são conferidos com mensagem em português; texto colado vira uma linha', () => {
+  const msg = (c) => erro('papelaria', 'escolhas.json', papel([{ de: 0.5, titulo: 'Todo cliente', ...c }]));
+  assert.match(msg({ titulo: '  ' }), /cartão 1 pede "titulo", o trecho da fala que vai escrito à mão/);
+  assert.match(msg({ titulo: '*Todo* *cliente*' }), /no máximo uma palavra forte entre asteriscos/);
+  assert.match(msg({ titulo: 'Aqui na loja, todo cliente recebe resposta no mesmo' }), /tem 51 caracteres; na Papelaria cabem até 48/);
+  for (const lista of [[], ['a', 'b', 'c', 'd', 'e'], 'chega de manhã', ['chega', ' ']])
+    assert.match(msg({ lista }), /"lista" é uma lista com 1 a 4 textos curtos tirados da fala/, JSON.stringify(lista));
+  assert.match(msg({ lista: ['todo cliente recebe resposta no mesmo'] }), /tem 37 caracteres; na lista cabem até 32/);
+  assert.match(msg({ lista: ['todo cliente'], marca: 'x' }), /"marca" é "check" .* ou "risco"/);
+  const dir = projeto('papelaria', { cartoes: [{ de: 0.5, titulo: ' Todo cliente\nrecebe *resposta* ', lista: ['todo  cliente'], marca: 'risco' }] }), avisos = [];
+  try {
+    montar(dir, (m) => avisos.push(m));
+    assert.deepEqual(avisos, []);
+    assert.deepEqual(lerD(dir).cartoes, [{ de: 0.5, titulo: 'Todo cliente recebe *resposta*', lista: ['todo cliente'], marca: 'risco' }]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('papelaria: título ou item que não está na fala daquele cartão é avisado', () => {
+  const dir = projeto('papelaria', { cartoes: [{ de: 0.5, titulo: 'Atendimento *rápido*', lista: ['todo cliente', 'garantia'] }, { de: 4.8, titulo: 'Antes do almoço', lista: ['todo cliente'] }] }), avisos = [];
+  try {
+    montar(dir, (m) => avisos.push(m));
+    assert.equal(avisos.length, 3, avisos.join('\n'));
+    assert.match(avisos[0], /o título "Atendimento rápido" do cartão 1 não aparece igual na fala desse cartão/);
+    assert.match(avisos[1], /o item "garantia" do cartão 1 .* o check entra 0,5 s depois do anterior/);
+    assert.match(avisos[2], /o item "todo cliente" do cartão 2/); // dito no cartão 1: fora do cartão 2
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('papelaria: cada item ganha a marca no começo da última palavra dele, o primeiro também, nunca depois de 0,6 s antes do fim do cartão', () => {
+  const pal = ['Primeiro,', 'a', 'análise', 'técnica.', 'Depois', 'negociação.'].map((txt, i) => ({ txt, ini: i, fim: i + 0.5 }));
+  const m = (itens, ini = 0, fim = 8) => EC.batidas(pal, itens, ini, fim, { comTitulo: false, naUltima: true });
+  assert.deepEqual(m(['análise técnica', 'negociação']), [{ t: 3, achou: true }, { t: 5, achou: true }]); // "técnica" e "negociação"
+  assert.deepEqual(m(['a análise']), [{ t: 2, achou: true }]); // o primeiro item não entra com o título: espera ser dito
+  assert.deepEqual(m(['garantia', 'negociação']), [{ t: 0.55, achou: false }, { t: 5, achou: true }]);
+  assert.deepEqual(m(['negociação'], 0, 5.5), [{ t: 4.9, achou: true }]); // fim do cartão em 5,5 s: a marca fica na tela antes da saída
+  assert.deepEqual(EC.batidas(pal, ['análise técnica'], 0, 8), [{ t: EC.ENTRA_TITULO, achou: true }]); // o Motion dividido segue como era
+});
+
+test('papelaria: whoosh largo na entrada de cada cartão e clique discreto em cada check ou risco, no instante em que o item é dito', () => {
+  const dir = projeto('papelaria');
+  try {
+    montar(dir, () => {});
+    const d = lerD(dir), ev = EC.efeitos('papelaria', d, TRECHOS, 8.2).map((e) => [+e.t.toFixed(3), e.som]);
+    // "manhã," (original 6,0 s) e "almoço." (7,8 s) na edição; a entrada dos cartões em 0,067 e 3,5 s
+    assert.deepEqual(ev, [[0.067, 'whoosh-largo'], [3.5, 'whoosh-largo'], [4.7, 'tique'], [6.5, 'clique-suave']]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('papelaria: no papel branco a tinta lê com 4,5:1, traço, check e risco com 3:1, o item riscado ainda com 4,5:1, e a assinatura no fundo claro', () => {
+  const BRANCO = [255, 255, 255], c = EC.contraste;
+  for (const [nome, m] of Object.entries(MARCAS_MOTION)) {
+    const P = EC.coresPapelaria({ ...m, TEXTO: m.ESCURO });
+    assert.deepEqual(P.PAINEL, BRANCO, nome);
+    assert.ok(c(P.TEXTO, BRANCO) >= 4.5 && c(P.APAGADO, BRANCO) >= 4.5, `${nome}: tinta ${c(P.TEXTO, BRANCO)}, riscado ${c(P.APAGADO, BRANCO)}`);
+    assert.ok(c(P.LINHA, BRANCO) >= 3 && c(P.DETALHE, BRANCO) >= 3, `${nome}: traço ${c(P.LINHA, BRANCO)}, quadradinho ${c(P.DETALHE, BRANCO)}`);
+    assert.ok(c(P.CABECA, m.CLARO) >= 4.5, `${nome}: assinatura ${c(P.CABECA, m.CLARO)}`);
+    assert.deepEqual(P.LINHA, EC.coresMotion(m).LINHA, nome); // a mesma conta do painel branco
+  }
+  const amarela = EC.coresPapelaria({ ...MARCAS_MOTION['destaque claro (amarelo)'], TEXTO: '#14213D' }).LINHA; // escurece no mesmo matiz
+  assert.ok(amarela.every((v, i) => v <= [0xf2, 0xc2, 0x00][i]) && amarela[2] === 0 && amarela[0] > amarela[1], String(amarela));
+});
+
+test('papelaria: o molde usa as cores do papel, a letra de mão Caveat e a marca no tempo da fala; a legenda é a do Corte seco', () => {
+  const html = molde('papelaria');
+  assert.match(html, /P = EC\.coresPapelaria\(C\)/);
+  assert.match(html, /EC\.batidas\(PAL, c\.lista, ini, fim, \{ comTitulo: false, naUltima: true \}\)/); // a mesma conta dos efeitos
+  assert.match(html, /EC\.legendaCorrida\(tl, C, \{ fortes: D\.fortes/); // a legenda do Corte seco, sem o papel branco
+  assert.match(html, /\.titulo \{[^}]*font-family: "Caveat", cursive; font-weight: 700;/);
+  const dir = projeto('papelaria');
+  try {
+    montar(dir, () => {});
+    assert.match(readFileSync(join(dir, 'index.html'), 'utf8'), /@font-face \{ font-family: "Caveat"; src: url\("fonts\/Caveat-700\.woff2"\) format\("woff2"\); font-weight: 700;/);
+    rmSync(join(dir, 'fonts', 'Caveat-700.woff2'));
+    assert.throws(() => montar(dir, () => {}), /falta a letra de mão da Papelaria \(fonts\/Caveat-700\.woff2\).*baixar-fonte\.mjs" "Caveat" "700"/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a duração da edição vai no milésimo de baixo: a HyperFrames não grava um quadro depois do último trecho', () => {
   const dir = projeto('legenda-viva', { efeitos: false });
-  writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ limiar: -38, duracao: 95, manter: [[0, 2786 / 30]] }));
-  montar(dir, () => {});
-  const d = +/id="raiz"[^>]*data-duration="([\d.]+)"/.exec(readFileSync(join(dir, 'index.html'), 'utf8'))[1];
-  assert.equal(d, 92.866);
-  rmSync(dir, { recursive: true, force: true });
+  try {
+    // 2786 quadros (92,8667 s): "92.867" faria a HyperFrames gravar 2787 quadros, o último só com o fundo
+    writeFileSync(join(dir, 'trechos.json'), JSON.stringify({ ...corte, duracao: 100, manter: [[0, 50], [51, 93.85]] })); // 1500 + 1286 quadros
+    montar(dir, () => {});
+    const html = readFileSync(join(dir, 'index.html'), 'utf8'), d = +/data-composition-id="editor-chefe"[^>]*?data-duration="([\d.]+)"/.exec(html)[1];
+    const v = [...html.matchAll(/<video id="trecho-\d+"[^>]* data-start="([\d.]+)" data-duration="([\d.]+)"/g)].map((m) => [+m[1], +m[2]]), [a, b] = v[v.length - 1];
+    assert.equal(d, 92.866);
+    assert.equal(Math.ceil(d * 30 - 1e-9), 2786); // quadros de 0 a 2785
+    assert.ok(2785 / 30 < a + b, `o último quadro (${2785 / 30}) cai no último trecho, que vai até ${a + b}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('palavra que anima y ou scale sai também do layout (display none), nunca só fica transparente', () => {
+  // na gravação rápida da HyperFrames (900 quadros ou mais), o elemento escondido só com opacity 0 depois de animar uma
+  // transformação mostrava a pintura velha por trás da palavra seguinte (provado num render de 930 quadros, 2026-10-26)
+  const comum = readFileSync(new URL('../plugins/editor-chefe/estilos/comum.js', import.meta.url), 'utf8'), corrida = comum.slice(comum.indexOf('function legendaCorrida'), comum.indexOf('function capa('));
+  const fontes = { corrida, pecas: readFileSync(new URL('../plugins/editor-chefe/estilos/pecas.js', import.meta.url), 'utf8') };
+  for (const estilo of ['corte-seco-zoom', 'editorial-claro-dividido', 'editorial-claro', 'palavra-chave']) fontes[estilo] = molde(estilo);
+  for (const [nome, js] of Object.entries(fontes)) {
+    const sets = [...js.matchAll(/tl\.set\(el, \{ opacity: 0[^}]*\}/g)];
+    assert.ok(sets.length, nome);
+    for (const m of sets) assert.match(m[0], /display: "none"/, `${nome}: ${m[0]}`);
+  }
+});
+
+test('nenhum molde carrega script da internet: o GSAP vem do plugin, com o SHA-256 registrado, e vai para a pasta do vídeo', () => {
+  const E = fileURLToPath(new URL('../plugins/editor-chefe/estilos/', import.meta.url)), sha = (b) => createHash('sha256').update(b).digest('hex');
+  const moldes = readdirSync(E).filter((a) => a.endsWith('.html'));
+  assert.equal(moldes.length, 12);
+  for (const m of moldes) {
+    const html = readFileSync(join(E, m), 'utf8');
+    assert.doesNotMatch(html, /<script[^>]+src\s*=\s*["'](?:https?:)?\/\//i, m);
+    assert.match(html, /<script src="gsap\.min\.js"><\/script>/, m);
+  }
+  assert.equal(sha(readFileSync(join(E, 'gsap.min.js'))), GSAP_SHA256);
+  assert.match(readFileSync(join(E, 'gsap.min.js'), 'utf8'), /^\/\*!\n \* GSAP 3\.14\.2\n/);
+  assert.match(readFileSync(join(E, 'gsap-LICENCA.txt'), 'utf8'), /Standard "No Charge" GSAP License/);
+  assert.match(readFileSync(new URL('../NOTICE', import.meta.url), 'utf8'), new RegExp(`GSAP 3\\.14\\.2[\\s\\S]*${GSAP_SHA256}`));
+  const dir = projeto('legenda-viva');
+  try {
+    montar(dir, () => {});
+    assert.equal(sha(readFileSync(join(dir, 'gsap.min.js'))), GSAP_SHA256);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

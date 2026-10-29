@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="gsap.min.js"></script>
     <script src="comum.js"></script>
     <style>
 {{FONTES}}
@@ -23,15 +23,10 @@
       #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
-      /* A emenda: filete na cor de destaque e a legenda centrada nela (870 a 1050, meio em 960) */
+      /* A emenda: filete na cor de destaque */
       #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--destaque-legivel); }
-      #legenda { position: absolute; left: 48px; right: 48px; top: 870px; height: 180px; }
-      .grupo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
-      .grupo .caixa {
-        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.24em; max-width: 984px; padding: 14px 32px; border-radius: 16px;
-        background: var(--fundo-escuro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent), 0 12px 30px color-mix(in srgb, var(--fundo-escuro) 45%, transparent);
-        font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 58px; line-height: 1.15; color: var(--fundo-claro);
-      }
+      /* A legenda corrida do Corte seco, sem caixa, dentro da metade do vídeo, embaixo e longe do rosto (1500 a 1650) */
+      #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }
     </style>
   </head>
   <body>
@@ -73,8 +68,8 @@
           tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
         });
 
-        // Legenda em caixa escura na emenda; a palavra falada na cor destaque (clareada, se faltar contraste)
-        EC.legendaEmCaixa(tl, C);
+        // Legenda corrida do Corte seco, sem caixa, dentro do vídeo; traço na cor destaque nas palavras de ênfase (o montar.mjs escolhe)
+        EC.legendaCorrida(tl, C, { fortes: D.fortes, familia: "{{TITULO}}", reforcar: {{VEU}} === 1 });
         if (D.aproximar) EC.aproximar(tl, D.aproximar);
         if (D.capa) EC.capa(tl, D.capa);
         window.__timelines["editor-chefe"] = tl;

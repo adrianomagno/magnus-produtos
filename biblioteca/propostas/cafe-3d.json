@@ -1,0 +1,18 @@
+{
+ "nome": "cafe",
+ "tipo": "objeto",
+ "familia": "3d",
+ "arquivo": "cafe-3d.png",
+ "sha256": "edeaa3fca5eace5f2546efcd3b3e42ef1fd389a0c51d374dbf7863731db8f314",
+ "palavras": [
+  "café",
+  "cafezinho",
+  "xícara",
+  "pausa"
+ ],
+ "origem": "fluent-emoji",
+ "licenca": "MIT",
+ "fonte": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Hot%20beverage/3D/hot_beverage_3d.png",
+ "motivo": "pausa e café aparecem nas falas de rotina",
+ "data": "2026-10-26"
+}

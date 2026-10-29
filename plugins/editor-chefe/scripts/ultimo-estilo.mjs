@@ -1,7 +1,8 @@
 // "Mesmo estilo do último vídeo": na entrega aprovada, guarda as escolhas de ESTILO do vídeo em Documentos/Editor Chefe/
 // ultimo-estilo.json (ao lado do marca.json); no vídeo seguinte, monta a pergunta única com o nome do estilo do catálogo.
 // Nunca guarda o conteúdo do vídeo (textos, palavras-chave, cartões, frases, foco): só o estilo, a identidade, os efeitos,
-// o visual de cor e a limpeza de ruído (do fonte.json, que o fonte.mjs grava), a aproximação ligada ou não e o estilo da capa.
+// o visual de cor e a limpeza de ruído (do fonte.json, que o fonte.mjs grava), a aproximação ligada ou não, o estilo da capa
+// e, nos Destaques tipográficos, o estilo dos objetos (3D ou sóbrio).
 // Uso: node ultimo-estilo.mjs guardar <pasta do vídeo>     grava ../ultimo-estilo.json
 //      node ultimo-estilo.mjs ler <pasta Editor Chefe>     imprime a pergunta e as escolhas, ou que não há estilo guardado
 // Arquivo ausente ou estragado nunca para o fluxo: o "ler" diz que não há estilo guardado e o vídeo segue com as perguntas.
@@ -16,7 +17,7 @@ const CAT = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "sk
 const secao = (t) => CAT.split(/^## /m).find((s) => s.startsWith(t)) ?? "";
 const lista = (s) => Object.fromEntries([...s.matchAll(/^(\d+)\. \*\*([^*]+)\*\* \(`([a-z0-9-]+)`\)/gm)].map((m) => [m[3], { n: +m[1], nome: m[2] }]));
 export const ESTILOS = lista(secao("Estilos")), CAPAS = lista(secao("Capas"));
-// O que cada estilo pergunta (catálogo e passo 2 da SKILL): efeitos e capa nos de 1 a 5 e de 7 a 9; aproximação em todo
+// O que cada estilo pergunta (catálogo e passo 2 da SKILL): efeitos e capa nos de 1 a 5, de 7 a 9, 11 e 12; aproximação em todo
 // estilo com gravação menos o Corte seco; cor e ruído em todo estilo com gravação; identidade só na Palavra-chave
 const COM_CAPA = (e) => !["caixinha-pergunta", "motion-narrado"].includes(e);
 const GRAVADO = (e) => e !== "motion-narrado";
@@ -40,6 +41,8 @@ export function normalizar(s) {
     o.ruido = s.ruido;
   }
   if (APROXIMA(e)) { if (typeof s.aproximar !== "boolean") return null; o.aproximar = s.aproximar; }
+  // Destaques tipográficos: o estilo dos objetos (arquivo guardado antes dele vale como 3D)
+  if (e === "destaques-tipograficos") { const i = s.icones ?? "3d"; if (!["3d", "sobrio"].includes(i)) return null; o.icones = i; }
   return o;
 }
 
@@ -49,7 +52,7 @@ export function guardar(pasta) {
   try { esc = JSON.parse(readFileSync(join(pasta, "escolhas.json"), "utf8")); } catch { throw new Error(`ultimo-estilo: não consegui ler o escolhas.json em ${pasta}; nada foi guardado.`); }
   try { f = JSON.parse(readFileSync(join(pasta, "fonte.json"), "utf8")) ?? {}; } catch { /* sem fonte.json: sem visual de cor e sem limpeza */ }
   const s = normalizar({ estilo: esc?.estilo, identidade: esc?.identidade ?? "keynote", efeitos: esc?.efeitos !== false, capa: CAPAS[esc?.capa?.estilo] ? esc.capa.estilo : null,
-    cor: Object.hasOwn(CORES, f.cor ?? "") ? f.cor : null, ruido: f.ruido === true, aproximar: Array.isArray(esc?.aproximar) && esc.aproximar.length > 0 });
+    cor: Object.hasOwn(CORES, f.cor ?? "") ? f.cor : null, ruido: f.ruido === true, aproximar: Array.isArray(esc?.aproximar) && esc.aproximar.length > 0, icones: esc?.icones ?? "3d" });
   if (!s) throw new Error(`ultimo-estilo: o escolhas.json em ${pasta} não tem um estilo do catálogo; nada foi guardado.`);
   writeFileSync(join(pasta, "..", ARQ), JSON.stringify({ ...s, guardado: new Date().toISOString().slice(0, 10) }, null, 1) + "\n");
   return s;
@@ -69,6 +72,7 @@ export function pergunta(s) {
   if (s.ruido) p.push("limpeza de ruído");
   if ("aproximar" in s) p.push(s.aproximar ? "aproximação no rosto" : "sem aproximação no rosto");
   if ("capa" in s) p.push(s.capa ? `capa ${CAPAS[s.capa].n}, ${CAPAS[s.capa].nome}` : "sem gancho de capa");
+  if (s.icones) p.push(s.icones === "sobrio" ? "objetos no estilo sóbrio" : "objetos em 3D");
   return `Quer o mesmo estilo do último vídeo: ${p.join(", ")}?`;
 }
 

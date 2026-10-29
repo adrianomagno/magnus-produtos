@@ -4,12 +4,15 @@
 // osascript), sem instalar nada e sem mandar o vídeo para fora do computador. Lista também os nomes possíveis da fala e
 // todo o outro texto da tela, sem repetir, para o Claude julgar nome de cliente ou paciente, processo e prontuário.
 // Uso: node sigilo.mjs <pasta do vídeo>                 grava sigilo.json e imprime o resumo
-//      node sigilo.mjs <pasta do vídeo> --borrar 1,3    junta ao borrar.json as áreas da tela com esses números do resumo;
-//                                                       o fonte.mjs borra essas áreas toda vez que grava a fonte.mp4
+//      node sigilo.mjs <pasta do vídeo> --print <arquivo> confere o print da janela (estilo 11) e junta ao sigilo.json
+//      node sigilo.mjs <pasta do vídeo> --borrar 1,3    junta ao borrar.json as áreas da tela (ou do print) com esses
+//                                                       números do resumo; o fonte.mjs borra as do vídeo toda vez que
+//                                                       grava a fonte.mp4, e o montar.mjs borra as do print
 // Fora do Mac confere só o texto falado e diz que não leu a tela.
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, rmSync, realpathSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { join, resolve } from "node:path";
+import { join, resolve, isAbsolute, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { filtros } from "./fonte.mjs";
 
@@ -220,8 +223,49 @@ export function naEdicao(t, manter) {
 }
 const relogio = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-// A conferência inteira da pasta do vídeo: grava sigilo.json e devolve o mesmo objeto
+// Itens do vídeo primeiro, depois os dos prints; o número de cada um (o do --borrar) segue essa ordem
+const numerar = (itens) => [...itens.filter((i) => !i.print), ...itens.filter((i) => i.print)].map((it, i) => ({ ...it, n: i + 1 }));
+const lerSigilo = (pasta) => { try { return JSON.parse(readFileSync(join(pasta, "sigilo.json"), "utf8")); } catch { return null; } };
+
+// O caminho do print da janela: o Claude copia o arquivo do dono para prints/ da pasta do vídeo, e só vale caminho relativo,
+// dentro dela. Recusa caminho absoluto, ".." e link simbólico que, resolvido, saia da pasta do vídeo (o montar.mjs usa a
+// mesma conferência). Devolve o caminho resolvido; erro em português, com quem chama no começo ("sigilo" ou "montar").
+export function caminhoPrint(pasta, arquivo, quem = "sigilo") {
+  const a = String(arquivo ?? "");
+  const copie = `Copie o print do dono para prints/ da pasta do vídeo e use o caminho a partir dela, como "prints/tela.png".`;
+  if (isAbsolute(a) || /^[a-zA-Z]:[\\/]/.test(a)) throw new Error(`${quem}: o print "${a}" é um caminho absoluto. ${copie}`);
+  if (a.split(/[\\/]+/).includes("..")) throw new Error(`${quem}: o print "${a}" sobe de pasta (".."). ${copie}`);
+  const cam = resolve(pasta, a);
+  if (!existsSync(cam)) return cam; // quem chama diz que não achou
+  const real = realpathSync(cam), base = realpathSync(pasta);
+  if (real !== base && !real.startsWith(base + sep)) throw new Error(`${quem}: o print "${a}" é um link que sai da pasta do vídeo. ${copie}`);
+  return cam;
+}
+
+// O print que o dono mandou para a janela do estilo 11: lido pela mesma leitura de texto do macOS, sem sair do computador.
+// Junta ao sigilo.json o registro do print (o arquivo, o SHA-256 e se foi lido) e os itens achados nele, numerados depois
+// dos do vídeo. O montar.mjs só põe o print na janela com esse registro e com o mesmo SHA-256 (o print não mudou depois).
+export function conferirPrint(pasta, arquivo, { tela = telaDisponivel() } = {}) {
+  const cam = caminhoPrint(pasta, arquivo);
+  if (!existsSync(cam)) throw new Error(`sigilo: não achei o print ${arquivo} na pasta do vídeo.`);
+  const r = lerSigilo(pasta) ?? { tela: { lida: false, motivo: "o vídeo ainda não foi conferido" }, fala: [], nomes: [], itens: [], manter: [] };
+  const reg = { arquivo, sha256: createHash("sha256").update(readFileSync(cam)).digest("hex"), lida: false };
+  let itens = [];
+  if (!tela) reg.motivo = "a leitura de texto da tela só existe no Mac";
+  else try {
+    const [linhas] = lerTela([cam]);
+    itens = agrupar([{ t: 0, linhas }], 0).map(({ n, ...it }) => ({ ...it, print: arquivo }));
+    Object.assign(reg, { lida: true, linhas: linhas.length });
+  } catch (e) { reg.motivo = e.message; }
+  r.prints = [...(r.prints ?? []).filter((x) => x.arquivo !== arquivo), reg];
+  r.itens = numerar([...r.itens.filter((i) => i.print !== arquivo), ...itens]);
+  writeFileSync(join(pasta, "sigilo.json"), JSON.stringify(r, null, 1));
+  return r;
+}
+
+// A conferência inteira da pasta do vídeo: grava sigilo.json e devolve o mesmo objeto (os prints já conferidos ficam)
 export function conferirDados(pasta, { tela = telaDisponivel() } = {}) {
+  const antes = lerSigilo(pasta);
   const ler = (nome) => { try { return JSON.parse(readFileSync(join(pasta, nome), "utf8")); } catch { throw new Error(`sigilo: falta o ${nome} na pasta do vídeo (passos 2 e 3 de references/audio-e-corte.md).`); } };
   const transcript = ler("transcript.json"), corte = ler("trechos.json"), manter = corte.manter ?? [];
   const fala = naFala(transcript, corte.extras ?? []);
@@ -239,25 +283,36 @@ export function conferirDados(pasta, { tela = telaDisponivel() } = {}) {
       r.tela.motivo = e.message;
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }
+  if (antes?.prints?.length) Object.assign(r, { prints: antes.prints, itens: numerar([...r.itens, ...(antes.itens ?? []).filter((i) => i.print)]) });
   writeFileSync(join(pasta, "sigilo.json"), JSON.stringify(r, null, 1));
   return r;
 }
 
-// O resumo para o Claude: os dados achados primeiro, com o tempo no vídeo editado; depois o que ele precisa julgar
-export function resumo(r) {
-  const ed = (t) => relogio(naEdicao(t, r.manter)), l = [], dados = r.itens.filter((i) => i.tipo !== "texto"), outros = r.itens.filter((i) => i.tipo === "texto");
+// O resumo para o Claude: os dados achados primeiro, com o tempo no vídeo editado; depois o que ele precisa julgar.
+// soPrint: só a parte dos prints (o --print não conferiu o vídeo de novo)
+export function resumo(r, soPrint = false) {
+  const ed = (t) => relogio(naEdicao(t, r.manter)), l = [], doVideo = r.itens.filter((i) => !i.print), dados = doVideo.filter((i) => i.tipo !== "texto"), outros = doVideo.filter((i) => i.tipo === "texto");
   const quando = (it) => it.aparicoes.map((a) => (ed(a.visto[0]) === ed(a.visto[1]) ? `em ${ed(a.visto[0])}` : `de ${ed(a.visto[0])} a ${ed(a.visto[1])}`)).join(", ");
-  l.push(r.tela.lida ? `sigilo: tela lida em ${r.tela.quadros} quadros.` : r.tela.motivo === "fora do Mac"
+  if (!soPrint) l.push(r.tela.lida ? `sigilo: tela lida em ${r.tela.quadros} quadros.` : r.tela.motivo === "fora do Mac"
     ? "sigilo: a tela não foi lida neste computador (a leitura de texto da tela só existe no Mac); conferido só o texto falado."
     : `sigilo: a tela não foi lida (${r.tela.motivo}); conferido só o texto falado.`);
-  for (const a of r.fala) l.push(`NA FALA: ${a.tipo} "${a.valor}" em ${ed(a.de)} do vídeo editado (${a.de.toFixed(2)} a ${a.ate.toFixed(2)} s do original).`);
-  for (const it of dados) l.push(`NA TELA [${it.n}]: ${it.tipo} na linha "${it.texto}", ${quando(it)} do vídeo editado.`);
-  if (!r.fala.length && !dados.length) l.push("sigilo: nenhum CPF, CNPJ, telefone ou e-mail achado.");
-  if (r.nomes.length) l.push(`Nomes possíveis na fala (julgue): ${r.nomes.map((n) => `${n.nome} (${ed(n.de)})`).join("; ")}.`);
-  if (outros.length) {
+  if (!soPrint) for (const a of r.fala) l.push(`NA FALA: ${a.tipo} "${a.valor}" em ${ed(a.de)} do vídeo editado (${a.de.toFixed(2)} a ${a.ate.toFixed(2)} s do original).`);
+  if (!soPrint) for (const it of dados) l.push(`NA TELA [${it.n}]: ${it.tipo} na linha "${it.texto}", ${quando(it)} do vídeo editado.`);
+  if (!soPrint && !r.fala.length && !dados.length) l.push("sigilo: nenhum CPF, CNPJ, telefone ou e-mail achado.");
+  if (!soPrint && r.nomes.length) l.push(`Nomes possíveis na fala (julgue): ${r.nomes.map((n) => `${n.nome} (${ed(n.de)})`).join("; ")}.`);
+  if (!soPrint && outros.length) {
     l.push("Outro texto da tela (julgue nome de cliente ou paciente, processo, prontuário):");
     for (const it of outros.slice(0, MAX_OUTROS)) l.push(`  [${it.n}] "${it.texto}", ${quando(it)}`);
     if (outros.length > MAX_OUTROS) l.push(`  ... e mais ${outros.length - MAX_OUTROS} no sigilo.json.`);
+  }
+  for (const p of r.prints ?? []) {
+    const dele = r.itens.filter((i) => i.print === p.arquivo);
+    if (!p.lida) { l.push(`sigilo: o print "${p.arquivo}" não foi lido (${p.motivo}); sem a conferência, ele não entra na janela.`); continue; }
+    l.push(`sigilo: print "${p.arquivo}" lido (${p.linhas} linhas de texto).`);
+    for (const it of dele.filter((i) => i.tipo !== "texto")) l.push(`NO PRINT [${it.n}]: ${it.tipo} na linha "${it.texto}" do print "${p.arquivo}".`);
+    const txt = dele.filter((i) => i.tipo === "texto");
+    if (!dele.some((i) => i.tipo !== "texto")) l.push(`sigilo: nenhum CPF, CNPJ, telefone ou e-mail no print "${p.arquivo}".`);
+    if (txt.length) l.push(`Texto do print "${p.arquivo}" (julgue nome de cliente ou paciente, processo, prontuário, endereço): ${txt.slice(0, MAX_OUTROS).map((i) => `[${i.n}] "${i.texto}"`).join("; ")}.`);
   }
   return l.join("\n");
 }
@@ -266,28 +321,37 @@ export function resumo(r) {
 export function escolherBorrar(pasta, numeros) {
   let r;
   try { r = JSON.parse(readFileSync(join(pasta, "sigilo.json"), "utf8")); } catch { throw new Error("sigilo: falta o sigilo.json; rode antes node sigilo.mjs <pasta do vídeo>."); }
-  const arq = join(pasta, "borrar.json"), areas = existsSync(arq) ? JSON.parse(readFileSync(arq, "utf8")).areas ?? [] : [], ja = new Set(areas.map((a) => JSON.stringify([a.de, a.ate, a.caixa])));
+  const arq = join(pasta, "borrar.json"), velho = existsSync(arq) ? JSON.parse(readFileSync(arq, "utf8")) : {}, areas = velho.areas ?? [], prints = velho.prints ?? {};
+  const ja = new Set(areas.map((a) => JSON.stringify([a.de, a.ate, a.caixa])));
   for (const n of numeros) {
     const it = r.itens.find((i) => i.n === n);
     if (!it) throw new Error(`sigilo: não há item ${n} da tela no sigilo.json (os números são os de [n] do resumo).`);
+    if (it.print) { // no print não há tempo: a caixa vale para a imagem inteira
+      const lista = (prints[it.print] ??= []);
+      for (const a of it.aparicoes) for (const caixa of a.caixas) if (!lista.some((c) => JSON.stringify(c) === JSON.stringify(caixa))) lista.push(caixa);
+      continue;
+    }
     for (const a of it.aparicoes) for (const caixa of a.caixas) {
       const chave = JSON.stringify([a.de, a.ate, caixa]);
       if (!ja.has(chave)) { ja.add(chave); areas.push({ de: a.de, ate: a.ate, caixa, texto: it.texto }); }
     }
   }
-  writeFileSync(arq, JSON.stringify({ areas }, null, 1));
-  return areas.length;
+  writeFileSync(arq, JSON.stringify(Object.keys(prints).length ? { areas, prints } : { areas }, null, 1));
+  return areas.length + Object.values(prints).reduce((s, l) => s + l.length, 0);
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const args = process.argv.slice(2), pasta = args[0], i = args.indexOf("--borrar");
-  if (!pasta || pasta.startsWith("--")) { console.error("Uso: node sigilo.mjs <pasta do vídeo>  ou  node sigilo.mjs <pasta do vídeo> --borrar 1,3"); process.exit(1); }
+  const args = process.argv.slice(2), pasta = args[0], i = args.indexOf("--borrar"), ip = args.indexOf("--print");
+  if (!pasta || pasta.startsWith("--")) { console.error("Uso: node sigilo.mjs <pasta do vídeo>, node sigilo.mjs <pasta do vídeo> --print <arquivo> ou node sigilo.mjs <pasta do vídeo> --borrar 1,3"); process.exit(1); }
   try {
-    if (i >= 0) {
+    if (ip >= 0) {
+      if (!args[ip + 1]) throw new Error("sigilo: --print pede o caminho do print, a partir da pasta do vídeo.");
+      console.log(resumo(conferirPrint(resolve(pasta), args[ip + 1]), true));
+    } else if (i >= 0) {
       const nums = String(args[i + 1] ?? "").split(",").map((x) => +x.trim());
       if (!nums.length || nums.some((n) => !Number.isInteger(n) || n < 1)) throw new Error("sigilo: --borrar pede os números do resumo, separados por vírgula, como --borrar 1,3.");
       const n = escolherBorrar(resolve(pasta), nums);
-      console.log(`sigilo: borrar.json com ${n} ${n > 1 ? "áreas" : "área"}. Grave a fonte de novo (passo 1, com as mesmas opções) e rode o passo 1b.`);
+      console.log(`sigilo: borrar.json com ${n} ${n > 1 ? "áreas" : "área"}. Área do vídeo: grave a fonte de novo (passo 1, com as mesmas opções) e rode o passo 1b. Área do print: monte de novo (o montar.mjs borra o print).`);
     } else console.log(resumo(conferirDados(resolve(pasta))));
   } catch (e) {
     console.error(e.message);

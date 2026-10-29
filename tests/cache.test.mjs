@@ -10,6 +10,11 @@ import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// banco local de peças só deste arquivo de teste (o montador guarda ali as peças e o logo do cliente)
+const BIB_TESTE = mkdtempSync(join(tmpdir(), 'biblioteca-'));
+process.env.EDITOR_CHEFE_BIBLIOTECA = BIB_TESTE;
+test.after(() => rmSync(BIB_TESTE, { recursive: true, force: true }));
+
 const PLUGIN = fileURLToPath(new URL('../plugins/editor-chefe', import.meta.url));
 const MARCA = fileURLToPath(new URL('./marca-teste.json', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + process.env.PATH };

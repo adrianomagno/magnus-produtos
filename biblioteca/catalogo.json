@@ -1,0 +1,47 @@
+{
+ "versao": 1,
+ "pecas": [
+  {
+   "nome": "comida",
+   "tipo": "objeto",
+   "familia": "3d",
+   "arquivo": "objetos/comida.png",
+   "sha256": "fa0516ce35666517a49daf7a62183c053dc5e99e9232f1bf5f7fbfb08d6ef0af",
+   "palavras": [
+    "comida",
+    "comer",
+    "refeição",
+    "prato",
+    "dieta",
+    "almoço",
+    "jantar"
+   ],
+   "origem": "fluent-emoji",
+   "original": "assets/Fork and knife with plate/3D/fork_and_knife_with_plate_3d.png",
+   "licenca": "MIT",
+   "fonte": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Fork%20and%20knife%20with%20plate/3D/fork_and_knife_with_plate_3d.png",
+   "data": "2026-10-26"
+  },
+  {
+   "nome": "comida",
+   "tipo": "objeto",
+   "familia": "sobrio",
+   "arquivo": "icones/comida.svg",
+   "sha256": "e041753e7555d98ceb8d7f71d7b36fc572190d22440bbded87af3f080fa99e95",
+   "palavras": [
+    "comida",
+    "comer",
+    "refeição",
+    "prato",
+    "dieta",
+    "almoço",
+    "jantar"
+   ],
+   "origem": "phosphor",
+   "original": "assets/duotone/fork-knife-duotone.svg",
+   "licenca": "MIT",
+   "fonte": "https://raw.githubusercontent.com/phosphor-icons/core/2b75f3ad12b420c9504ef05df8d2564a28f8500e/assets/duotone/fork-knife-duotone.svg",
+   "data": "2026-10-26"
+  }
+ ]
+}

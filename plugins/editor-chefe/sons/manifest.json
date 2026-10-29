@@ -97,5 +97,23 @@
   "pico_dbfs": -0.9,
   "momentaneo_lufs": -26.7,
   "volume": 0.351
+ },
+ "notificacao": {
+  "arquivo": "notificacao.wav",
+  "origem": "kenney-interface-sounds",
+  "duracao": 0.276,
+  "pico": 0.005,
+  "pico_dbfs": -1,
+  "momentaneo_lufs": -16.4,
+  "volume": 0.355
+ },
+ "pronto": {
+  "arquivo": "pronto.mp3",
+  "origem": "kenney-interface-sounds",
+  "duracao": 0.539,
+  "pico": 0.005,
+  "pico_dbfs": -1.4,
+  "momentaneo_lufs": -9.5,
+  "volume": 0.188
  }
 }

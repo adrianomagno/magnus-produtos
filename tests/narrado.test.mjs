@@ -9,6 +9,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { montar, planoNarrado } from '../plugins/editor-chefe/scripts/montar.mjs';
 
+// banco local de peças só deste arquivo de teste (o montador guarda ali as peças e o logo do cliente)
+const BIB_TESTE = mkdtempSync(join(tmpdir(), 'biblioteca-'));
+process.env.EDITOR_CHEFE_BIBLIOTECA = BIB_TESTE;
+test.after(() => rmSync(BIB_TESTE, { recursive: true, force: true }));
+
 const MARCA = fileURLToPath(new URL('./marca-teste.json', import.meta.url));
 const ff = (...a) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...a]);
 const raiz = mkdtempSync(join(tmpdir(), 'narrado-'));

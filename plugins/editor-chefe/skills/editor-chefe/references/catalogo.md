@@ -12,13 +12,13 @@ O dono escolhe pelo número. Cada estilo diz o que faz, o que precisa, se aceita
 1. **Legenda viva** (`legenda-viva`): 3 ou 4 palavras por vez, a palavra falada em destaque. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 2. **Palavra-chave** (`palavra-chave`): só a palavra forte de cada frase, grande na tela. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 3. **Corte seco** (`corte-seco-zoom`): sem pausas, enquadramento alternando a cada frase. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
-4. **Painel escuro** (`painel-escuro`): fundo escuro, cartões de informação, legenda em caixa. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
+4. **Painel escuro** (`painel-escuro`): fundo escuro, cartões de informação e a legenda corrida, sem caixa, dentro da janela do vídeo. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 5. **Editorial claro** (`editorial-claro`): fundo claro, a pessoa num cartão, uma palavra por vez. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 6. **Caixinha de pergunta** (`caixinha-pergunta`): a pergunta numa caixinha igual à do Instagram, o vídeo inteiro, com a legenda embaixo. Precisa da gravação e da pergunta da caixinha (até 110 caracteres; o dono escreve e, se ele não tiver, o Editor Chefe sugere 3 depois de ouvir o vídeo). Não leva gancho de capa: a caixinha é a capa. Sem efeitos sonoros.
 
 ### Tela dividida (de 7 a 9)
 
-A pessoa grande na metade de baixo, texto ou animação na de cima, legenda no meio. Todos precisam da gravação.
+A pessoa grande na metade de baixo, texto ou animação na de cima. Todos precisam da gravação. No 7 e no 9 a legenda é corrida, sem caixa, dentro do vídeo; no 8 a palavra grande fica na emenda.
 
 7. **Painel escuro dividido** (`painel-escuro-dividido`): fundo escuro em cima, com os cartões de informação. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 8. **Editorial claro dividido** (`editorial-claro-dividido`): fundo claro em cima, com o título do cartão; uma palavra por vez no meio. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
@@ -30,13 +30,20 @@ Só animação, narrada por voz a partir de um texto do dono.
 
 10. **Motion narrado** (`motion-narrado`): cada palavra-chave entra grande na tela no instante em que é dita, com a legenda da narração embaixo; de 20 a 30 segundos. Não precisa de gravação: precisa do texto do dono (de 55 a 70 palavras, de preferência uma frase que ele já disse) e de uma voz da conta dele na ElevenLabs; o texto vai para a ElevenLabs, pela conta do dono, para virar voz. Não leva gancho de capa: a primeira palavra-chave é a capa. Efeitos sonoros: sempre ligados, sem perguntar.
 
+### Animado pela fala (11 e 12)
+
+Com gravação: o texto da fala entra na tela no instante em que é dito, sem cobrir o rosto.
+
+11. **Destaques tipográficos** (`destaques-tipograficos`): a pessoa em tela cheia e a legenda de uma palavra por vez, em caixa alta e letra condensada, com a palavra-chave na cor de destaque; acima da cabeça, no instante da palavra, a frase forte em letra grande e as peças animadas na marca do negócio: selo de aprovado ou reprovado, lista que se escreve com check, capítulo numerado, "Comenta PALAVRA", objeto (dinheiro, calendário, balança, dente e outros, em 3D colorido ou num estilo sóbrio de traço nas cores da marca, para médicos, advogados e profissionais da mesma linha), o ícone do aplicativo que a pessoa citou, uma janela com um print que o dono mandar e um esquema. O vídeo fica sempre na tela inteira, sem moldura: com a cabeça alta, ele aproxima um pouco para abrir lugar acima dela; quando em cima não cabe (a selfie com a cabeça colada no topo, a gravação de rosto grande), a frase e as peças entram logo abaixo do queixo e a legenda sai da tela enquanto elas estão ali, menos na janela com print, que não mostra a fala: com ela, a legenda fica e, se a janela também descer para embaixo do queixo, sobe para acima da cabeça. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
+12. **Papelaria** (`papelaria`): visual claro de papel de caderno na metade de cima, com cartões brancos em letra de mão; quando a fala enumera coisas, o cartão leva a lista, e cada item ganha o check (ou é riscado) no instante em que é dito. A pessoa na metade de baixo, com a legenda corrida, sem caixa, dentro do vídeo. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
+
 ### Tipo de vídeo e efeitos sonoros
 
-Nos estilos de 1 a 5 e de 7 a 9, o Editor Chefe pergunta que tipo de vídeo é. Depoimento, entrevista ou conversa saem sem efeitos sonoros; dica, aula, venda ou outro levam efeitos sonoros curtos por baixo da voz. Se o dono quiser o contrário, vale o que ele disser.
+Nos estilos de 1 a 5, de 7 a 9, 11 e 12, o Editor Chefe pergunta que tipo de vídeo é. Depoimento, entrevista ou conversa saem sem efeitos sonoros; dica, aula, venda ou outro levam efeitos sonoros curtos por baixo da voz. Se o dono quiser o contrário, vale o que ele disser.
 
 ## Capas
 
-O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem, que prende quem está rolando o feed. Vale para os estilos de 1 a 5 e de 7 a 9. A frase tem até 8 palavras. O dono escolhe a capa pelo número; se ele não tiver o texto, o Editor Chefe sugere 3 frases depois de ouvir o vídeo.
+O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem, que prende quem está rolando o feed. Vale para os estilos de 1 a 5, de 7 a 9, 11 e 12. A frase tem até 8 palavras. O dono escolhe a capa pelo número; se ele não tiver o texto, o Editor Chefe sugere 3 frases depois de ouvir o vídeo.
 
 1. **Faixa** (`faixa`): tarja na cor de destaque no topo, frase em letras maiúsculas, o vídeo logo abaixo.
 2. **Manchete** (`manchete`): frase grande sobre o vídeo, abaixo do rosto, com o fundo escurecido por baixo.
@@ -48,13 +55,13 @@ O gancho de capa é opcional: uma frase curta escrita na tela nos primeiros 3 se
 - **Limpeza de ruído:** opcional. O Editor Chefe mede o áudio e só oferece quando há chiado de fundo (ventilador, ar-condicionado); o dono liga ou desliga em palavras simples.
 - **Visual de cor:** opcional, escolhido pelo nome: **natural** (correção leve), **claro** (claro e limpo), **quente** (tom mais quente na pele) ou **contraste** (mais contraste). Cada um vem em dois níveis: leve (o padrão) e **forte**, com mais luz e vida no rosto, sem estourar o branco nem deixar a pele laranja. Sem escolha, o vídeo sai com a cor original.
 - **Aproximação no rosto:** opcional, em todo estilo com gravação menos o Corte seco (que já aproxima a cada frase). Nas frases mais fortes da fala, o vídeo aproxima devagar no rosto e volta depois, no máximo uma vez a cada 8 segundos, sem cortar o rosto nem pôr o texto em cima dele. O Editor Chefe pergunta ao dono se ele quer; ele desliga quando quiser.
-- **Conferência automática:** antes da prévia e antes da entrega, o Editor Chefe confere tamanho, duração, volume e se algum texto ficou em cima do rosto, e corrige antes de mostrar.
+- **Conferência automática:** antes da prévia e antes da entrega, o Editor Chefe confere tamanho, duração, volume (com o pico abaixo do limite), se alguma emenda saiu sem imagem e se algum texto ou peça ficou em cima do rosto, e corrige antes de mostrar.
 
 Tudo isso roda no computador do dono: o vídeo não sai dele.
 
 ## Capa do perfil
 
-A imagem parada que aparece na grade do perfil do Instagram, diferente do gancho de capa (que fica dentro do vídeo). No fim de todo vídeo que vai ser postado, o Editor Chefe pergunta se ele precisa dela: recomenda em vídeo de evento, lançamento ou anúncio, ou quando o começo do vídeo não mostra o rosto nem o assunto; no dia a dia é opcional. Sai com o rosto do dono em close, tirado do próprio vídeo, um título de até 6 palavras e a cor da marca, pronta para trocar no app.
+A imagem parada que aparece na grade do perfil do Instagram, diferente do gancho de capa (que fica dentro do vídeo). No fim de todo vídeo que vai ser postado, o Editor Chefe pergunta se ele precisa dela: recomenda em vídeo de evento, lançamento ou anúncio, ou quando o começo do vídeo não mostra o rosto nem o assunto; no dia a dia é opcional. Sai com o rosto do dono em close, tirado do próprio vídeo, um título de até 6 palavras e a cor da marca, pronta para trocar no app. No estilo Caixinha de pergunta é diferente: a caixinha já é a capa, então não há arte nem pergunta, e o dono só escolhe um bom quadro da pessoa ao postar.
 
 ## Para o Magnus do dono
 

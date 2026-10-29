@@ -1,0 +1,18 @@
+{
+ "nome": "cafe",
+ "tipo": "objeto",
+ "familia": "sobrio",
+ "arquivo": "cafe-sobrio.svg",
+ "sha256": "f8285e75660c4ed9830ed42416bf3a839cb52c30a3bf2f19ba303e9ed6fb05a1",
+ "palavras": [
+  "café",
+  "cafezinho",
+  "xícara",
+  "pausa"
+ ],
+ "origem": "phosphor",
+ "licenca": "MIT",
+ "fonte": "https://raw.githubusercontent.com/phosphor-icons/core/2b75f3ad12b420c9504ef05df8d2564a28f8500e/assets/duotone/coffee-duotone.svg",
+ "motivo": "pausa e café aparecem nas falas de rotina",
+ "data": "2026-10-26"
+}

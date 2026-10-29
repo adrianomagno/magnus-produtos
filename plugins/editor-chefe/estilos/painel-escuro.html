@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="gsap.min.js"></script>
     <script src="comum.js"></script>
     <style>
 {{FONTES}}
@@ -26,14 +26,8 @@
       }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
-      #legenda { position: absolute; left: 48px; right: 48px; top: 1315px; height: 150px; }
-      .grupo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
-      .grupo .caixa {
-        display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.24em; max-width: 984px; padding: 14px 30px; border-radius: 14px;
-        background: var(--fundo-escuro); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fundo-claro) 22%, transparent);
-        font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 54px; line-height: 1.15; color: var(--fundo-claro);
-      }
-      .grupo .p { display: inline-block; padding: 0 0.12em; margin: 0 -0.12em; border-radius: 0.16em; }
+      /* A legenda corrida do Corte seco, sem caixa, dentro da janela do vídeo, embaixo (1262 a 1380; a janela vai até 1390) */
+      #legenda { position: absolute; left: 78px; right: 78px; top: 1262px; height: 118px; }
     </style>
   </head>
   <body>
@@ -50,7 +44,7 @@
     </div>
     <script>
       const D = {{DADOS}};
-      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, ESCURO, DESTAQUE, SOBRE_DESTAQUE } = EC.iniciar(D.palavras);
+      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, CLARO, ESCURO, DESTAQUE } = C;
       const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
       const tl = gsap.timeline({ paused: true });
 
@@ -72,19 +66,8 @@
         tl.to(el, { opacity: 0, duration: 0.25, ease: "power2.in" }, fim - 0.25);
       });
 
-      // Legenda em caixa escura; a palavra falada na cor destaque (ou em caixa, se a cor não tiver contraste)
-      const caixa = document.getElementById("legenda"), GRUPOS = EC.agrupar(PAL, 4, 22);
-      GRUPOS.forEach((g, gi) => {
-        const el = caixa.appendChild(novo("div", "grupo", `grupo-${gi + 1}`)), cx = el.appendChild(novo("div", "caixa", `grupo-${gi + 1}-caixa`));
-        g.forEach((p, pi) => (p.el = cx.appendChild(novo("span", "p", `grupo-${gi + 1}-p${pi + 1}`, p.txt))));
-        const prox = GRUPOS[gi + 1], sai = Math.min(prox ? prox[0].ini : TOTAL, g[g.length - 1].fim + 0.6);
-        tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
-        tl.set(el, { opacity: 0 }, sai);
-        g.forEach((p, pi) => {
-          tl.set(p.el, LEGIVEL ? { color: DESTAQUE } : { backgroundColor: DESTAQUE, color: SOBRE_DESTAQUE }, p.ini);
-          tl.set(p.el, { color: CLARO, backgroundColor: "rgba(0,0,0,0)" }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
-        });
-      });
+      // Legenda corrida do Corte seco, sem caixa; traço na cor destaque nas palavras de ênfase (o montar.mjs escolhe)
+      EC.legendaCorrida(tl, C, { fortes: D.fortes, familia: "{{TITULO}}", tamanho: 60, maxLetras: 22, reforcar: {{VEU}} === 1 });
       if (D.aproximar) EC.aproximar(tl, D.aproximar);
       if (D.capa) EC.capa(tl, D.capa);
       window.__timelines["editor-chefe"] = tl;

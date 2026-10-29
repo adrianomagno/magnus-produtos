@@ -167,3 +167,19 @@ test('o comando da chave em marca.md, rodado pelo zsh e pelo bash, grava o arqui
     if (process.platform !== 'win32') assert.equal(statSync(join(dados, ARQUIVO_CHAVE)).mode & 0o777, 0o600);
   }
 });
+
+test('roteiro com dado pessoal: para antes de mandar à ElevenLabs e só segue com a confirmação do dono; sem dado, nada muda', async () => {
+  const texto = 'Ligue para 11 98765-4321 e fale com a Joana Prado hoje.';
+  let chamou = 0;
+  const nao = async () => { chamou++; throw new Error('não devia chamar a ElevenLabs'); };
+  await assert.rejects(vozComTempos(pasta(undefined, texto), { env, fetch: nao }),
+    /o roteiro tem o que parece dado pessoal \(telefone 11 98765-4321; nome possível "Joana Prado"\), e o texto vai para a ElevenLabs .*rode com --confirmado/);
+  await assert.rejects(vozComTempos(pasta(undefined, 'Mande o CPF 529 982 247 25 hoje.'), { env, fetch: nao }), /CPF 529 982 247 25/); // dito em pedaços
+  assert.equal(chamou, 0);
+  const ws = exemplo(2.5, texto), f = api(ws);
+  assert.equal((await vozComTempos(pasta(undefined, texto), { env, fetch: f, confirmado: true })).palavras, ws.length);
+  assert.equal(f.pedidos[0].corpo.text, texto); // confirmado, o texto vai como está
+  // o nome do negócio e um aplicativo no meio da frase não pedem confirmação
+  const t2 = 'Aqui no Estúdio Exemplo, todo cliente chama no WhatsApp.';
+  assert.equal((await vozComTempos(pasta(undefined, t2), { env, fetch: api(exemplo(2.5, t2)) })).palavras, t2.split(' ').length);
+});

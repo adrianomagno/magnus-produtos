@@ -18,7 +18,17 @@ Sem motivo para recomendar (conteúdo do dia a dia com rosto no começo), pergun
 
     Quer uma capa para a grade do seu perfil? Para vídeo do dia a dia é opcional: no feed ele já roda sozinho.
 
-Se ele não quiser, a entrega termina aí. No estilo 10 (sem gravação) não há rosto: não ofereça.
+Se ele não quiser, a entrega termina aí. No estilo 10 (sem gravação) não há rosto: não ofereça. No estilo 6 (Caixinha de pergunta) a checagem é outra, na seção logo abaixo.
+
+## No estilo 6 (Caixinha de pergunta): a caixinha já é a capa
+
+Neste estilo a caixinha fica na tela o vídeo inteiro e a pergunta é o gancho. Ela é a própria capa. Por isso a capa do perfil não leva título, selo nem arte montada: não faça a pergunta da checagem, não sugira títulos e não rode o `capa-perfil.mjs`. Só faça a arte com título se o dono pedir.
+
+O que falta é só um bom quadro da pessoa, e a caixinha já aparece em todos. No fim da entrega, diga numa frase:
+
+    Neste estilo a caixinha já é a capa. Ao postar, toque em Capa (ou Editar capa) e escolha um quadro em que o seu rosto esteja bom: olhos abertos, expressão natural, boca fechada ou sorrindo.
+
+Reel já publicado: abra o Reel, toque nos três pontinhos, Editar, Editar capa, e escolha o quadro do mesmo jeito.
 
 ## O título
 

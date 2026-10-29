@@ -1,6 +1,6 @@
 # Gancho de capa
 
-Opcional. É uma frase curta escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem, que prende quem está rolando o feed. Vale para os estilos de edição de 1 a 5 e de 7 a 9: a capa fica numa camada por cima de tudo e o estilo escolhido continua igual por baixo. A Caixinha de pergunta (estilo 6) não leva gancho de capa: a caixinha já é a capa, e o `montar.mjs` recusa o campo `capa` nesse estilo.
+Opcional. É uma frase curta escrita na tela nos primeiros 3 segundos do vídeo, por cima da imagem, que prende quem está rolando o feed. Vale para os estilos de edição de 1 a 5, de 7 a 9, 11 e 12: a capa fica numa camada por cima de tudo e o estilo escolhido continua igual por baixo. A Caixinha de pergunta (estilo 6) não leva gancho de capa: a caixinha já é a capa, e o `montar.mjs` recusa o campo `capa` nesse estilo.
 
 ## Quando perguntar
 

@@ -22,7 +22,7 @@ function problemas(dir, { medir = true } = {}) {
   const erros = [], arquivos = readdirSync(dir).filter((a) => AUDIO.test(a));
   for (const [nome, s] of Object.entries(m)) {
     if (s.origem === 'hyperframes') continue;
-    if (!['woven-sfx', 'kenney-ui-audio', 'kenney-impact-sounds'].includes(s.origem)) erros.push(`${nome}: origem "${s.origem}" sem licença conhecida`);
+    if (!['woven-sfx', 'kenney-ui-audio', 'kenney-impact-sounds', 'kenney-interface-sounds'].includes(s.origem)) erros.push(`${nome}: origem "${s.origem}" sem licença conhecida`);
     if (!existsSync(join(dir, s.arquivo))) erros.push(`${nome}: falta o arquivo ${s.arquivo}`);
   }
   for (const a of arquivos) {

@@ -23,7 +23,7 @@ Esquema:
       "logo": "logo-claro.png"
     }
 
-`chamada_caixinha` é opcional: só entra depois que o dono usou a Caixinha de pergunta. `voz` e `logo` são opcionais e só o Motion narrado usa.
+`chamada_caixinha` é opcional: só entra depois que o dono usou a Caixinha de pergunta. `icones` é opcional e só os Destaques tipográficos usam: `"3d"` ou `"sobrio"`, a família dos objetos que o dono quer em todos os vídeos (veja `references/estilos/destaques-tipograficos.md`). `voz` e `logo` são opcionais e só o Motion narrado usa.
 
 Fontes: baixe cada família de `fontes` direto na pasta `fonts/` da pasta do vídeo, **antes** de montar: `node "${CLAUDE_PLUGIN_ROOT}/scripts/baixar-fonte.mjs" "<Família>" "400,800" "<pasta do vídeo>/fonts"`. O `montar.mjs` só lê `fonts/`: se faltar a fonte de uma família que o estilo usa, ou se o arquivo não for woff2 de verdade, ele para com erro; se faltar o peso 800 ou o itálico, usa o arquivo mais perto e avisa. Fonte que não está no Google Fonts: use a mais parecida e avise o dono.
 
@@ -31,7 +31,7 @@ Fontes: baixe cada família de `fontes` direto na pasta `fonts/` da pasta do ví
 
 - **A voz:** `voz.elevenlabs_voice_id` é o ID de uma voz da conta do dono na ElevenLabs (no site, em Voices, o botão de copiar o ID da voz). Pode ser qualquer voz da conta dele, a que ele escolher. Não há voz padrão: sem esse campo, o `voz-com-tempos.mjs` para e pede.
 - **O ritmo:** `voz.ritmo` (opcional) é a velocidade da fala, em palavras por segundo; o padrão é 2,54. A voz é acelerada até 10% para chegar nele, nunca desacelerada.
-- **O logo:** `logo` (opcional) é o caminho de um PNG, JPG, WebP ou SVG a partir da pasta do `marca.json`, de preferência a versão clara com fundo transparente, porque o fecho fica sobre o fundo escuro. Sem logo, o fecho mostra o `nome`.
+- **O logo:** `logo` (opcional) é o caminho de um PNG, JPG, WebP ou SVG a partir da pasta do `marca.json`, de preferência a versão clara com fundo transparente, porque o fecho fica sobre o fundo escuro. Sem logo, o fecho mostra o `nome`. O Editor Chefe guarda uma cópia do logo na biblioteca do dono (`Documentos/Editor Chefe/biblioteca/cliente/`), só no computador dele; o logo, os prints e qualquer dado do cliente nunca vão para o banco central.
 - **A chave da API** fica só no computador do dono, num arquivo que só ele lê, e **nunca** na conversa. Ele cria a chave no site da ElevenLabs (no perfil, em API Keys; se o site oferecer, só com a permissão de texto para fala) e guarda com um comando de uma linha, no Terminal do Mac ou no Git Bash do Windows (vem com o Git que o Claude Code usa); o comando chama o `bash`, então vale também no zsh, o padrão do Mac. Mande este comando a ele com a pasta de dados escrita por extenso no lugar de CLAUDE_PLUGIN_DATA entre chaves, porque o Terminal dele não conhece essa variável (no Windows, com barras normais, como `C:/Users/...`):
 
       bash -c 'read -rsp "Chave da ElevenLabs (não aparece na tela): " K; echo; umask 077; printf %s "$K" > "$1"; chmod 600 "$1"' _ "${CLAUDE_PLUGIN_DATA}/chave-elevenlabs"

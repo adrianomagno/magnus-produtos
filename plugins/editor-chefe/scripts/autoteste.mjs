@@ -12,13 +12,14 @@
 // detector de rosto (rosto.mjs: sem rosto no vídeo sintético, o fluxo segue com o foco fixo), o recorte vertical que segue
 // um caminho dado e a aproximação no rosto, num rastro de rosto de mentira junto com esse caminho. Roda o montar.mjs e, sem --sem-render, o
 // render da HyperFrames pelo hf (o mesmo lançador do fluxo normal) e a conferência automática (conferir.mjs: 1080x1920,
-// duração, áudio perto de -16 LUFS). No sucesso, grava <pasta de dados>/pronto com a versão do plugin e a data. A pasta de teste precisa ser nova: o autoteste recusa pasta que já existe e, no fim, com sucesso
+// duração, áudio perto de -16 LUFS com o pico abaixo de -1 dBTP, emendas com vídeo). No sucesso, grava <pasta de dados>/pronto com a versão do plugin e a data. A pasta de teste precisa ser nova: o autoteste recusa pasta que já existe e, no fim, com sucesso
 // ou com erro, apaga só a pasta que ele mesmo criou. Cada programa chamado para em 10 minutos.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { montar } from "./montar.mjs";
+import { montar, GSAP_SHA256 } from "./montar.mjs";
+import { createHash } from "node:crypto";
 import { fonte, medirRuido, conferirForte, CORES } from "./fonte.mjs";
 import { trajetoria, recortar, medidas } from "./rosto.mjs";
 import { conferirDados, escolherBorrar, imagemComTexto, lerTela, procurar, resumo, telaDisponivel } from "./sigilo.mjs";
@@ -145,9 +146,13 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
       const sons = JSON.parse(readFileSync(join(RAIZ, "sons", "manifest.json"), "utf8"));
       if (!r.sons.some((s) => sons[s].origem !== "hyperframes")) throw new Error("nenhum som CC0 do pacote (pasta sons/) entrou na montagem.");
       if (r.aproximacoes !== 1) throw new Error("a aproximação no rosto não entrou na montagem.");
+      // o render usa o GSAP que vem no plugin, conferido pelo SHA-256; nenhum script da internet no index.html
+      const html = readFileSync(join(pasta, "index.html"), "utf8");
+      if (/<script[^>]+src\s*=\s*["'](?:https?:)?\/\//i.test(html)) throw new Error("o index.html carrega script da internet.");
+      if (!html.includes('src="gsap.min.js"') || createHash("sha256").update(readFileSync(join(pasta, "gsap.min.js"))).digest("hex") !== GSAP_SHA256) throw new Error("o GSAP do plugin não foi para a pasta do vídeo com o SHA-256 registrado.");
       return r;
     });
-    avisar(`autoteste: montagem ok (${montagem.trechos} trechos, ${montagem.efeitos} efeitos sonoros: ${montagem.sons.join(", ")}; ${montagem.aproximacoes} aproximação no rosto)`);
+    avisar(`autoteste: montagem ok (${montagem.trechos} trechos, ${montagem.efeitos} efeitos sonoros: ${montagem.sons.join(", ")}; ${montagem.aproximacoes} aproximação no rosto; GSAP do plugin conferido pelo SHA-256, nenhum script da internet)`);
     if (!render) { avisar("AUTOTESTE SEM RENDER OK"); return { montagem }; }
     etapa("render", () => {
       // O render vai pelo próprio hf, que acha a HyperFrames (HYPERFRAMES_PLUGIN_ROOT ou o cache de plugins) como no fluxo normal
@@ -159,7 +164,7 @@ export function autoteste(pasta, { render = true, baixarFonte = baixarDoGoogle, 
       const r = rodar(process.execPath, [join(RAIZ, "scripts", "conferir.mjs"), pasta, join(pasta, "autoteste.mp4")], ms("conferência"), { env: { ...process.env, EDITOR_CHEFE_DATA: dados } });
       if (r.status !== 0) throw new Error(`o vídeo de teste não passou na conferência.\n${ultimas(`${r.stdout}\n${r.stderr}`)}`);
     });
-    avisar("autoteste: conferência ok (1080x1920, duração, áudio perto de -16 LUFS)");
+    avisar("autoteste: conferência ok (1080x1920, duração, áudio perto de -16 LUFS com o pico abaixo de -1 dBTP, emendas com vídeo)");
     mkdirSync(dados, { recursive: true });
     writeFileSync(join(dados, "pronto"), `versao=${VERSAO} data=${new Date().toISOString()}\n`);
     avisar("AUTOTESTE OK");

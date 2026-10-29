@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1080, height=1920" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="gsap.min.js"></script>
     <script src="comum.js"></script>
     <style>
 {{FONTES}}
@@ -53,7 +53,7 @@
         });
         const prox = LINHAS[gi + 1], sai = Math.min(prox ? prox[0].ini : TOTAL, g[g.length - 1].fim + 0.6);
         tl.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
-        tl.set(el, { opacity: 0 }, sai);
+        tl.set(el, { opacity: 0, display: "none" }, sai); // display none: sem ele, a gravação rápida da HyperFrames (900 quadros ou mais) mostrava a palavra que animou y ou scale com a pintura velha
       });
       if (D.capa) EC.capa(tl, D.capa);
       window.__timelines["editor-chefe"] = tl;

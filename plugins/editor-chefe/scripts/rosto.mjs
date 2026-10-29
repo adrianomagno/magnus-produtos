@@ -19,8 +19,9 @@ const F = 30;
 // Janela do vídeo em cada estilo (largura x altura em px no quadro 1080x1920), medida nos moldes de estilos/
 export const JANELA = {
   "legenda-viva": [1080, 1920], "palavra-chave": [1080, 1920], "corte-seco-zoom": [1080, 1920], "caixinha-pergunta": [1080, 1920],
+  "destaques-tipograficos": [1080, 1920],
   "painel-escuro": [984, 600], "editorial-claro": [960, 540],
-  "painel-escuro-dividido": [1080, 960], "editorial-claro-dividido": [1080, 960], "motion-dividido": [1080, 960],
+  "painel-escuro-dividido": [1080, 960], "editorial-claro-dividido": [1080, 960], "motion-dividido": [1080, 960], papelaria: [1080, 960],
 };
 // Confiança mínima do YuNet para contar como rosto (0 a 1) e sobreposição acima da qual duas caixas são o mesmo rosto
 export const LIMIAR = 0.7;
@@ -153,23 +154,34 @@ export async function reenquadrar(pasta, estilo, { dados, avisar = () => {} } = 
 export const ZOOM = 1.25, ZOOM_MIN = 1.1, ZOOM_AMPLIADO = 1.15, SOBE = 0.45, DESCE = 0.6, SEGURA_MAX = 5, A_CADA = 8, INTERVALO = 4;
 const limpa = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 // frases: textos da fala; pal: palavras da edição [{ txt, ini, fim }]; trechos: [{ ini, dur, src }]; rosto: o rosto.json;
-// fonte: { W, H } da fonte.mp4; janela: [x, y, largura, altura] no quadro 1080x1920; faixas: [{ y0, y1, x0, x1 }] do texto no
+// fonte: { W, H } da fonte.mp4; janela: [x, y, largura, altura] no quadro 1080x1920; faixas: [{ y0, y1, x0, x1, de?, ate? }] do texto no
 // quadro; foco: o "foco" do escolhas.json; desde: fim do gancho de capa (0 sem capa). Devolve { lista, avisos }, com cada
 // item { de, ate, volta, fim, z, ox, oy }: cresce de "de" a "ate", segura, volta de "volta" a "fim"; centro (ox, oy) em px da janela.
-export function planejarAproximacao({ frases, pal, trechos, total, rosto, fonte, janela, faixas = [], foco = "50% 40%", desde = 0 }) {
-  const avisos = [], lista = [], r = rosto?.rastro;
-  if (!r?.caixas?.length) return { lista, avisos: ["aproximar: não há rastro do rosto (rode o rosto.mjs, passo 1b); segue sem aproximar."] };
-  const corte = rosto.corte_x, larg = corte ? rosto.recorte?.[0] : r.W;
-  if (fonte.W !== larg || fonte.H !== r.H) return { lista, avisos: ["aproximar: o rastro do rosto é de outra fonte.mp4 (rode o rosto.mjs de novo, passo 1b); segue sem aproximar."] };
-  const [jx, jy, bw, bh] = janela, s = Math.max(bw / fonte.W, bh / fonte.H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
-  const dx = (fonte.W * s - bw) * fx, dy = (fonte.H * s - bh) * fy, teto = s > 1.5 ? ZOOM_AMPLIADO : ZOOM;
-  // Caixa do rosto (centro, largura, altura) em px da janela no instante t da edição, ou null
-  const caixa = (t) => {
+// O rastro do rosto.json serve para esta fonte.mp4 ({ W, H })? null se serve; se não, o motivo
+export function rastroInvalido(rosto, fonte) {
+  const r = rosto?.rastro;
+  if (!r?.caixas?.length) return "não há rastro do rosto (rode o rosto.mjs, passo 1b)";
+  if (fonte.W !== (rosto.corte_x ? rosto.recorte?.[0] : r.W) || fonte.H !== r.H) return "o rastro do rosto é de outra fonte.mp4 (rode o rosto.mjs de novo, passo 1b)";
+  return null;
+}
+// Caixa do rosto (centro x, centro y, largura, altura) em px da janela no instante t da edição, ou null: o rastro levado ao
+// recorte da fonte.mp4 e ao enquadramento do molde (cover com o "foco"). Rastro conferido antes com rastroInvalido.
+export function rostoNaJanela(rosto, fonte, [, , bw, bh], foco, trechos) {
+  const r = rosto.rastro, corte = rosto.corte_x, s = Math.max(bw / fonte.W, bh / fonte.H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
+  const dx = (fonte.W * s - bw) * fx, dy = (fonte.H * s - bh) * fy;
+  return (t) => {
     const p = trechos.find((x) => t >= x.ini && t < x.ini + x.dur);
     if (!p) return null;
     const i = Math.min(r.caixas.length - 1, Math.max(0, Math.round((p.src + t - p.ini) * r.qps))), c = r.caixas[i];
     return c && [(c[0] - (corte?.[i] ?? 0)) * s - dx, c[1] * s - dy, c[2] * s, c[3] * s];
   };
+}
+
+export function planejarAproximacao({ frases, pal, trechos, total, rosto, fonte, janela, faixas = [], foco = "50% 40%", desde = 0 }) {
+  const avisos = [], lista = [], ruim = rastroInvalido(rosto, fonte);
+  if (ruim) return { lista, avisos: [`aproximar: ${ruim}; segue sem aproximar.`] };
+  const [jx, jy, bw, bh] = janela, s = Math.max(bw / fonte.W, bh / fonte.H), teto = s > 1.5 ? ZOOM_AMPLIADO : ZOOM;
+  const caixa = rostoNaJanela(rosto, fonte, janela, foco, trechos);
   const maximo = Math.max(1, Math.floor(total / A_CADA));
   let k = 0, livre = desde > 0 ? desde + 0.3 : 0;
   for (const frase of frases) {
@@ -186,15 +198,15 @@ export function planejarAproximacao({ frases, pal, trechos, total, rosto, fonte,
     if (volta <= ate) { nao("perto demais do fim do vídeo"); continue; }
     const amostras = [];
     for (let t = de; t <= fim; t += 0.2) amostras.push(caixa(t));
-    const vistos = amostras.filter(Boolean);
+    const vistos = amostras.filter(Boolean), naTela = faixas.filter((f) => !(f.ate <= de) && !(f.de >= fim)); // faixa sem de e ate vale o vídeo inteiro
     if (vistos.length < 0.6 * amostras.length) { nao("o rosto não aparece bem nesse trecho"); continue; }
     // A cabeça em cada amostra: [esquerda, direita, topo (um quarto da altura acima da caixa, o cabelo), queixo], em px da janela
     const cabecas = vistos.map(([cx, cy, cw, ch]) => [cx - cw / 2, cx + cw / 2, cy - 0.75 * ch, cy + ch / 2]);
     // O rosto (só a caixa, a mesma regra da conferir.mjs) já está embaixo do texto: aproximar não conserta
-    if (vistos.some(([cx, cy, cw, ch]) => faixas.some((f) => Math.min(cy + ch / 2 + jy, f.y1) - Math.max(cy - ch / 2 + jy, f.y0) >= 0.25 * ch
+    if (vistos.some(([cx, cy, cw, ch]) => naTela.some((f) => Math.min(cy + ch / 2 + jy, f.y1) - Math.max(cy - ch / 2 + jy, f.y0) >= 0.25 * ch
       && cx + cw / 2 + jx > f.x0 && cx - cw / 2 + jx < f.x1))) { nao("o rosto já está embaixo do texto"); continue; }
     // Com o centro (ox, oy) e a força z, nenhuma borda da cabeça sai mais da janela nem entra mais no texto do que sem aproximar
-    const sobre = (e, d, a, b) => faixas.reduce((n, f) => n + (d + jx > f.x0 && e + jx < f.x1 ? Math.max(0, Math.min(b + jy, f.y1) - Math.max(a + jy, f.y0)) : 0), 0);
+    const sobre = (e, d, a, b) => naTela.reduce((n, f) => n + (d + jx > f.x0 && e + jx < f.x1 ? Math.max(0, Math.min(b + jy, f.y1) - Math.max(a + jy, f.y0)) : 0), 0);
     const cabe = (z, ox, oy) => cabecas.every(([e1, d1, a1, b1]) => {
       const e = ox + z * (e1 - ox), d = ox + z * (d1 - ox), a = oy + z * (a1 - oy), b = oy + z * (b1 - oy);
       return e >= Math.min(0, e1) && d <= Math.max(bw, d1) && a >= Math.min(0, a1) && b <= Math.max(bh, b1) && sobre(e, d, a, b) <= sobre(e1, d1, a1, b1) + 0.5;

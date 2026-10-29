@@ -52,18 +52,21 @@
       .sort((a, b) => a - b).reduce((r, t) => (t > 0.3 && t < total - 0.3 && (!r.length || t - r[r.length - 1] >= 0.8) ? [...r, t] : r), []);
   }
 
-  // Estilos com cartões ("cartoes" no escolhas.json): o Painel escuro, o Editorial claro e os três de tela dividida.
-  // No Motion dividido, cada cartão é uma ideia com uma animação da biblioteca.
-  const COM_CARTOES = ["painel-escuro", "editorial-claro", "painel-escuro-dividido", "editorial-claro-dividido", "motion-dividido"];
+  // Estilos com cartões ("cartoes" no escolhas.json): o Painel escuro, o Editorial claro, os três de tela dividida e a
+  // Papelaria. No Motion dividido, cada cartão é uma ideia com uma animação da biblioteca; na Papelaria, um cartão de papel
+  // com o título em letra de mão e, se tiver, a lista que ganha o check ou o risco item por item.
+  const COM_CARTOES = ["painel-escuro", "editorial-claro", "painel-escuro-dividido", "editorial-claro-dividido", "motion-dividido", "papelaria"];
 
   // Motion dividido: instante (na edição) em que cada item da animação entra. O primeiro entra junto com o título da
   // ideia (ini + ENTRA_TITULO, o mesmo instante do título no molde), mesmo antes de ser dito; os seguintes, quando a fala
   // diz as palavras deles, todas seguidas e na ordem dos itens, dentro da ideia (de ini - 0,5 s a fim). Item que não
   // aparece assim entra 0,5 s depois do anterior; nenhum dos seguintes entra depois de fim - 0,6 s (para ficar na tela
   // antes da saída). achou: as palavras do item estão na fala da ideia (o montador avisa quando não estão, também no
-  // primeiro). Devolve [{ t, achou }], com t em milésimos de segundo.
+  // primeiro). Devolve [{ t, achou }], com t em milésimos de segundo. Na lista da Papelaria ({ comTitulo: false,
+  // naUltima: true }) todos os itens já estão no cartão e cada um ganha a marca quando é dito, o primeiro também, no
+  // começo da última palavra dele (a marca termina de se desenhar junto com o item).
   const ENTRA_TITULO = 0.05;
-  function batidas(pal, itens, ini, fim) {
+  function batidas(pal, itens, ini, fim, { comTitulo = true, naUltima = false } = {}) {
     let k = pal.findIndex((p) => p.ini >= ini - 0.5), ant = ini + ENTRA_TITULO;
     if (k < 0) k = pal.length;
     const teto = Math.max(ant, fim - 0.6);
@@ -73,7 +76,7 @@
       while (w.length && j + w.length <= pal.length && pal[j].ini < fim && !w.every((x, m) => limpa(pal[j + m].txt) === x)) j++;
       const achou = w.length > 0 && j + w.length <= pal.length && pal[j].ini < fim;
       if (achou) k = j + w.length;
-      const t = n ? Math.min(teto, Math.max(achou ? pal[j].ini : ant + 0.5, ant)) : ant;
+      const t = n || !comTitulo ? Math.min(teto, Math.max(achou ? pal[naUltima ? j + w.length - 1 : j].ini : ant + 0.5, ant)) : ant;
       ant = t;
       return { t: +t.toFixed(3), achou };
     });
@@ -108,6 +111,16 @@
     robo: ["M15 22 H49 A6 6 0 0 1 55 28 V48 A6 6 0 0 1 49 54 H15 A6 6 0 0 1 9 48 V28 A6 6 0 0 1 15 22 Z", "M32 22 V13 M32 6 A3.5 3.5 0 1 0 32 13 A3.5 3.5 0 1 0 32 6", "M24 34 V38 M40 34 V38",
       "~M25 46 H39 M9 36 H4 M55 36 H60"],
   };
+  // Ícone neutro do aplicativo citado, para a marca sem kit público ou cuja regra não deixa usar o logo (o "desenho" do
+  // manifest.json de pecas/): só traços nossos, sem a cor nem a forma do logo. Mesma convenção de "~" dos ÍCONES.
+  const QUADRO = "M8 10 H56 A4 4 0 0 1 60 14 V50 A4 4 0 0 1 56 54 H8 A4 4 0 0 1 4 50 V14 A4 4 0 0 1 8 10 Z";
+  const NEUTROS = {
+    calendario: ICONES.calendario, robo: ICONES.robo, pasta: ICONES.pasta, documento: ICONES.documento, celular: ICONES.celular, conversa: ICONES.conversa,
+    email: ["M8 16 H56 A4 4 0 0 1 60 20 V46 A4 4 0 0 1 56 50 H8 A4 4 0 0 1 4 46 V20 A4 4 0 0 1 8 16 Z", "M6 19 L32 38 L58 19"],
+    planilha: [QUADRO, "~M4 24 H60", "~M4 39 H60", "~M24 10 V54"],
+    imagem: [QUADRO, "~M10 48 L24 32 L34 42 L42 34 L54 48", "~M44 18 A5 5 0 1 0 44 28 A5 5 0 1 0 44 18"],
+    camera: ["M8 18 H38 A4 4 0 0 1 42 22 V42 A4 4 0 0 1 38 46 H8 A4 4 0 0 1 4 42 V22 A4 4 0 0 1 8 18 Z", "~M42 28 L58 19 V45 L42 36 Z"],
+  };
 
   // Número que cresce: separa o número do texto ("R$ 2.000" vira antes "R$ ", valor 2000, depois ""), no jeito brasileiro
   // (ponto no milhar, vírgula nos decimais); sem algarismo, null. escrever(n, v) escreve o valor v no mesmo formato.
@@ -125,7 +138,7 @@
   const SAIDA = { faixa: 2.6, manchete: 2.7, editorial: 2.6 };
 
   // Efeitos sonoros de cada estilo, nos mesmos instantes em que o molde mostra o elemento: [{ t, som }] no tempo da edição.
-  // d: os dados do molde (palavras, chaves, apice, identidade, enfase, cartoes, capa). Cada momento tem uma família de som
+  // d: os dados do molde (palavras, chaves, apice, identidade, enfase, cartoes, destaques, capa). Cada momento tem uma família de som
   // (SONS: os nomes do sons/manifest.json); a família com mais de um som reveza, na ordem, para não repetir o mesmo som
   // seguido. Efeitos a menos de 0,5 s um do outro: fica o da família mais forte (FORCA).
   // Com gancho de capa, os efeitos do estilo só começam depois dela, e a saída da capa ganha o som dela.
@@ -133,13 +146,15 @@
   const SONS = {
     frase: ["whoosh-short", "whoosh-rapido"], // começo de frase, palavra forte, aproximação do enquadramento
     destaque: ["pop", "pop-mao", "clique"], // palavra de ênfase
-    item: ["tique", "clique-suave"], // item da animação do Motion dividido, quando é dito
+    item: ["tique", "clique-suave"], // item da animação do Motion dividido e check ou risco da Papelaria, quando é dito
     cartao: ["whoosh-largo"], // entrada de cartão (no Motion dividido, de cada animação)
     capa: ["whoosh-grave"], // saída do gancho de capa
-    apice: ["impacto-suave"], // ápice da Palavra-chave na identidade keynote
+    apice: ["impacto-suave"], // ápice da Palavra-chave na identidade keynote; o carimbo do selo
     "apice-stomp": ["impact-bass-1"], // ápice na identidade stomp
+    notificacao: ["notificacao"], // a notificação de mensagem que desce no "Comenta"
+    pronto: ["pronto"], // a barra do "Comenta" que chega a pronto
   };
-  const FORCA = { item: 0, frase: 1, destaque: 2, cartao: 3, capa: 3, apice: 4, "apice-stomp": 4 };
+  const FORCA = { item: 0, frase: 1, destaque: 2, notificacao: 2, pronto: 2, cartao: 3, capa: 3, apice: 4, "apice-stomp": 4 };
   function efeitos(estilo, d, trechos, total) {
     const pal = mapear(d.palavras, trechos, total), ev = [];
     if (estilo === "legenda-viva") // começo de cada frase
@@ -152,14 +167,16 @@
       trocas(pal, trechos, total).forEach((t, n) => n % 2 || ev.push({ t, f: "frase" }));
       marcar(pal, d.enfase).filter((i) => i >= 0).forEach((i) => ev.push({ t: pal[i].ini, f: "destaque" }));
     }
-    if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação, e cada item seguinte quando é dito)
+    if (estilo === "destaques-tipograficos") { // whoosh na entrada de cada frase em destaque; pop na palavra-chave dela; os sons de cada peça (do plano)
+      d.destaques.forEach((x) => { ev.push({ t: pal[x.de].ini, f: "frase" }); ev.push({ t: pal[x.chave[0]].ini, f: "destaque" }); });
+      (d.pecas ?? []).forEach((p) => ev.push(...p.sons));
+    }
+    if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação, e cada item seguinte quando é dito; na Papelaria, cada check ou risco)
       d.cartoes.forEach((c, i) => {
-        const ini = naEdicao(c.de, "ini", trechos, total);
+        const ini = naEdicao(c.de, "ini", trechos, total), fim = d.cartoes[i + 1] ? naEdicao(d.cartoes[i + 1].de, "ini", trechos, total) : total;
         ev.push({ t: ini, f: "cartao" });
-        if (estilo === "motion-dividido") {
-          const fim = d.cartoes[i + 1] ? naEdicao(d.cartoes[i + 1].de, "ini", trechos, total) : total;
-          batidas(pal, c.itens, ini, fim).slice(1).forEach((b) => ev.push({ t: b.t, f: "item" }));
-        }
+        if (estilo === "motion-dividido") batidas(pal, c.itens, ini, fim).slice(1).forEach((b) => ev.push({ t: b.t, f: "item" }));
+        if (estilo === "papelaria" && c.lista) batidas(pal, c.lista, ini, fim, { comTitulo: false, naUltima: true }).forEach((b) => ev.push({ t: b.t, f: "item" }));
       });
     const todos = d.capa ? [...ev.filter((e) => e.t >= d.capa.fim), { t: SAIDA[d.capa.estilo], f: "capa" }] : ev;
     const fica = [], vez = {};
@@ -181,6 +198,97 @@
     for (let t = 0; t <= 1.001; t += 0.02) { const c = mistura(base, rumo, t); if (contraste(c, fundo) >= min) return c; }
     return rgb(rumo);
   }
+  // Motion dividido: cores do painel branco (o fundo fica no escuro da marca; o painel da animação, branco). Traço, setas,
+  // marcas, número e palavra forte do título na cor destaque, escurecida até 3,2:1 contra o branco se for clara demais
+  // (amarelo); a caixa forte e o balão da resposta, um tom de 18% dela. Texto no escuro da marca, escurecido até 4,6:1
+  // contra esse tom (o fundo mais escuro em que um texto pousa). Item ainda não dito: cinza com 4,6:1; detalhe de ícone,
+  // 3:1; trilho e traço apagado, 2:1. Fora do painel, sobre o fundo escuro, iguais aos da 0.8.0 (medidos contra o tom do
+  // painel de antes, 5% mais claro que o fundo): o número do cabeçalho e os filetes (do cabeçalho e da emenda), na cor
+  // destaque clareada até 3,2:1 se for escura demais. Tudo [r, g, b].
+  function coresMotion(c) {
+    const PAINEL = [255, 255, 255], PRETO = [0, 0, 0], LINHA = legivel(c.DESTAQUE, PRETO, PAINEL, 3.2), FORTE = mistura(PAINEL, LINHA, 0.18);
+    const TEXTO = legivel(c.ESCURO, PRETO, FORTE, 4.6), TOPO = mistura(c.ESCURO, c.CLARO, 0.05);
+    return {
+      PAINEL, LINHA, FORTE, TEXTO,
+      APAGADO: legivel(mistura(TEXTO, PAINEL, 0.55), TEXTO, PAINEL, 4.6),
+      DETALHE: legivel(mistura(TEXTO, PAINEL, 0.45), TEXTO, PAINEL, 3),
+      TRACO_APAGADO: legivel(mistura(TEXTO, PAINEL, 0.78), TEXTO, PAINEL, 2),
+      NUM_CABECA: legivel(mistura(c.CLARO, TOPO, 0.55), c.CLARO, TOPO, 3.2),
+      FILETE: legivel(c.DESTAQUE, c.CLARO, TOPO, 3.2),
+    };
+  }
+
+  // Papelaria: o papel branco do cartão leva as cores do painel branco do Motion dividido (coresMotion): tinta no escuro da
+  // marca (4,6:1), traço, check, risco e palavra forte no destaque, escurecido rumo ao preto até 3,2:1 se for claro
+  // demais; item riscado em cinza ainda com 4,6:1; contorno do quadradinho com 3:1. Fora do cartão, no fundo claro: a
+  // assinatura no texto da marca, escurecida até 4,6:1; os pontos do papel e a fita adesiva são só enfeite. Tudo [r, g, b].
+  function coresPapelaria(c) {
+    const P = coresMotion(c);
+    return { ...P, CABECA: legivel(c.TEXTO, [0, 0, 0], c.CLARO, 4.6), PONTO: mistura(c.CLARO, c.TEXTO, 0.14), FITA: mistura(P.LINHA, [255, 255, 255], 0.62) };
+  }
+
+  // Destaques tipográficos: as palavras da legenda, que são as de fora das frases em destaque (por índice da fala). Com
+  // "k" na palavra (o índice dela na fala inteira), o filtro usa o k: a legenda de uma palavra marca a palavra-chave por ele.
+  function semDestaques(pal, destaques) {
+    const fora = new Set(destaques.flatMap((x) => Array.from({ length: x.ate - x.de + 1 }, (_, k) => x.de + k)));
+    return pal.filter((p, i) => !fora.has(p.k ?? i));
+  }
+
+  // Biblioteca de peças (estilo 11), desenhadas para o Editor Chefe: o tamanho de desenho de cada uma (px, antes da escala
+  // que o montar.mjs calcula para caber na faixa, acima da cabeça ou embaixo do queixo), o instante de cada movimento depois da entrada (s) e quanto ela
+  // fica na tela. O montar.mjs usa estes números no plano (tempo, faixa da conferência e sons, com o pico no quadro do
+  // movimento) e o pecas.js, na animação: os dois leem a mesma tabela. A pílula do capítulo fica no canto, de 240 a 304
+  // px (com as peças embaixo do queixo, logo acima da legenda, na mesma altura delas). Enquanto outra peça ou frase está
+  // na faixa, a pílula encolhe para só o número (de 90 a 154 px) e a peça fica com até larguraComPilula de largura,
+  // centrada, para não encostar nela. A lista, o esquema e a janela têm a letra 30% maior que na primeira versão (a letra
+  // miúda não se lia no celular), e a peça cresceu junto, para a letra não voltar a encolher.
+  const PECA = {
+    topo: 240, pilula: [240, 304], larguraComPilula: 772,
+    selo: { w: 660, h: 210, pousa: 0.16, fica: 2.2 },
+    lista: { w: 860, linha: 84, titulo: 90, borda: 60, escreve: 0.35, fica: 1.6 },
+    capitulo: { w: 900, h: 260, grande: 1.7 },
+    comenta: { w: 820, h: 296, acende: 0.55, notifica: 1.05, enche: [1.5, 3], fica: 4.6 },
+    objeto: { w: 340, h: 340, pousa: 0.2, fica: 2 },
+    app: { w: 760, h: 280, fica: 2.4 },
+    janela: { w: 860, h: 344, fica: 3.6 },
+    esquema: { w: 900, h: 330, liga: 0.3, fica: 1.6 },
+  };
+  const alturaPeca = (p) => (p.tipo === "lista" ? PECA.lista.borda + (p.titulo ? PECA.lista.titulo : 0) + p.itens.length * PECA.lista.linha : PECA[p.tipo].h);
+  // Cores das peças: os cartões são brancos, com as cores do painel branco do Motion dividido (coresMotion). Verde e
+  // vermelho só no selo de aprovado e reprovado e no "pronto" do Comenta (certo e errado), os dois com 4,5:1 no branco.
+  // SOBRE_LINHA: o texto sobre a cor de destaque (o branco ou o texto da marca, o que lê mais). VEU: o fundo das vagas
+  // vazias do esquema, sobre o vídeo. Tudo [r, g, b].
+  function coresPecas(c) {
+    const P = coresMotion(c), BRANCO = [255, 255, 255];
+    return { ...P, VERDE: [21, 128, 61], VERMELHO: [198, 40, 40], SOBRE_LINHA: contraste(BRANCO, P.LINHA) >= contraste(P.TEXTO, P.LINHA) ? BRANCO : P.TEXTO, VEU: mistura(c.ESCURO, [0, 0, 0], 0.3) };
+  }
+  // Legenda de uma palavra por vez (estilo 11). pal: as palavras da fala ({ txt, ini, fim, k }, k o índice na fala inteira);
+  // chaves: os índices k das palavras-chave. Palavra de 1 ou 2 letras colada na seguinte (menos de 0,12 s entre elas) vai
+  // junto ("A ANÁLISE"), para não piscar sozinha. Cada uma fica até a seguinte entrar, ou até 0,4 s depois do fim dela se
+  // vem uma pausa, e no mínimo 0,08 s. fora: os intervalos [de, ate] sem legenda (a frase ou peça embaixo do queixo, que
+  // já mostra as palavras): a palavra que começa dentro de um deles não entra, e a de antes sai quando ele começa.
+  // Devolve [{ txt, ini, sai, chave }], o texto sem a pontuação do fim.
+  function palavraPorVez(pal, chaves, total, fora = []) {
+    const g = [], curta = (p) => p.txt.replace(/[^\p{L}\p{N}]/gu, "").length <= 2;
+    pal.forEach((p, i) => {
+      const ant = g[g.length - 1];
+      if (ant && ant.curta && p.ini - ant.fim < 0.12 && ant.txt.length + p.txt.length < 12) Object.assign(ant, { txt: `${ant.txt} ${p.txt}`, fim: p.fim, chave: ant.chave || chaves.has(p.k), curta: false });
+      else g.push({ txt: p.txt, ini: p.ini, fim: p.fim, chave: chaves.has(p.k), curta: curta(p) && i < pal.length - 1 });
+    });
+    return g.map((x, i) => ({ txt: x.txt.replace(/[.,;:…]+$/u, ""), ini: x.ini, sai: +Math.max(x.ini + 0.08, Math.min(g[i + 1] ? g[i + 1].ini : total, x.fim + 0.4)).toFixed(3), chave: x.chave }))
+      .filter((x) => !fora.some(([a, b]) => x.ini >= a && x.ini < b))
+      .map((x) => ({ ...x, sai: Math.min(x.sai, ...fora.filter(([a]) => a > x.ini).map(([a]) => a)) }))
+      .filter((x) => x.sai - x.ini >= 0.08);
+  }
+  // Legenda de uma palavra (estilo 11), sobre o vídeo: letra branca com um contorno no escuro da marca, escurecido até 15:1
+  // contra o branco. Sobre fundo claro (jaleco, parede) quem separa a letra é o contorno; sobre fundo escuro (cabelo,
+  // roupa escura), é a própria letra. Por isso a palavra-chave clareia rumo ao branco, no mesmo matiz, até 9:1 contra o
+  // contorno: assim ela passa de 3:1 também num fundo de luminância 0,1, onde o contorno escuro quase não ajuda (medido
+  // no hf check: o destaque a 4,5:1 caiu para 2,4:1 sobre o cabelo). Tudo [r, g, b].
+  function coresLegenda(c) {
+    const BRANCO = [255, 255, 255], CONTORNO = legivel(c.ESCURO, [0, 0, 0], BRANCO, 15);
+    return { TEXTO: BRANCO, CONTORNO, CHAVE: legivel(c.DESTAQUE, BRANCO, CONTORNO, 9) };
+  }
 
   // Só no navegador: lê a edição da página (trechos dos <video>, duração da raiz) e as cores da marca.
   function iniciar(palavras) {
@@ -196,8 +304,9 @@
   // Legenda em caixa escura, na emenda das duas metades (Painel escuro dividido e Motion dividido), como a do Painel
   // escuro: grupos de até 4 palavras e 22 letras dentro de #legenda; a palavra falada na cor destaque, clareada até
   // 3,4:1 contra o fundo escuro quando precisa (a caixa é opaca: o vídeo da emenda não vaza). c: o que o iniciar() devolve.
-  function legendaEmCaixa(tl, c) {
-    const COR = `rgb(${legivel(c.DESTAQUE, c.CLARO, c.ESCURO, 3.4).join(",")})`, host = document.getElementById("legenda"), GRUPOS = agrupar(c.PAL, 4, 22);
+  // cores: { texto, falada } para caixa de outra cor (na Papelaria, papel branco com tinta escura), com o fundo no CSS.
+  function legendaEmCaixa(tl, c, cores = {}) {
+    const COR = cores.falada ?? `rgb(${legivel(c.DESTAQUE, c.CLARO, c.ESCURO, 3.4).join(",")})`, BASE = cores.texto ?? c.CLARO, host = document.getElementById("legenda"), GRUPOS = agrupar(c.PAL, 4, 22);
     GRUPOS.forEach((g, gi) => {
       const el = host.appendChild(novo("div", "grupo", `grupo-${gi + 1}`)), cx = el.appendChild(novo("div", "caixa", `grupo-${gi + 1}-caixa`));
       g.forEach((p, pi) => (p.el = cx.appendChild(novo("span", "p", `grupo-${gi + 1}-p${pi + 1}`, p.txt))));
@@ -206,8 +315,40 @@
       tl.set(el, { opacity: 0 }, sai);
       g.forEach((p, pi) => {
         tl.set(p.el, { color: COR }, p.ini);
-        tl.set(p.el, { color: c.CLARO }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
+        tl.set(p.el, { color: BASE }, Math.min(g[pi + 1] ? g[pi + 1].ini : sai, p.fim + 0.25));
       });
+    });
+  }
+
+  // Legenda corrida do Corte seco (estilo 3), também nos estilos com muitos elementos na tela (4, 7, 9, 12 e a opção do 8),
+  // no lugar da legenda em caixa (2026-10-26): linhas de até maxPal palavras e maxLetras letras, sem
+  // caixa, no claro da marca com um leve contorno no escuro e sombra; a palavra de ênfase ganha o traço de 8 px na cor
+  // destaque no instante em que é dita. O contorno fica numa camada atrás da letra (::before; o Chrome do render não aplica
+  // paint-order em texto HTML) e a letra da frente leva um fio dele, que a conferência de contraste da HyperFrames lê como
+  // parte da letra. reforcar: a faixa da legenda no vídeo é clara (o montar.mjs mede), contorno e sombra mais fortes.
+  // fortes: os índices, na fala inteira, das palavras de ênfase. Monta em #legenda. c: o que o iniciar() devolve.
+  function legendaCorrida(tl, c, { fortes = [], familia, tamanho = 66, maxPal = 5, maxLetras = 24, reforcar = false } = {}) {
+    const K = coresLegenda(c).CONTORNO.join(","), host = document.getElementById("legenda"), ENF = new Set(fortes);
+    const sombra = reforcar ? `0 0 4px rgba(${K},.95), 0 0 16px rgba(${K},.85), 0 4px 14px rgba(${K},.9)` : `0 0 14px rgba(${K},.55), 0 3px 9px rgba(${K},.7)`;
+    document.head.appendChild(novo("style", "", "legenda-estilo")).textContent = `
+      #legenda .linha { position: absolute; inset: 0; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; column-gap: 0.24em; row-gap: 6px; opacity: 0;
+        font-family: "${familia}", sans-serif; font-weight: 800; font-size: ${tamanho}px; line-height: 1.14; color: ${c.CLARO}; }
+      #legenda .p { display: inline-block; position: relative; z-index: 0; -webkit-text-stroke: 0.6px rgb(${K}); }
+      #legenda .p::before { content: attr(data-t); position: absolute; left: 0; top: 0; z-index: -1; color: rgb(${K}); -webkit-text-stroke: ${reforcar ? 10 : 5}px rgb(${K}); text-shadow: ${sombra}; }
+      #legenda .sublinha { position: absolute; left: 0; bottom: -4px; width: 0; height: 8px; border-radius: 4px; background: ${c.DESTAQUE}; }`;
+    const LINHAS = agrupar(c.PAL.map((p, k) => ({ ...p, k })), maxPal, maxLetras);
+    LINHAS.forEach((g, gi) => {
+      const el = host.appendChild(novo("div", "linha", `linha-${gi + 1}`));
+      g.forEach((p, pi) => {
+        const s = el.appendChild(novo("span", "p", `linha-${gi + 1}-p${pi + 1}`, p.txt));
+        s.dataset.t = p.txt;
+        if (ENF.has(p.k)) tl.fromTo(s.appendChild(novo("span", "sublinha", `linha-${gi + 1}-p${pi + 1}-traco`)), { width: "0%" }, { width: "100%", duration: 0.25, ease: "power2.out" }, p.ini);
+      });
+      const prox = LINHAS[gi + 1], sai = Math.min(prox ? prox[0].ini : c.TOTAL, g[g.length - 1].fim + 0.6);
+      tl.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: Math.min(0.07, (sai - g[0].ini) / 2), ease: "none" }, g[0].ini);
+      // sai do layout, e não só fica transparente: a linha que subiu com y ganha camada própria, e a gravação rápida da
+      // HyperFrames (900 quadros ou mais) a mostrava com a pintura velha por trás da seguinte
+      tl.set(el, { opacity: 0, display: "none" }, sai);
     });
   }
 
@@ -291,7 +432,8 @@
     }
   }
 
-  const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, SONS, contraste, legivel, mistura, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES };
+  const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, SONS, contraste, legivel, mistura, coresMotion, coresPapelaria, semDestaques, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES, NEUTROS,
+    PECA, alturaPeca, coresPecas, coresLegenda, palavraPorVez, legendaCorrida };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.EditorChefe = api;
 })(this);
