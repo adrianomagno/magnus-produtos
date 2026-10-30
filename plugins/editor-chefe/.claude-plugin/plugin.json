@@ -1,6 +1,6 @@
 {
   "name": "editor-chefe",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Editor de vídeo do MAGNUS: galeria de estilos, corte de pausas, legenda, marca do negócio, enquadramento que segue o rosto, aproximação no rosto nas frases mais fortes, limpeza de ruído, visuais de cor em dois níveis, conferência automática antes de entregar, capa do perfil com gancho para a grade do Instagram, corte fino com a melhor tomada, efeitos sonoros com o pico no movimento, aviso de dado pessoal na tela com oferta de borrar, o mesmo estilo do último vídeo e dois estilos animados pela fala: a frase forte em letra grande e peças animadas acima da cabeça (selo, lista com check, capítulo, \"Comenta PALAVRA\", objeto 3D, ícone do aplicativo citado, janela com print e esquema), com a legenda de uma palavra por vez, e cartões de papelaria em letra de mão com a lista que ganha o check no instante em que cada item é dito. O vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala, o texto que aparece na tela (lido no próprio computador) e alguns quadros para conferir o enquadramento.",
   "author": { "name": "Equipe MAGNUS" },
   "dependencies": ["hyperframes"]
