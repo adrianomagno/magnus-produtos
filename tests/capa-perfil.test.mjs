@@ -1,7 +1,7 @@
 // tests/capa-perfil.test.mjs: as regras do título, os instantes dos quadros, a escolha dos candidatos e o enquadramento do rosto
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validar, instantes, escolher, enquadrar, GRADE } from '../plugins/editor-chefe/scripts/capa-perfil.mjs';
+import { validar, instantes, escolher, enquadrar, GRADE, frente, boca, pontuar } from '../plugins/editor-chefe/scripts/capa-perfil.mjs';
 
 test('título: uma palavra forte, até 6 palavras, sem travessão; selo curto', () => {
   assert.deepEqual(validar({ titulo: 'Um dia para olhar *seu negócio.*', selo: '24/10 · Centro' }).ruim, []);
@@ -37,4 +37,18 @@ test('enquadramento: rosto em close, imagem cobrindo a largura, centro do rosto 
     assert.ok(y > GRADE[0] && y < GRADE[1]);
     assert.ok(c.rosto.h * q.s >= 479);
   }
+});
+
+test('ângulo da capa: rosto de frente, olhos abertos, boca fora da palavra e nitidez ganham do rosto maior', () => {
+  // 5 pontos: olhos em (40,50) e (80,50), nariz no meio, boca embaixo
+  const de = [40, 50, 80, 50, 60, 70, 45, 85, 75, 85], virado = [40, 50, 80, 50, 75, 70, 60, 85, 88, 85], tombado = [40, 40, 80, 62, 60, 70, 45, 85, 75, 85];
+  assert.equal(frente(de), 1);
+  assert.ok(frente(virado) < 0.5 && frente(tombado) < 0.7, `${frente(virado)} ${frente(tombado)}`);
+  const pal = [{ start: 1, end: 1.5 }, { start: 1.6, end: 2 }];
+  assert.deepEqual([boca(1.25, pal), boca(1.53, pal), boca(3, pal), boca(3, null)], [0, 0.5, 1, 0.5]);
+  const q = (t, h, k, olhos, nitidez, b) => ({ t, rosto: { h, q: 1, k }, medidas: { olhos, nitidez, luz: 0.9 }, boca: b });
+  const achados = pontuar([q(1, 500, virado, 0.3, 100, 0), q(4, 420, de, 0.3, 100, 1), q(7, 420, de, 0.05, 100, 1), q(10, 420, de, 0.3, 20, 1)]);
+  // o melhor: de frente, olhos abertos, nítido, em pausa; depois o borrado e o de olho fechado; o rosto maior virado e falando por último
+  assert.deepEqual(escolher(achados, 4).map((a) => a.t), [4, 10, 7, 1]);
+  assert.ok(achados.every((a) => a.nota > 0 && a.nota <= 1 && a.partes.frente != null));
 });

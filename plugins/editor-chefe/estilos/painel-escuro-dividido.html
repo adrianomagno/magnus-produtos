@@ -10,21 +10,21 @@
       :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
       html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
       #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); color: var(--fundo-claro); }
-      /* Metade de cima (0 a 960): o cabeçalho do Painel escuro fixo no alto (marca, filete e a numeração de cada cartão)
-         e o título do cartão centrado entre 230 e 870, do maior tamanho que couber (de 88 a 120 px) */
+      /* Parte de cima (0 a 768, 40% da tela): o cabeçalho do Painel escuro fixo no alto (marca, filete e a numeração de cada cartão)
+         e o título do cartão centrado entre 224 e 724, do maior tamanho que couber (de 88 a 120 px) */
       #cabeca, .cab-num { position: absolute; top: 150px; line-height: 30px; font-family: "{{CORPO}}", sans-serif; font-size: 24px; letter-spacing: 0.28em; text-transform: uppercase; color: color-mix(in srgb, var(--fundo-claro) 75%, var(--fundo-escuro)); }
       #cabeca { left: 64px; right: 64px; padding-bottom: 14px; border-bottom: 2px solid color-mix(in srgb, var(--fundo-claro) 80%, transparent); }
       .cab-num { right: 64px; }
-      #cartoes { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; }
+      #cartoes { position: absolute; left: 0; top: 0; width: 1080px; height: 768px; }
       .cartao { position: absolute; inset: 0; opacity: 0; }
-      .tit { position: absolute; left: 64px; right: 64px; top: 230px; height: 640px; margin: 0; display: flex; align-items: center; font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 120px; line-height: 1.06; letter-spacing: -0.02em; }
+      .tit { position: absolute; left: 64px; right: 64px; top: 224px; height: 500px; margin: 0; display: flex; align-items: center; font-family: "{{TITULO}}", sans-serif; font-weight: 800; font-size: 120px; line-height: 1.06; letter-spacing: -0.02em; }
       .tit em { font-style: normal; color: var(--destaque-legivel); }
-      /* Metade de baixo (960 a 1920): o vídeo em toda a largura */
-      #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
+      /* Parte de baixo (768 a 1920, 60% da tela): o vídeo em toda a largura */
+      #janela { position: absolute; left: 0; top: 768px; width: 1080px; height: 1152px; overflow: hidden; }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
       /* A emenda: filete na cor de destaque */
-      #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--destaque-legivel); }
+      #emenda { position: absolute; left: 0; right: 0; top: 765px; height: 6px; background: var(--destaque-legivel); }
       /* A legenda corrida do Corte seco, sem caixa, dentro da metade do vídeo, embaixo e longe do rosto (1500 a 1650) */
       #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }
     </style>

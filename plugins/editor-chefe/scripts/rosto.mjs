@@ -21,8 +21,20 @@ export const JANELA = {
   "legenda-viva": [1080, 1920], "palavra-chave": [1080, 1920], "corte-seco-zoom": [1080, 1920], "caixinha-pergunta": [1080, 1920],
   "destaques-tipograficos": [1080, 1920],
   "painel-escuro": [984, 600], "editorial-claro": [960, 540],
-  "painel-escuro-dividido": [1080, 960], "editorial-claro-dividido": [1080, 960], "motion-dividido": [1080, 960], papelaria: [1080, 960],
+  "painel-escuro-dividido": [1080, 1152], "editorial-claro-dividido": [1080, 1152], "motion-dividido": [1080, 1152], papelaria: [1080, 1152],
 };
+// Área útil de cada janela, em px da janela: [de, até] na altura, sem o cabeçalho do Instagram (220 px) e acima da legenda,
+// da palavra na emenda e dos botões (1500 px no quadro). Os olhos vão para o terço de cima dela. Terceiro número: o queixo
+// tem de ficar acima dele, senão nada muda (a caixinha embaixo do queixo vai até 1070; ali o montar.mjs põe a caixinha no alto).
+// Nos divididos a janela começa em 768 (40% em cima, 60% da pessoa embaixo).
+const CHEIA = [220, 1500], DIVIDIDO = [0, 1500 - 768];
+export const AREA = {
+  "legenda-viva": CHEIA, "palavra-chave": CHEIA, "corte-seco-zoom": CHEIA, "destaques-tipograficos": CHEIA, "caixinha-pergunta": [220, 1500, 1010],
+  "painel-escuro": [0, 1262 - 790], "editorial-claro": [0, 540],
+  "painel-escuro-dividido": DIVIDIDO, "motion-dividido": DIVIDIDO, papelaria: DIVIDIDO, "editorial-claro-dividido": [80, 1500 - 768],
+};
+// Ampliação máxima do reenquadramento: além dela a imagem perde nitidez. Folga dos olhos em volta do alvo, em px da janela.
+export const ZOOM_ENQ = 1.3, FOLGA_OLHOS = 20;
 // Confiança mínima do YuNet para contar como rosto (0 a 1) e sobreposição acima da qual duas caixas são o mesmo rosto
 export const LIMIAR = 0.7;
 const MESMO = 0.3;
@@ -51,11 +63,15 @@ export async function detector(dados = process.env.EDITOR_CHEFE_DATA || process.
     const o = await sessao.run({ [sessao.inputNames[0]]: new ort.Tensor("float32", plano, [1, 3, altura, largura]) });
     const caixas = [];
     for (const passo of [8, 16, 32]) {
-      const cls = o[`cls_${passo}`].data, obj = o[`obj_${passo}`].data, bb = o[`bbox_${passo}`].data, cols = largura / passo;
+      const cls = o[`cls_${passo}`].data, obj = o[`obj_${passo}`].data, bb = o[`bbox_${passo}`].data, kp = o[`kps_${passo}`].data, cols = largura / passo;
       for (let i = 0; i < cls.length; i++) {
         const q = Math.sqrt(Math.min(1, Math.max(0, cls[i])) * Math.min(1, Math.max(0, obj[i])));
         if (q < LIMIAR) continue;
-        caixas.push({ x: ((i % cols) + bb[4 * i]) * passo, y: (Math.floor(i / cols) + bb[4 * i + 1]) * passo, w: Math.exp(bb[4 * i + 2]) * passo, h: Math.exp(bb[4 * i + 3]) * passo, q });
+        const gx = i % cols, gy = Math.floor(i / cols);
+        // k: os 5 pontos do rosto [x, y] x 5, na ordem do YuNet: olho da esquerda da imagem, olho da direita, ponta do nariz,
+        // canto da boca da esquerda, canto da boca da direita
+        const k = Array.from({ length: 10 }, (_, m) => ((m % 2 ? gy : gx) + kp[10 * i + m]) * passo);
+        caixas.push({ x: (gx + bb[4 * i]) * passo, y: (gy + bb[4 * i + 1]) * passo, w: Math.exp(bb[4 * i + 2]) * passo, h: Math.exp(bb[4 * i + 3]) * passo, q, k });
       }
     }
     // Uma caixa por rosto: fica a de maior confiança entre as que se sobrepõem
@@ -108,6 +124,36 @@ export function trajetoria(centros, W, cw) {
   return { parado, x: s.map((c) => Math.min(W - cw, Math.max(0, Math.round(c - cw / 2)))) };
 }
 
+const pct = (a, p) => { const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(p * b.length))]; };
+// Enquadramento parado do vídeo inteiro: o recorte (na proporção da janela) e a ampliação z para os olhos (a mediana das
+// amostras) ficarem no terço de cima da área útil, com a menor ampliação que chega lá, até ZOOM_ENQ (só para subir os olhos). A testa (o alto da
+// caixa do rosto, nas amostras mais altas) nunca sai pelo alto da janela; a ampliação para antes de o queixo descer até o
+// fim da área útil. caixas: [cx, cy, largura, altura] em px da fonte (null sem rosto); olhos: y dos olhos, em px da fonte.
+// Devolve { z, cw, ch, y, olhos, alvo, queixo } (recorte cw x ch a partir de y; olhos e queixo em px da janela) ou null,
+// quando o estilo pede o queixo acima de um limite que nenhuma ampliação permitida alcança.
+export function enquadrar({ W, H, bw, bh, area, caixas, olhos }) {
+  const [u0, u1, limite] = area, alvo = Math.round(u0 + (u1 - u0) / 3);
+  const ok = caixas.map((c, i) => (c && olhos[i] != null ? i : -1)).filter((i) => i >= 0);
+  if (!ok.length) return null;
+  const ey = mediana(ok.map((i) => olhos[i])), testa = pct(ok.map((i) => caixas[i][1] - caixas[i][3] / 2), 0.1), qx = pct(ok.map((i) => caixas[i][1] + caixas[i][3] / 2), 0.9);
+  const ch0 = Math.min(H, (W * bh) / bw), teto = limite ?? u1 - FOLGA_OLHOS;
+  let melhor = null, q1 = null;
+  for (let z = 1; z <= ZOOM_ENQ + 1e-9; z = +(z + 0.01).toFixed(2)) {
+    const ch = 2 * Math.round(ch0 / z / 2), k = bh / ch;
+    let y = Math.min(Math.max(ey - alvo / k, 0), H - ch);
+    y = Math.max(0, Math.min(y, testa)); // a testa não sai pelo alto
+    y = Math.round(y);
+    const r = { z, cw: Math.min(W, 2 * Math.round((ch * bw) / bh / 2)), ch, y, olhos: Math.round((ey - y) * k), alvo, queixo: Math.round((qx - y) * k) };
+    q1 ??= r.queixo;
+    if (r.queixo > teto) { if (limite != null) continue; if (z > 1 && r.queixo > q1) break; } // ampliar não desce o queixo para baixo da área
+    // só se amplia para subir os olhos: olhos já no alvo ou acima dele (rosto alto, sem sobra para descer) ficam assim
+    const falta = (x) => Math.max(0, x.olhos - alvo);
+    if (!melhor || falta(r) < falta(melhor) - 0.5) melhor = r;
+    if (falta(r) <= FOLGA_OLHOS) break;
+  }
+  return melhor;
+}
+
 export async function reenquadrar(pasta, estilo, { dados, avisar = () => {} } = {}) {
   if (!JANELA[estilo]) throw new Error(`rosto: o estilo "${estilo}" não tem vídeo gravado para enquadrar. Use: ${Object.keys(JANELA).join(", ")}.`);
   const fonte = join(pasta, "fonte.mp4"), inteira = join(pasta, "fonte-inteira.mp4"), rel = join(pasta, "rosto.json");
@@ -124,25 +170,40 @@ export async function reenquadrar(pasta, estilo, { dados, avisar = () => {} } = 
   const sobra = W / H > (bw / bh) * 1.02; // vídeo mais largo que a janela: dá para seguir o rosto dos lados
   const det = await detector(dados);
   if (!det) {
-    if (!sobra) return fim("sem sobra");
     avisar("rosto: o detector de rosto não está nesta pasta de dados (rode o preparar.sh); segue com o foco fixo.");
     return fim("sem detector");
   }
   // O rastro do rosto (centro, largura e altura do maior rosto em cada amostra, em px da fonte inteira) fica no rosto.json
   // mesmo sem recorte: é dele que o montar.mjs tira a aproximação no rosto. Sem sobra, 2 amostras por segundo bastam.
   // ponytail: no vídeo em pé, com sobra zero, o rastro é só para a aproximação; 2 por segundo deixa de pegar movimento rápido
-  const cw = Math.round((H * bw) / bh / 2) * 2, qps = !sobra || duracao > 180 ? 2 : 5, centros = [], caixas = [];
+  const qps = !sobra || duracao > 180 ? 2 : 5, centros = [], caixas = [], olhos = [];
   for await (const q of quadros(inteira, W, H, 480, qps)) {
     const r = (await det(q.px, q.largura, q.altura)).sort((a, b) => b.w * b.h - a.w * a.h)[0]; // o maior rosto: quem fala, perto da câmera
     centros.push(r ? r.x * q.escala : null);
     caixas.push(r ? [r.x, r.y, r.w, r.h].map((v) => Math.round(v * q.escala)) : null);
+    olhos.push(r ? ((r.k[1] + r.k[3]) / 2) * q.escala : null);
   }
-  const achados = centros.filter((c) => c != null).length, rastro = { qps, W, H, caixas };
-  if (!sobra) return fim("sem sobra", { amostras: centros.length, achados, rastro });
-  if (achados < 0.3 * centros.length) return fim("sem rosto", { amostras: centros.length, achados, rastro });
-  const t = trajetoria(centros, W, cw);
-  if (!recortar(pasta, t.x, qps, cw, H, duracao, avisar)) return fim("falhou", { rastro });
-  return fim(t.parado ? "parado" : "seguindo", { amostras: centros.length, achados, recorte: [cw, H], x_min: Math.min(...t.x), x_max: Math.max(...t.x), rastro, corte_x: t.x });
+  const achados = centros.filter((c) => c != null).length, rastro = { qps, W, H, caixas }, amostras = centros.length;
+  if (achados < 0.3 * amostras) return fim(sobra ? "sem rosto" : "sem sobra", { amostras, achados, rastro });
+  // O recorte: na proporção da janela, com os olhos no terço de cima da área útil (enquadrar); sem enquadramento possível
+  // (a caixinha com o rosto grande demais para ela caber embaixo do queixo), o recorte da janela inteira, como antes
+  let e = enquadrar({ W, H, bw, bh, area: AREA[estilo], caixas, olhos });
+  if (!e && sobra) e = { cw: Math.round((H * bw) / bh / 2) * 2, ch: H, y: 0 };
+  const enq = e?.alvo != null ? { z: e.z, olhos: e.olhos, alvo: e.alvo, queixo: e.queixo } : null;
+  if (!e || (e.cw >= W - 2 && e.ch >= H - 2)) return fim("sem sobra", { amostras, achados, rastro, ...(enq ? { enquadramento: enq } : {}) });
+  // O gancho de capa mostra o vídeo em tela cheia, também nos estilos de janela: o enquadramento de tela cheia dele, parado,
+  // na fonte-inteira.mp4 ({ x, y, cw, ch } em px dela), que o montar.mjs usa nas cópias da capa
+  let capa = null;
+  if (Math.abs(bw / bh - 1080 / 1920) > 0.01) {
+    const c = enquadrar({ W, H, bw: 1080, bh: 1920, area: CHEIA, caixas, olhos });
+    if (c) capa = { x: Math.min(W - c.cw, Math.max(0, Math.round(mediana(centros.filter((v) => v != null)) - c.cw / 2))), y: c.y, cw: c.cw, ch: c.ch };
+  }
+  // Seguir o rosto dos lados só quando o vídeo é mais largo que a janela; no recorte só da ampliação, a sobra dos lados é
+  // pequena e a câmera fica parada, centrada no rosto: o enquadramento não pula durante o vídeo
+  let t = trajetoria(centros, W, e.cw);
+  if (!sobra && !t.parado) t = { parado: true, x: t.x.map(() => Math.min(W - e.cw, Math.max(0, Math.round(mediana(centros.filter((c) => c != null)) - e.cw / 2)))) };
+  if (!recortar(pasta, t.x, qps, e.cw, e.ch, duracao, avisar, e.y)) return fim("falhou", { rastro });
+  return fim(t.parado ? "parado" : "seguindo", { amostras, achados, recorte: [e.cw, e.ch], corte_y: e.y, ...(enq ? { enquadramento: enq } : {}), ...(capa ? { capa } : {}), x_min: Math.min(...t.x), x_max: Math.max(...t.x), rastro, corte_x: t.x });
 }
 
 // Aproximação no rosto: nas frases de ênfase que o Claude escolheu, o vídeo cresce devagar até ZOOM com o centro no rosto,
@@ -161,19 +222,19 @@ const limpa = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 export function rastroInvalido(rosto, fonte) {
   const r = rosto?.rastro;
   if (!r?.caixas?.length) return "não há rastro do rosto (rode o rosto.mjs, passo 1b)";
-  if (fonte.W !== (rosto.corte_x ? rosto.recorte?.[0] : r.W) || fonte.H !== r.H) return "o rastro do rosto é de outra fonte.mp4 (rode o rosto.mjs de novo, passo 1b)";
+  if (fonte.W !== (rosto.corte_x ? rosto.recorte?.[0] : r.W) || fonte.H !== (rosto.corte_x ? rosto.recorte?.[1] ?? r.H : r.H)) return "o rastro do rosto é de outra fonte.mp4 (rode o rosto.mjs de novo, passo 1b)";
   return null;
 }
 // Caixa do rosto (centro x, centro y, largura, altura) em px da janela no instante t da edição, ou null: o rastro levado ao
 // recorte da fonte.mp4 e ao enquadramento do molde (cover com o "foco"). Rastro conferido antes com rastroInvalido.
 export function rostoNaJanela(rosto, fonte, [, , bw, bh], foco, trechos) {
-  const r = rosto.rastro, corte = rosto.corte_x, s = Math.max(bw / fonte.W, bh / fonte.H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
+  const r = rosto.rastro, corte = rosto.corte_x, cy = rosto.corte_y ?? 0, s = Math.max(bw / fonte.W, bh / fonte.H), [fx, fy] = foco.split(" ").map((v) => parseFloat(v) / 100);
   const dx = (fonte.W * s - bw) * fx, dy = (fonte.H * s - bh) * fy;
   return (t) => {
     const p = trechos.find((x) => t >= x.ini && t < x.ini + x.dur);
     if (!p) return null;
     const i = Math.min(r.caixas.length - 1, Math.max(0, Math.round((p.src + t - p.ini) * r.qps))), c = r.caixas[i];
-    return c && [(c[0] - (corte?.[i] ?? 0)) * s - dx, c[1] * s - dy, c[2] * s, c[3] * s];
+    return c && [(c[0] - (corte?.[i] ?? 0)) * s - dx, (c[1] - cy) * s - dy, c[2] * s, c[3] * s];
   };
 }
 
@@ -232,9 +293,9 @@ export function planejarAproximacao({ frases, pal, trechos, total, rosto, fonte,
   return { lista, avisos };
 }
 
-// Recorta a fonte-inteira.mp4 da pasta em fonte.mp4 (largura cw, altura H), com o x de cada amostra (qps por segundo)
-// levado a cada quadro de 30 qps pela reta entre as amostras vizinhas. Devolve false se o ffmpeg falhar.
-export function recortar(pasta, x, qps, cw, H, duracao, avisar = () => {}) {
+// Recorta a fonte-inteira.mp4 da pasta em fonte.mp4 (largura cw, altura H, a partir do y), com o x de cada amostra (qps por
+// segundo) levado a cada quadro de 30 qps pela reta entre as amostras vizinhas. Devolve false se o ffmpeg falhar.
+export function recortar(pasta, x, qps, cw, H, duracao, avisar = () => {}, y = 0) {
   const n = Math.round(duracao * F), linhas = [];
   for (let q = 0; q < n; q++) {
     const p = Math.min(x.length - 1, (q / F) * qps), a = Math.floor(p), b = Math.min(a + 1, x.length - 1);
@@ -242,7 +303,7 @@ export function recortar(pasta, x, qps, cw, H, duracao, avisar = () => {}) {
   }
   writeFileSync(join(pasta, "rosto-comandos.txt"), linhas.join("\n") + "\n");
   // Arquivo de comandos pelo nome, com a pasta do vídeo como pasta atual: caminho com espaço ou "C:" quebraria o filtro
-  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", "-i", "fonte-inteira.mp4", "-vf", `sendcmd=f=rosto-comandos.txt,crop=w=${cw}:h=${H}:x=${x[0]}:y=0`,
+  const r = spawnSync(ffmpeg(), ["-v", "error", "-y", "-i", "fonte-inteira.mp4", "-vf", `sendcmd=f=rosto-comandos.txt,crop=w=${cw}:h=${H}:x=${x[0]}:y=${y}`,
     "-r", String(F), "-c:v", "libx264", "-crf", "18", "-g", "30", "-keyint_min", "30", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", "fonte.mp4"],
     { cwd: pasta, encoding: "utf8", timeout: TEMPO_MAX, maxBuffer: 1 << 26 });
   rmSync(join(pasta, "rosto-comandos.txt"), { force: true });
@@ -268,10 +329,13 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     if (estilo === "--desligar") { desligar(resolve(pasta)); console.log("rosto: fonte inteira de volta; o molde usa o foco fixo do escolhas.json."); }
     else {
       const r = await reenquadrar(resolve(pasta), estilo, { avisar: (m) => console.error(m) });
-      const msg = { seguindo: `o recorte segue o rosto (achado em ${r.achados} de ${r.amostras} amostras)`, parado: `o rosto quase não anda; recorte parado nele (achado em ${r.achados} de ${r.amostras} amostras)`,
+      let msg = { seguindo: `o recorte segue o rosto (achado em ${r.achados} de ${r.amostras} amostras)`, parado: `o rosto quase não anda; recorte parado nele (achado em ${r.achados} de ${r.amostras} amostras)`,
         "sem rosto": `rosto achado em só ${r.achados} de ${r.amostras} amostras; segue com o foco fixo`, "sem sobra": "o vídeo já tem a proporção da janela; segue com o foco fixo",
         "sem detector": "sem detector; segue com o foco fixo", falhou: "o recorte falhou; segue com o foco fixo" }[r.estado];
-      console.log(`rosto: ${msg}.`);
+      const e = r.enquadramento;
+      if (r.estado === "sem sobra" && !e && r.achados && AREA[r.estilo]?.[2] != null)
+        msg = "o rosto está grande e baixo demais para subir com a caixinha embaixo do queixo; segue como foi gravado e o montador põe a caixinha no alto, acima da cabeça";
+      console.log(`rosto: ${msg}${e ? `; olhos a ${e.olhos} px do alto da janela (alvo ${e.alvo})${e.z > 1 ? `, com ampliação de ${String(e.z).replace(".", ",")} vez` : ""}` : ""}.`);
     }
   } catch (e) {
     console.error(e.message);

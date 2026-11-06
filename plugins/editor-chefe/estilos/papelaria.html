@@ -10,11 +10,11 @@
       :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
       html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
       #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-claro); color: var(--texto); }
-      /* Metade de cima (0 a 960): papel pontilhado de caderno, a assinatura no alto e o cartão de papel entre 220 e 870 */
-      #pontos { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; background-image: radial-gradient(circle, var(--ponto) 2.4px, transparent 2.9px); background-size: 40px 40px; background-position: 20px 20px; }
+      /* Parte de cima (0 a 768, 40% da tela): papel pontilhado de caderno, a assinatura no alto e o cartão de papel entre 210 e 740 */
+      #pontos { position: absolute; left: 0; top: 0; width: 1080px; height: 768px; background-image: radial-gradient(circle, var(--ponto) 2.4px, transparent 2.9px); background-size: 40px 40px; background-position: 20px 20px; }
       #cabeca { position: absolute; left: 0; right: 0; top: 150px; height: 44px; display: flex; align-items: center; justify-content: center; }
       #cabeca-texto { font-family: "{{CORPO}}", sans-serif; font-weight: 400; font-size: 26px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cabeca); }
-      #cartoes { position: absolute; left: 0; top: 220px; width: 1080px; height: 650px; }
+      #cartoes { position: absolute; left: 0; top: 210px; width: 1080px; height: 530px; }
       .cartao { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
       .papel {
         position: relative; width: 860px; box-sizing: border-box; padding: 72px 64px 60px; border-radius: 8px; background: var(--papel);
@@ -33,11 +33,11 @@
       .quadrado { flex: 0 0 auto; display: block; overflow: visible; }
       .item-texto { position: relative; font-family: "Caveat", cursive; font-weight: 700; font-size: calc(var(--k, 1) * 66px); line-height: 1.05; color: var(--tinta); }
       .risco { position: absolute; left: -10px; top: 50%; margin-top: -14px; overflow: visible; }
-      /* Metade de baixo (960 a 1920): o vídeo em toda a largura, com a sombra da borda do papel por cima */
-      #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
+      /* Parte de baixo (768 a 1920, 60% da tela): o vídeo em toda a largura, com a sombra da borda do papel por cima */
+      #janela { position: absolute; left: 0; top: 768px; width: 1080px; height: 1152px; overflow: hidden; }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
-      #borda { position: absolute; left: 0; right: 0; top: 960px; height: 18px; background: linear-gradient(color-mix(in srgb, var(--fundo-escuro) 22%, transparent), transparent); }
+      #borda { position: absolute; left: 0; right: 0; top: 768px; height: 18px; background: linear-gradient(color-mix(in srgb, var(--fundo-escuro) 22%, transparent), transparent); }
       /* A legenda corrida do Corte seco, sem caixa, dentro da metade do vídeo, embaixo e longe do rosto (1500 a 1650) */
       #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }
     </style>
@@ -92,9 +92,9 @@
             const marca = svg(li, "quadrado", `${id}-item-${k + 1}-marca`, risco ? 30 : 64, 64);
             return { li, marca, texto: li.appendChild(novo("span", "item-texto", `${id}-item-${k + 1}-texto`, txt)) };
           });
-          // Cartão mais alto que o espaço (650 px) encolhe a letra de 4 em 4%, até 64%
+          // Cartão mais alto que o espaço (530 px, com a folga da fita) encolhe a letra de 4 em 4%, até 50%
           let k = 1;
-          while (papel.offsetHeight > 640 && k > 0.64) papel.style.setProperty("--k", (k -= 0.04).toFixed(2));
+          while (papel.offsetHeight > 520 && k > 0.5) papel.style.setProperty("--k", (k -= 0.04).toFixed(2));
           const giro = i % 2 ? 1.1 : -1.4;
           tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none" }, ini);
           tl.fromTo(papel, { opacity: 0, y: 60, rotation: giro - 5 }, { opacity: 1, y: 0, rotation: giro, duration: 0.45, ease: "back.out(1.6)" }, ini);

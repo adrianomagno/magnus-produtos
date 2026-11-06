@@ -1,8 +1,10 @@
 // Capa do perfil: a imagem parada que aparece na grade do Instagram, feita depois do vídeo aprovado.
 // Uso: node capa-perfil.mjs quadros <pasta do vídeo> [vídeo] [--de S] [--ate S]
-//        Tira quadros do vídeo original (o de maior resolução, sem legenda), acha o rosto em cada um e guarda os 6 com o
-//        rosto maior em capa-perfil/candidato-N.jpg, com a folha capa-perfil/candidatos.jpg (da esquerda para a direita,
-//        de cima para baixo, 1 a 6) e o capa-perfil/candidatos.json. Só os trechos do trechos.json, se ele existir.
+//        Tira quadros do vídeo original (o de maior resolução, sem legenda), acha o rosto em cada um, dá uma nota ao ângulo
+//        (rosto de frente, olhos abertos, boca fora do meio de uma palavra, rosto nítido, boa luz, rosto grande) e guarda os
+//        6 melhores, do melhor para o pior, em capa-perfil/candidato-N.jpg, com a folha capa-perfil/candidatos.jpg (da
+//        esquerda para a direita, de cima para baixo, 1 a 6) e o capa-perfil/candidatos.json (com a nota e as partes dela).
+//        Só os trechos do trechos.json, se ele existir.
 //      node capa-perfil.mjs montar <pasta do vídeo>
 //        Lê o capa-perfil.json da pasta ({ "quadro": 1 a 6, "titulo": "Texto com uma *palavra forte*", "selo": true ou
 //        "texto do selo" }) e a marca (padrão ../marca.json), monta a capa 1080x1920 pelo navegador do render da HyperFrames,
@@ -21,7 +23,7 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EC = createRequire(import.meta.url)(join(RAIZ, "estilos", "comum.js"));
 const TEMPO_MAX = 600000;
 const ffmpeg = () => process.env.HYPERFRAMES_FFMPEG_PATH ?? "ffmpeg", ffprobe = () => process.env.HYPERFRAMES_FFPROBE_PATH ?? "ffprobe";
-export const AMOSTRAS = 24, CANDIDATOS = 6, MAX_PALAVRAS = 6, MAX_SELO = 32;
+export const AMOSTRAS = 36, CANDIDATOS = 6, MAX_PALAVRAS = 6, MAX_SELO = 32;
 export const GRADE = [240, 1680]; // a faixa 3:4 (1080x1440) que a grade do perfil mostra
 const ROSTO_ALT = 480, ROSTO_Y = 640; // altura da caixa do rosto e y do centro dela na capa
 const TRAVESSAO = /[\u2013\u2014]/;
@@ -39,11 +41,68 @@ function bgr(arq, W, H) {
   if (r.status !== 0) throw new Error(`capa-perfil: não consegui ler a imagem ${arq}.`);
   return { px: r.stdout, largura, altura: alt32, escala: W / largura };
 }
-// O maior rosto da imagem, em px da imagem: { x, y, w, h } (centro e tamanho), ou null
+// O maior rosto da imagem, em px da imagem: { x, y, w, h } (centro e tamanho), a confiança q e os 5 pontos k, ou null
 async function rosto(det, arq, W, H) {
   const q = bgr(arq, W, H), r = await det(q.px, q.largura, q.altura);
   const c = r.sort((a, b) => b.w * b.h - a.w * a.h)[0];
-  return c ? { x: c.x * q.escala, y: c.y * q.escala, w: c.w * q.escala, h: c.h * q.escala, q: c.q } : null;
+  return c ? { x: c.x * q.escala, y: c.y * q.escala, w: c.w * q.escala, h: c.h * q.escala, q: c.q, k: c.k.map((v) => v * q.escala) } : null;
+}
+
+// O ângulo do rosto pelos 5 pontos do YuNet (olho da esquerda, olho da direita, nariz, cantos da boca): 1 de frente, 0
+// virado. Nariz fora do meio dos olhos (virado para o lado) e linha dos olhos inclinada (cabeça tombada) tiram nota.
+export function frente(k) {
+  const [lx, ly, rx, ry, nx] = k, d = Math.hypot(rx - lx, ry - ly);
+  if (!(d > 0)) return 0;
+  const lado = Math.abs(nx - (lx + rx) / 2) / d, tombo = Math.abs(Math.atan2(ry - ly, rx - lx));
+  return +(Math.max(0, 1 - lado / 0.3) * Math.max(0, 1 - tombo / 0.35)).toFixed(3);
+}
+// Boca no instante t pelos tempos das palavras ([{ start, end }], do transcript.json): 0 no meio de uma palavra (boca
+// torta, meio aberta), 0,5 na borda de uma, 1 fora de todas (pausa: boca fechada ou sorrindo). Sem as palavras, 0,5.
+export function boca(t, palavras) {
+  if (!palavras?.length) return 0.5;
+  if (palavras.some((w) => t > w.start + 0.06 && t < w.end - 0.06)) return 0;
+  return palavras.some((w) => t > w.start - 0.06 && t < w.end + 0.06) ? 0.5 : 1;
+}
+// Medidas do rosto na imagem, num recorte de 160x160 em cinza da caixa dele: olhos (a fração de pixels escuros em volta de
+// cada olho: a íris e a pupila aparecem com o olho aberto e somem no piscar), nitidez (variância do laplaciano: borrão de
+// movimento baixa) e luz (brilho médio perto de 135 e pouca área estourada)
+const LADO = 160;
+function medirRosto(arq, r) {
+  const x = Math.max(0, Math.round(r.x - r.w / 2)), y = Math.max(0, Math.round(r.y - r.h / 2)), w = Math.max(16, Math.round(r.w)), h = Math.max(16, Math.round(r.h));
+  const p = spawnSync(ffmpeg(), ["-v", "error", "-i", arq, "-vf", `crop=${w}:${h}:${x}:${y},scale=${LADO}:${LADO},format=gray`, "-f", "rawvideo", "-"], { timeout: TEMPO_MAX, maxBuffer: 1 << 24 });
+  if (p.status !== 0 || p.stdout.length < LADO * LADO) return null;
+  const g = p.stdout, v = (i, j) => g[j * LADO + i], sx = LADO / w, sy = LADO / h;
+  const ord = [...g].sort((a, b) => a - b), med = ord[ord.length >> 1];
+  // olhos: janela de 0,3 x 0,18 da distância entre os olhos em volta de cada um
+  const d = Math.hypot((r.k[2] - r.k[0]) * sx, (r.k[3] - r.k[1]) * sy), hw = Math.max(3, Math.round(0.15 * d)), hh = Math.max(2, Math.round(0.09 * d));
+  let escuros = 0, n = 0;
+  for (const [ex, ey] of [[r.k[0], r.k[1]], [r.k[2], r.k[3]]]) {
+    const cx = Math.round((ex - x) * sx), cy = Math.round((ey - y) * sy);
+    for (let j = cy - hh; j <= cy + hh; j++) for (let i = cx - hw; i <= cx + hw; i++) if (i >= 0 && j >= 0 && i < LADO && j < LADO) { n++; if (v(i, j) < 0.6 * med) escuros++; }
+  }
+  // nitidez no miolo do rosto (sem as bordas do recorte, onde entra fundo)
+  let s = 0, s2 = 0, m = 0;
+  for (let j = 24; j < LADO - 24; j++) for (let i = 24; i < LADO - 24; i++) {
+    const l = 4 * v(i, j) - v(i - 1, j) - v(i + 1, j) - v(i, j - 1) - v(i, j + 1);
+    s += l; s2 += l * l; m++;
+  }
+  const media = g.reduce((a, b) => a + b, 0) / g.length, estouro = g.filter((b) => b >= 245).length / g.length;
+  return { olhos: n ? escuros / n : 0, nitidez: s2 / m - (s / m) ** 2, luz: +Math.max(0, (1 - Math.abs(media - 135) / 90) * (1 - Math.min(1, estouro * 5))).toFixed(3) };
+}
+// Nota de cada quadro (0 a 1): olhos e nitidez valem em relação aos outros quadros do mesmo vídeo (a mesma pessoa e a
+// mesma luz), pelo 90º percentil deles; o rosto maior ganha um pouco. Grava a nota e as partes em cada achado.
+export function pontuar(achados) {
+  const p90 = (k) => { const v = achados.map((a) => a.medidas?.[k] ?? 0).sort((x, y) => x - y); return v[Math.floor(0.9 * (v.length - 1))] || 1; };
+  const ro = p90("olhos"), rn = p90("nitidez"), hmax = Math.max(...achados.map((a) => a.rosto.h));
+  for (const a of achados) {
+    const m = a.medidas ?? { olhos: 0, nitidez: 0, luz: 0.5 }, c = {
+      frente: frente(a.rosto.k ?? []), olhos: +Math.min(1, m.olhos / ro).toFixed(3), nitidez: +Math.min(1, m.nitidez / rn).toFixed(3), boca: a.boca ?? 0.5, luz: m.luz,
+    };
+    const base = 0.3 * c.frente + 0.25 * c.olhos + 0.2 * c.nitidez + 0.15 * c.boca + 0.1 * c.luz;
+    a.partes = c;
+    a.nota = +(base * (0.75 + (0.25 * a.rosto.h) / hmax)).toFixed(3);
+  }
+  return achados;
 }
 
 // Instantes de amostra espalhados pelos trechos mantidos (sem os 0,3 s das pontas de cada trecho)
@@ -57,10 +116,10 @@ export function instantes(trechos, n = AMOSTRAS) {
   });
 }
 
-// Os melhores: rosto maior primeiro, no máximo um a cada 1,5 s para não repetir a mesma cena
+// Os melhores: a nota maior primeiro (sem nota, o rosto maior), no máximo um a cada 1,5 s para não repetir a mesma cena
 export function escolher(achados, n = CANDIDATOS) {
-  const fica = [];
-  for (const a of [...achados].sort((x, y) => y.rosto.h * y.rosto.q - x.rosto.h * x.rosto.q))
+  const fica = [], v = (a) => a.nota ?? a.rosto.h * a.rosto.q;
+  for (const a of [...achados].sort((x, y) => v(y) - v(x)))
     if (fica.length < n && fica.every((f) => Math.abs(f.t - a.t) >= 1.5)) fica.push(a);
   return fica;
 }
@@ -74,6 +133,8 @@ export async function quadros(pasta, video, { de = 0, ate = Infinity, dados, avi
   let manter = [[0, duracao]];
   if (existsSync(join(pasta, "trechos.json"))) manter = JSON.parse(readFileSync(join(pasta, "trechos.json"), "utf8")).manter ?? manter;
   manter = manter.map(([a, b]) => [Math.max(a, de), Math.min(b, ate)]).filter(([a, b]) => b > a);
+  let palavras = null;
+  try { palavras = JSON.parse(readFileSync(join(pasta, "transcript.json"), "utf8")).filter((w) => Number.isFinite(w.start) && Number.isFinite(w.end)); } catch { /* sem transcrição: a boca fica neutra */ }
   const p = transfer(video), saida = join(pasta, "capa-perfil");
   rmSync(saida, { recursive: true, force: true });
   mkdirSync(saida, { recursive: true });
@@ -83,20 +144,21 @@ export async function quadros(pasta, video, { de = 0, ate = Infinity, dados, avi
     // Quadro em resolução cheia, girado como o celular gravou; HDR do celular vira cor comum
     rodar(ffmpeg(), ["-v", "error", "-y", "-ss", String(t), "-i", video, "-frames:v", "1", ...(p ? ["-vf", HDR_SDR] : []), "-q:v", "2", arq], `não consegui tirar o quadro de ${t} s`);
     const m = medidas(arq), r = await rosto(det, arq, m.W, m.H);
-    if (r) achados.push({ t, arq, W: m.W, H: m.H, rosto: r });
+    if (r) achados.push({ t, arq, W: m.W, H: m.H, rosto: r, medidas: medirRosto(arq, r), boca: boca(t, palavras) });
   }
-  const melhores = escolher(achados);
+  const melhores = escolher(pontuar(achados));
   if (!melhores.length) { rmSync(saida, { recursive: true, force: true }); throw new Error("capa-perfil: nenhum rosto achado no vídeo. A capa do perfil pede um rosto em close; sem ele, siga sem capa do perfil."); }
   const lista = melhores.map((a, i) => {
     const nome = `candidato-${i + 1}.jpg`;
     copyFileSync(a.arq, join(saida, nome));
-    return { n: i + 1, t: a.t, arquivo: `capa-perfil/${nome}`, W: a.W, H: a.H, rosto: Object.fromEntries(Object.entries(a.rosto).map(([k, v]) => [k, Math.round(v * 100) / 100])) };
+    const { k: _k, ...r } = a.rosto;
+    return { n: i + 1, t: a.t, arquivo: `capa-perfil/${nome}`, W: a.W, H: a.H, nota: a.nota, partes: a.partes, rosto: Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Math.round(v * 100) / 100])) };
   });
   for (const f of readdirSync(saida)) if (/^q\d+\.jpg$/.test(f)) rmSync(join(saida, f));
   writeFileSync(join(saida, "candidatos.json"), JSON.stringify(lista, null, 1));
   const folha = join(saida, "candidatos.jpg");
   rodar(ffmpeg(), ["-v", "error", "-y", "-start_number", "1", "-i", join(saida, "candidato-%d.jpg"), "-vf", `scale=360:-2,tile=3x2`, "-frames:v", "1", folha], "não consegui montar a folha dos candidatos");
-  avisar(`capa-perfil: ${lista.length} quadros com rosto (de ${AMOSTRAS} olhados); folha em ${folha}`);
+  avisar(`capa-perfil: ${lista.length} quadros com rosto (de ${AMOSTRAS} olhados), do melhor ângulo para o pior (o 1 é o recomendado); folha em ${folha}`);
   return lista;
 }
 const transfer = (v) => ["arib-std-b67", "smpte2084"].includes(rodar(ffprobe(), ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=color_transfer", "-of", "csv=p=0", v], "não consegui ler o vídeo").stdout.trim());

@@ -25,7 +25,10 @@ test('todo molde com gravação tem a faixa do texto que a conferência lê', ()
 test('capa e caixinha entram como faixas; rosto embaixo da legenda é achado, rosto acima não', () => {
   const html = '#legenda { position: absolute; left: 70px; right: 70px; top: 1250px; height: 220px; }\nconst D = {"capa":{"estilo":"manchete","queixo":900,"fim":3},"caixinha":{"topo":920}};';
   const z = zonas(html, 20);
-  assert.deepEqual(z.map((a) => [a.nome, a.y0, a.y1, a.ate]), [['a legenda', 1250, 1470, 20], ['a caixinha', 920, 1500, 20], ['o gancho de capa', 1060, 1405, 3]]);
+  // a legenda só conta depois que a camada da capa começa a sumir (antes, o texto do estilo fica escondido); a capa, até ali
+  assert.deepEqual(z.map((a) => [a.nome, a.y0, a.y1, a.de, a.ate]), [['a legenda', 1250, 1470, 2.75, 20], ['a caixinha', 920, 1500, 0, 20], ['o gancho de capa', 1060, 1405, 0, 2.75]]);
+  // caixinha no alto: a faixa é a da caixa, de 170 até o fim dela, mais larga
+  assert.deepEqual(zonas('const D = {"caixinha":{"lugar":"alto","topo":170,"fim":560}};', 20).map((a) => [a.y0, a.y1, a.x0, a.x1]), [[170, 560, 50, 1030]]);
   const so = [z[0]];
   assert.equal(cobre({ x: 540, y: 1300, w: 300, h: 300 }, 5, so).length, 1);
   assert.equal(cobre({ x: 540, y: 700, w: 300, h: 300 }, 5, so).length, 0);

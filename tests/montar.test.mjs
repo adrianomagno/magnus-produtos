@@ -593,7 +593,8 @@ test('caixinha: queixo opcional baixa o topo da caixa (60 px abaixo do queixo, n
   for (const [queixo, topo] of [[undefined, 920], [800, 920], [900, 960], [980, 1040], [1010, 1070]])
     assert.equal(caixinhaDe(montarCaixinha({ caixinha: { ...CAIXINHA.caixinha, queixo } }).html).topo, topo, String(queixo));
   // rosto baixo demais: nem a menor caixa cabe com a legenda acima de 1500
-  assert.match(erro('caixinha-pergunta', 'fonte.mp4', '', { ...CAIXINHA, caixinha: { ...CAIXINHA.caixinha, queixo: 1011 } }), /queixo em 1011, a caixinha começaria em 1071 .* queixo pode ir até 1010/);
+  // (sem rosto.json não se sabe onde a cabeça começa, então a caixinha também não vai para o alto)
+  assert.match(erro('caixinha-pergunta', 'fonte.mp4', '', { ...CAIXINHA, caixinha: { ...CAIXINHA.caixinha, queixo: 1011 } }), /queixo em 1011, a caixinha começaria em 1071 .* queixo pode ir até 1010\), nem acima da cabeça/);
 });
 
 test('escolhas.json que não é objeto (null, lista, texto) para com mensagem clara', () => {
@@ -606,22 +607,27 @@ test('escolhas.json que não é objeto (null, lista, texto) para com mensagem cl
   }
 });
 
-// Tela dividida (estilos 7 a 9): vídeo na metade de baixo, em toda a largura; texto ou animação na de cima
+// Tela dividida (estilos 7 a 9 e 12): vídeo nos 60% de baixo (768 a 1920), em toda a largura; texto ou animação nos 40% de cima
 const DIVIDIDOS = ['painel-escuro-dividido', 'editorial-claro-dividido', 'motion-dividido'];
 const molde = (estilo) => readFileSync(new URL(`../plugins/editor-chefe/estilos/${estilo}.html`, import.meta.url), 'utf8');
 const caixa = (html, id) => { const m = new RegExp(`#${id} \\{[^}]*?top: (\\d+)px;[^}]*?height: (\\d+)px;`).exec(html); return m && { top: +m[1], alt: +m[2] }; };
 
-test('tela dividida: o vídeo ocupa a metade de baixo inteira; a legenda fica dentro dela, embaixo, e no 8 a palavra grande fica na emenda', () => {
+test('tela dividida: o vídeo ocupa os 60% de baixo inteiros; a legenda fica dentro dele, embaixo, e no 8 a palavra grande fica na emenda', () => {
   for (const estilo of [...DIVIDIDOS, 'papelaria']) {
     const html = molde(estilo);
-    assert.match(html, /#janela \{ position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; \}/, estilo);
+    assert.match(html, /#janela \{ position: absolute; left: 0; top: 768px; width: 1080px; height: 1152px; overflow: hidden; \}/, estilo);
     assert.match(html, /\.trecho \{[^}]*object-fit: cover; object-position: \{\{FOCO\}\};/, estilo);
-    if (estilo === 'editorial-claro-dividido') { const p = caixa(html, 'palavra'); assert.equal(p.top + p.alt / 2, 960, estilo); continue; } // a identidade do 8, centrada na emenda
+    if (estilo === 'editorial-claro-dividido') { const p = caixa(html, 'palavra'); assert.equal(p.top + p.alt / 2, 768, estilo); continue; } // a identidade do 8, centrada na emenda
     const leg = caixa(html, 'legenda');
     assert.deepEqual([leg.top, leg.top + leg.alt], [1500, 1650], estilo); // inteira dentro do vídeo, sem cruzar a divisa, abaixo do rosto
   }
-  const painel = caixa(molde('motion-dividido'), 'painel'); // a animação fica sempre em cima, acima da legenda
-  assert.ok(painel.top + painel.alt <= caixa(molde('motion-dividido'), 'legenda').top, JSON.stringify(painel));
+  const painel = caixa(molde('motion-dividido'), 'painel'); // a animação fica sempre em cima, acima da emenda
+  assert.ok(painel.top + painel.alt <= 768, JSON.stringify(painel));
+  // os cartões, o título e o papel terminam acima da emenda (e no 8 acima da aba da palavra)
+  for (const [estilo, id] of [['editorial-claro-dividido', 'cartoes'], ['painel-escuro-dividido', 'tit'], ['papelaria', 'cartoes'], ['motion-dividido', 'anim']]) {
+    const c = caixa(molde(estilo).replace(`.${id} {`, `#${id} {`), id); // .tit e .anim são classes
+    assert.ok(c && c.top + c.alt <= (estilo === 'editorial-claro-dividido' ? 688 : 768), `${estilo} ${JSON.stringify(c)}`);
+  }
 });
 
 test('tela dividida: whoosh largo na entrada de cada cartão (no 9, de cada animação, e clique discreto em cada item seguinte), sem som na legenda', () => {
@@ -837,7 +843,7 @@ test('estilo 8: a palavra grande na emenda continua o padrão; "legenda": "corri
   try {
     montar(dir, () => {});
     let html = readFileSync(join(dir, 'index.html'), 'utf8');
-    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a palavra na tela', 880, 1040]]);
+    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a palavra na tela', 688, 848]]);
     assert.equal(lerD(dir).legenda, undefined);
     writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda: 'corrida' }));
     montar(dir, () => {});
@@ -892,7 +898,8 @@ test('aproximar: cada molde com gravação (menos o Corte seco) chama a aproxima
 
 test('aproximar: rosto embaixo da caixinha, Corte seco, sem rosto.json ou rosto.json velho seguem sem aproximar, com aviso', () => {
   const casos = [
-    [comRosto('caixinha-pergunta', { ...CAIXINHA, aproximar: ['a solução sai'] }), /embaixo do texto/],
+    // queixo dado à mão acima do queixo real: a caixinha fica em 920, em cima do rosto (750 a 1050)
+    [comRosto('caixinha-pergunta', { ...CAIXINHA, caixinha: { ...CAIXINHA.caixinha, queixo: 800 }, aproximar: ['a solução sai'] }), /embaixo do texto/],
     [comRosto('corte-seco-zoom', { aproximar: ['a solução sai'] }), /Corte seco/],
   ];
   const sem = comRosto('legenda-viva', { aproximar: ['a solução sai'] });
@@ -909,6 +916,28 @@ test('aproximar: rosto embaixo da caixinha, Corte seco, sem rosto.json ou rosto.
       assert.match(avisos.join('\n'), aviso);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }
+});
+
+test('caixinha: sem queixo no escolhas.json, ele sai do rosto.json; rosto baixo demais leva a caixinha para o alto, acima da cabeça', () => {
+  // queixo em 960: a caixinha começa 60 px abaixo dele
+  let dir = comRosto('caixinha-pergunta', CAIXINHA, [540, 810, 300, 300]);
+  try { montar(dir, () => {}); assert.equal(caixinhaDe(readFileSync(join(dir, 'index.html'), 'utf8')).topo, 1020); }
+  finally { rmSync(dir, { recursive: true, force: true }); }
+  // queixo em 1150 (passa de 1010): a caixinha vai para o alto, de 170 até 30 px acima da testa (1000 - 150 = 850), e a
+  // legenda para logo abaixo do queixo, no CSS que a conferência lê
+  dir = comRosto('caixinha-pergunta', CAIXINHA, [540, 1000, 300, 300]);
+  const avisos = [];
+  try {
+    montar(dir, (m) => avisos.push(m));
+    const html = readFileSync(join(dir, 'index.html'), 'utf8'), c = caixinhaDe(html);
+    assert.deepEqual([c.lugar, c.topo, c.fim, c.legenda], ['alto', 170, 820, 1180]);
+    assert.match(html, /#legenda \{ position: absolute; left: 90px; right: 90px; top: 1180px; height: 200px; \}/);
+    assert.match(avisos.join('\n'), /caixinha .* foi para o alto/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  // testa alta demais para a caixa no alto (450) e queixo baixo demais para embaixo: erro, como antes
+  dir = comRosto('caixinha-pergunta', CAIXINHA, [540, 800, 300, 700]);
+  try { assert.throws(() => montar(dir, () => {}), /nem acima da cabeça/); }
+  finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('aproximar: false desliga sem aviso; formato errado é erro em português', () => {

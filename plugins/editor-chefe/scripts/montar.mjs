@@ -66,6 +66,13 @@ const ICONE_EM_TODOS = ["etapas", "antes-depois", "lista", "comparacao"];
 // pergunta em 30 px, 207 px), mais 40 px de folga e duas linhas de legenda (181 px), só cabe acima de 1500 com o topo até 1070;
 // entre 920 e 1070 o molde encolhe a pergunta até caber e, se não couber, avisa no hf check.
 const MAX_CHAMADA = 50, MAX_PERGUNTA = 110, CAIXA_TOPO = 920, CAIXA_TOPO_MAX = 1070;
+// Sem "queixo" no escolhas.json, ele sai do rosto.json (o queixo das amostras mais baixas). Rosto grande e baixo demais para
+// a caixinha caber embaixo do queixo: ela vai para o alto (CAIXA_ALTO), acima do rosto (até 30 px acima da testa, nas
+// amostras mais altas; pode passar sobre o alto do cabelo), mais larga e com letra maior que encolhe até caber; a legenda fica logo abaixo do queixo, com 2 linhas.
+// Sem lugar nem no alto (CAIXA_ALTO_MIN, a menor caixa de 30 px), o montador para, como antes.
+const CAIXA_ALTO = 170, CAIXA_ALTO_MIN = 300, LEGENDA_ALTO = 200, LEGENDA_PISO = 1650;
+const LEGENDA_CAIXINHA = "      #legenda { position: absolute; left: 90px; right: 90px; top: 1250px; height: 250px; }";
+const pct = (a, p) => { const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(p * b.length))]; };
 
 // Gancho de capa: CSS de cada estilo (o desenho aprovado), numa camada por cima de tudo com cópias mudas dos trechos.
 // O comum.js (capa) monta o texto, mede e anima. Estilo novo de capa: um bloco de CSS aqui e um ramo lá.
@@ -144,11 +151,11 @@ function pastaEfeitos() {
 // reforço, 13:1. Terno escuro dá 123 a 129 (contorno normal); jaleco, 194 a 200.
 const FAIXA = { "legenda-viva": [1250, 1470, 70, 1010], "palavra-chave": [1220, 1520, 60, 1020], "corte-seco-zoom": [1270, 1470, 80, 1000], "caixinha-pergunta": [1250, 1500, 90, 990],
   "painel-escuro": [1262, 1380, 78, 1002], "painel-escuro-dividido": [1500, 1650, 60, 1020], "motion-dividido": [1500, 1650, 60, 1020], papelaria: [1500, 1650, 60, 1020], "editorial-claro-dividido": [1500, 1650, 60, 1020] };
-const METADE = [0, 960, 1080, 960], JANELA_FAIXA = { "painel-escuro": [48, 790, 984, 600], "painel-escuro-dividido": METADE, "motion-dividido": METADE, papelaria: METADE, "editorial-claro-dividido": METADE };
+const METADE = [0, 768, 1080, 1152], JANELA_FAIXA = { "painel-escuro": [48, 790, 984, 600], "painel-escuro-dividido": METADE, "motion-dividido": METADE, papelaria: METADE, "editorial-claro-dividido": METADE };
 // Estilos com a legenda corrida do Corte seco (e o 8 com "legenda": "corrida"): a ênfase sai do "enfase" ou da palavra forte de cada cartão
 const CORRIDA = ["painel-escuro", "painel-escuro-dividido", "motion-dividido", "papelaria"];
 // O #palavra do Editorial claro dividido, que a opção "corrida" troca pela faixa da legenda dentro do vídeo
-const PALAVRA_8 = "      #palavra { position: absolute; left: 40px; right: 40px; top: 880px; height: 160px; }";
+const PALAVRA_8 = "      #palavra { position: absolute; left: 40px; right: 40px; top: 688px; height: 160px; }";
 const LEGENDA_8 = "      #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }";
 const CLARA = 130, CLARA_STOMP = 185; // luma média (0 a 255) da faixa, no 90º percentil dos quadros; acima disso, véu
 const CLARA_CORRIDA = 160; // legenda corrida: 90º percentil da luma da faixa (YHIGH), no 90º percentil dos quadros; acima, reforço
@@ -945,10 +952,7 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     if (chamada.length > MAX_CHAMADA)
       throw new Error(`montar: a chamada da caixinha (${daqui ? "caixinha.chamada, no escolhas.json" : "chamada_caixinha, no marca.json"}) tem ${chamada.length} caracteres; cabem até ${MAX_CHAMADA}. Encurte o texto.`);
     if (queixo !== undefined) conferirQueixo(queixo, "caixinha.queixo", "quadro");
-    const topo = Math.max(CAIXA_TOPO, Math.round((queixo ?? 0) + 60));
-    if (topo > CAIXA_TOPO_MAX)
-      throw new Error(`montar: com o queixo em ${queixo}, a caixinha começaria em ${topo} e não sobra lugar para ela e a legenda acima dos botões do Instagram (o queixo pode ir até ${CAIXA_TOPO_MAX - 60}). O rosto está baixo demais para este estilo: ofereça outro estilo ao dono.`);
-    caixa = { chamada, pergunta, topo };
+    caixa = { chamada, pergunta, queixo }; // o topo sai depois, com o rosto.json
   }
   for (const k of ["fundo_claro", "fundo_escuro", "texto", "destaque"])
     if (!/^#[0-9a-fA-F]{6}$/.test(marca.cores?.[k] ?? "")) throw new Error(`montar: cores.${k} do marca.json precisa estar no formato #RRGGBB.`);
@@ -1008,6 +1012,28 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     }
     return rosto;
   };
+
+  // Caixinha: o queixo do escolhas.json ou o do rosto.json; embaixo dele, ou no alto, acima da cabeça
+  if (caixa) {
+    let { queixo } = caixa, testa = null;
+    const r = lerRosto(), f = r && medidas(fonte);
+    if (r && !rastroInvalido(r, f)) {
+      const naTela = rostoNaJanela(r, f, [0, 0, 1080, 1920], foco, trechos), v = [];
+      for (let t = 0; t < total; t += 0.25) { const c = naTela(t); if (c) v.push(c); }
+      if (v.length) {
+        queixo ??= Math.round(pct(v.map((c) => c[1] + c[3] / 2), 0.9));
+        testa = Math.round(pct(v.map((c) => c[1] - c[3] / 2), 0.1));
+      }
+    }
+    const topo = Math.max(CAIXA_TOPO, Math.round((queixo ?? 0) + 60));
+    delete caixa.queixo;
+    if (topo <= CAIXA_TOPO_MAX) caixa.topo = topo;
+    else if (testa != null && testa - 30 - CAIXA_ALTO >= CAIXA_ALTO_MIN) {
+      Object.assign(caixa, { lugar: "alto", topo: CAIXA_ALTO, fim: testa - 30, legenda: Math.min(queixo + 30, LEGENDA_PISO - LEGENDA_ALTO) });
+      avisar(`montar: o rosto está grande e baixo para a caixinha caber embaixo do queixo (${queixo}); ela foi para o alto, de ${CAIXA_ALTO} a ${caixa.fim}, e a legenda para logo abaixo do queixo.`);
+    } else
+      throw new Error(`montar: com o queixo em ${queixo}, a caixinha começaria em ${topo} e não sobra lugar para ela e a legenda acima dos botões do Instagram (o queixo pode ir até ${CAIXA_TOPO_MAX - 60}), nem acima da cabeça. O rosto está baixo demais para este estilo: ofereça outro estilo ao dono.`);
+  }
 
   // Escolhas do vídeo; palavra escolhida que não aparece na fala, na ordem, é avisada e fica de fora
   const pal = palavras.map(([txt]) => ({ txt }));
@@ -1140,12 +1166,16 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
   // (mesma imagem), só para não repetir início e duração do trecho: o lint acusa duplicate_media_discovery_risk e o check --strict reprova
   let camada = "";
   if (capa) {
+    // Estilo de janela com a fonte.mp4 recortada na proporção da janela: a capa, em tela cheia, sai da fonte-inteira.mp4
+    // com o enquadramento de tela cheia do rosto.json (o recorte levado a 1080x1920 por posição e tamanho do vídeo)
+    const r = lerRosto(), cheia = r?.capa && existsSync(join(pasta, "fonte-inteira.mp4")) ? r.capa : null, k = cheia && 1920 / cheia.ch;
+    const pos = cheia ? `\n      .capa-trecho { inset: auto; left: ${Math.round(-cheia.x * k)}px; top: ${Math.round(-cheia.y * k)}px; width: ${Math.round(r.rastro.W * k)}px; height: ${Math.round(r.rastro.H * k)}px; object-fit: fill; }` : "";
     const copias = trechos.filter((s) => s.ini < capa.fim).map((s, i) =>
-      `          <video id="capa-trecho-${i + 1}" class="capa-trecho" src="fonte.mp4" data-start="${s.ini.toFixed(3)}" data-duration="${Math.min(s.dur - 0.001, capa.fim - s.ini).toFixed(3)}" data-media-start="${s.src.toFixed(3)}" data-track-index="${faixas + 1}" muted playsinline></video>`);
+      `          <video id="capa-trecho-${i + 1}" class="capa-trecho" src="${cheia ? "fonte-inteira.mp4" : "fonte.mp4"}" data-start="${s.ini.toFixed(3)}" data-duration="${Math.min(s.dur - 0.001, capa.fim - s.ini).toFixed(3)}" data-media-start="${s.src.toFixed(3)}" data-track-index="${faixas + 1}" muted playsinline></video>`);
     camada = `      <style>
       #capa { position: absolute; inset: 0; overflow: hidden; }
       #capa-enquadramento { position: absolute; inset: 0; overflow: hidden; transform-origin: ${foco}; }
-      .capa-trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: ${foco}; transform: translateY(var(--desce, 0px)); }
+      .capa-trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: ${foco}; transform: translateY(var(--desce, 0px)); }${pos}
       #capa-veu, #capa-faixa, #capa-filete { position: absolute; }
       #capa-gancho { position: absolute; left: 90px; right: 90px; margin: 0; font-family: "${html(marca.fontes.titulo)}", sans-serif; font-weight: 800; line-height: 1; }
       .capa-linha { display: block; width: max-content; white-space: nowrap; }${CAPA[capa.estilo](html(marca.fontes.destaque ?? ""))}
@@ -1171,6 +1201,8 @@ ${copias.join("\n")}
   // do rastro do rosto (rosto.json, do passo 1b) e das faixas de texto do molde; o que não cabe fica de fora, com aviso.
   let molde = readFileSync(join(RAIZ, "estilos", `${esc.estilo}.html`), "utf8");
   if (dados.legenda === "corrida") molde = molde.replace(PALAVRA_8, LEGENDA_8).replace('<div id="palavra"></div>', '<div id="legenda"></div>');
+  // Caixinha no alto: a faixa da legenda no CSS é a de verdade (a conferência e a aproximação leem dali)
+  if (caixa?.lugar === "alto") molde = molde.replace(LEGENDA_CAIXINHA, LEGENDA_CAIXINHA.replace("top: 1250px; height: 250px;", `top: ${caixa.legenda}px; height: ${LEGENDA_ALTO}px;`));
   let trechosHtml = videos.join("\n");
   if (esc.aproximar != null && esc.aproximar !== false) {
     if (!Array.isArray(esc.aproximar) || esc.aproximar.some((f) => typeof f !== "string" || !f.trim()))
@@ -1183,7 +1215,7 @@ ${copias.join("\n")}
         // nos Destaques tipográficos, com o vídeo aproximado para a frase ou peça (dados.abre) não se aproxima no rosto; sem
         // essa aproximação, a frase e a peça ficam com o vídeo como foi gravado e as faixas delas valem
         const faixas = [...zonas(molde, total), ...(dados.abre?.length ? [] : dados.faixas ?? [])];
-        if (caixa) faixas.push({ y0: caixa.topo, y1: 1500, x0: 90, x1: 990 });
+        if (caixa) faixas.push({ y0: caixa.topo, y1: caixa.fim ?? 1500, x0: caixa.lugar === "alto" ? 50 : 90, x1: caixa.lugar === "alto" ? 1030 : 990 });
         // nos Destaques tipográficos a aproximação só acontece com o enquadramento fechado (o vídeo como foi gravado)
         const { W, H } = medidas(fonte);
         const r = planejarAproximacao({ frases: esc.aproximar, pal: EC.mapear(palavras, trechos, total), trechos, total, rosto, fonte: { W, H }, janela, faixas, foco, desde: capa ? capa.fim : 0 });

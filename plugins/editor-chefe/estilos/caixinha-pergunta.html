@@ -20,6 +20,10 @@
       }
       #caixinha-chamada { background: #262B2E; color: #FFFFFF; font-size: 32px; line-height: 1.2; padding: 29px 36px; white-space: nowrap; }
       #caixinha-pergunta { background: #FFFFFF; color: #262626; font-size: 46px; line-height: 1.22; padding: 38px 48px 42px; text-wrap: balance; }
+      /* Caixinha no alto, acima da cabeça (rosto grande e baixo demais para ela caber embaixo do queixo): mais larga e com letra maior */
+      #caixinha.alto { left: 50px; width: 980px; }
+      #caixinha.alto #caixinha-chamada { font-size: 40px; padding: 30px 44px; }
+      #caixinha.alto #caixinha-pergunta { font-size: 62px; line-height: 1.2; padding: 40px 50px 46px; }
       /* Legenda viva entre a caixinha (+ 40 px) e y 1500; o script põe a faixa e o véu na altura certa */
       #veu-legenda { position: absolute; left: 0; right: 0; top: 1185px; height: 380px; opacity: {{VEU}}; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 28%, color-mix(in srgb, var(--fundo-escuro) 62%, transparent) 72%, transparent); } /* só com a faixa da legenda clara: o montar.mjs mede */
       #legenda { position: absolute; left: 90px; right: 90px; top: 1250px; height: 250px; }
@@ -55,7 +59,9 @@
       // Medidas de layout (offset*, client*), que não mudam com a escala da prévia; refeitas quando a fonte carrega.
       const cx = $("caixinha"), ch = $("caixinha-chamada"), pg = $("caixinha-pergunta"), leg = $("legenda");
       const BASE = 1500, FOLGA = 40, LEGENDA = 181; // duas linhas da legenda (82 px, altura de linha 1,1)
+      const alto = D.caixinha.lugar === "alto";
       cx.style.top = D.caixinha.topo + "px";
+      if (alto) cx.classList.add("alto");
       ch.textContent = D.caixinha.chamada;
       pg.textContent = D.caixinha.pergunta;
       const medir = (final) => {
@@ -63,13 +69,15 @@
         const lado = px(ch, "paddingLeft"), livre = ch.clientWidth - 2 * lado;
         if (ch.scrollWidth - 2 * lado > livre) ch.style.fontSize = Math.floor((px(ch, "fontSize") * livre) / (ch.scrollWidth - 2 * lado)) + "px";
         const linhas = () => Math.round((pg.clientHeight - px(pg, "paddingTop") - px(pg, "paddingBottom")) / px(pg, "lineHeight"));
-        const sobra = () => BASE - (cx.offsetTop + cx.offsetHeight + FOLGA) - LEGENDA;
-        while ((linhas() > 3 || sobra() < 0) && px(pg, "fontSize") > 30) pg.style.fontSize = px(pg, "fontSize") - 2 + "px";
-        const topo = cx.offsetTop + cx.offsetHeight + FOLGA;
-        Object.assign(leg.style, { top: topo + "px", height: Math.max(0, BASE - topo) + "px" });
-        $("veu-legenda").style.top = Math.round((topo + BASE) / 2 - 190) + "px";
+        // no alto: até 4 linhas, e a caixa termina antes de D.caixinha.fim (acima da cabeça); a legenda fica onde o montar pôs
+        const sobra = alto ? () => D.caixinha.fim - (cx.offsetTop + cx.offsetHeight) : () => BASE - (cx.offsetTop + cx.offsetHeight + FOLGA) - LEGENDA;
+        while ((linhas() > (alto ? 4 : 3) || sobra() < 0) && px(pg, "fontSize") > 30) pg.style.fontSize = px(pg, "fontSize") - 2 + "px";
+        const topo = alto ? leg.offsetTop : cx.offsetTop + cx.offsetHeight + FOLGA, fim = alto ? topo + leg.offsetHeight : BASE;
+        if (!alto) Object.assign(leg.style, { top: topo + "px", height: Math.max(0, BASE - topo) + "px" });
+        $("veu-legenda").style.top = Math.round((topo + fim) / 2 - 190) + "px";
         if (final && sobra() < 0)
-          console.error(`Editor Chefe: a caixinha não cabe com a legenda acima de ${BASE} px (faltam ${Math.ceil(-sobra())} px). Encurte a pergunta, confira o queixo ou ofereça outro estilo ao dono.`);
+          console.error(alto ? `Editor Chefe: a caixinha no alto não cabe acima da cabeça (faltam ${Math.ceil(-sobra())} px). Encurte a pergunta ou ofereça outro estilo ao dono.`
+            : `Editor Chefe: a caixinha não cabe com a legenda acima de ${BASE} px (faltam ${Math.ceil(-sobra())} px). Encurte a pergunta, confira o queixo ou ofereça outro estilo ao dono.`);
       };
       medir();
       // A HyperFrames espera essa promessa antes de gravar

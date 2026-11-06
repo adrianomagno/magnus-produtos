@@ -10,17 +10,17 @@
       :root { --fundo-claro: {{FUNDO_CLARO}}; --fundo-escuro: {{FUNDO_ESCURO}}; --texto: {{TEXTO}}; --destaque: {{DESTAQUE}}; }
       html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; }
       #raiz { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "{{TITULO}}", sans-serif; background: var(--fundo-escuro); color: var(--fundo-claro); }
-      /* Metade de cima (0 a 960): cabeçalho com a marca no fundo escuro, painel branco de 230 a 870 com o título da ideia e a animação */
+      /* Parte de cima (0 a 768, 40% da tela): cabeçalho com a marca no fundo escuro, painel branco de 214 a 738 com o título da ideia e a animação */
       #cabeca { position: absolute; left: 64px; top: 150px; height: 40px; display: flex; align-items: center; gap: 18px; }
       #cabeca-filete { width: 48px; height: 6px; border-radius: 3px; background: var(--filete); }
       #cabeca-nome { font-weight: 800; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fundo-claro); }
-      #painel { position: absolute; left: 48px; top: 230px; width: 984px; height: 640px; box-sizing: border-box; border-radius: 28px; background: var(--painel); }
-      #ideias { position: absolute; left: 0; top: 0; width: 1080px; height: 960px; }
+      #painel { position: absolute; left: 48px; top: 214px; width: 984px; height: 524px; box-sizing: border-box; border-radius: 28px; background: var(--painel); }
+      #ideias { position: absolute; left: 0; top: 0; width: 1080px; height: 768px; }
       .ideia { position: absolute; inset: 0; opacity: 0; }
       .ideia-num { position: absolute; right: 64px; top: 150px; height: 40px; line-height: 40px; font-weight: 800; font-size: 26px; letter-spacing: 0.08em; color: var(--num-cabeca); }
-      .ideia-tit { position: absolute; left: 88px; right: 88px; top: 262px; height: 136px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 56px; line-height: 1.1; letter-spacing: -0.015em; color: var(--texto-painel); }
+      .ideia-tit { position: absolute; left: 88px; right: 88px; top: 236px; height: 124px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 56px; line-height: 1.1; letter-spacing: -0.015em; color: var(--texto-painel); }
       .ideia-tit em { font-style: normal; color: var(--linha); }
-      .anim { position: absolute; left: 88px; right: 88px; top: 410px; height: 420px; display: flex; align-items: center; justify-content: center; }
+      .anim { position: absolute; left: 88px; right: 88px; top: 368px; height: 356px; display: flex; align-items: center; justify-content: center; }
       .rot { font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.12; text-align: center; color: var(--texto-painel); overflow-wrap: normal; }
       .caixa-anim { box-sizing: border-box; border: 3px solid var(--linha); border-radius: 22px; background: var(--painel); display: flex; align-items: center; justify-content: center; }
       .caixa-anim.forte { background: var(--forte); }
@@ -67,12 +67,12 @@
       .balao.resposta .balao-cauda { left: auto; right: 50px; background: var(--forte); }
       .balao-sinal { position: absolute; right: -26px; top: -26px; width: 60px; height: 60px; box-sizing: border-box; border-radius: 50%; border: 3px solid var(--linha); background: var(--painel); color: var(--linha); font-weight: 800; font-size: 40px; display: flex; align-items: center; justify-content: center; }
       .balao .rot { min-width: 0; text-transform: none; text-align: left; letter-spacing: 0; font-size: 48px; line-height: 1.18; }
-      /* Metade de baixo (960 a 1920): o vídeo em toda a largura */
-      #janela { position: absolute; left: 0; top: 960px; width: 1080px; height: 960px; overflow: hidden; }
+      /* Parte de baixo (768 a 1920, 60% da tela): o vídeo em toda a largura */
+      #janela { position: absolute; left: 0; top: 768px; width: 1080px; height: 1152px; overflow: hidden; }
       #enquadramento { position: absolute; inset: 0; overflow: hidden; }
       .trecho { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: {{FOCO}}; }
       /* A emenda: filete na cor de destaque */
-      #emenda { position: absolute; left: 0; right: 0; top: 957px; height: 6px; background: var(--filete); }
+      #emenda { position: absolute; left: 0; right: 0; top: 765px; height: 6px; background: var(--filete); }
       /* A legenda corrida do Corte seco, sem caixa, dentro da metade do vídeo, embaixo e longe do rosto (1500 a 1650) */
       #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }
     </style>
@@ -295,7 +295,7 @@
           const tit = c.titulo && el.appendChild(novo("h2", "ideia-tit", `${id}-tit`));
           const frase = tit && tit.appendChild(novo("span", "", `${id}-tit-texto`)); // um item só no flex: os espaços em volta da *palavra* ficam
           if (tit) c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? frase.appendChild(novo("em", "", "", parte.slice(1, -1))) : frase.append(parte)));
-          if (tit) caber(tit, 136);
+          if (tit) caber(tit, 124);
           const anim = el.appendChild(novo("div", `anim ${c.animacao}`, `${id}-anim`));
           ANIM[c.animacao](anim, c.itens, EC.batidas(PAL, c.itens, ini, fim).map((b) => b.t), id, ini, c.icones);
           tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);

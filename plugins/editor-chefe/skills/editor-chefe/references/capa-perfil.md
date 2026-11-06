@@ -56,8 +56,8 @@ Abaixo do título, com o logo do `marca.json` (ou o nome do negócio, se não ho
 
 Na pasta do vídeo, depois do prefixo `eval`:
 
-1. **Os quadros:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/capa-perfil.mjs" quadros .` Ele usa o `original` da pasta (o vídeo do dono em resolução cheia, sem legenda), só dos trechos que ficaram na edição, acha o rosto em 24 quadros e guarda os 6 com o rosto maior, com a folha `capa-perfil/candidatos.jpg` (de 1 a 6, da esquerda para a direita, de cima para baixo). Se o dono mandou um vídeo de maior resolução que o original da pasta, passe o caminho dele depois do ponto.
-2. **Olhe a folha** e escolha o quadro com os olhos abertos, expressão natural e boca fechada ou sorrindo. Se nenhum servir, rode de novo numa janela do vídeo (`--de 12 --ate 20`, em segundos do original). Mostre ao dono o quadro escolhido junto com o título.
+1. **Os quadros:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/capa-perfil.mjs" quadros .` Ele usa o `original` da pasta (o vídeo do dono em resolução cheia, sem legenda), só dos trechos que ficaram na edição, acha o rosto em 36 quadros e dá uma nota ao ângulo de cada um: rosto de frente (pelos olhos, nariz e boca), olhos abertos, boca fora do meio de uma palavra (pelos tempos do `transcript.json`), rosto nítido, sem borrão de movimento, boa luz e, por último, rosto maior. Guarda os 6 melhores, do melhor para o pior, com a folha `capa-perfil/candidatos.jpg` (de 1 a 6, da esquerda para a direita, de cima para baixo) e a nota de cada um no `capa-perfil/candidatos.json`. Se o dono mandou um vídeo de maior resolução que o original da pasta, passe o caminho dele depois do ponto.
+2. **Olhe a folha:** o 1 é o recomendado. Confira nele os olhos abertos, a expressão natural e a boca fechada ou sorrindo; se outro estiver melhor aos seus olhos, ou o dono preferir outro, use esse. Se nenhum servir, rode de novo numa janela do vídeo (`--de 12 --ate 20`, em segundos do original). Mostre ao dono o quadro escolhido junto com o título.
 3. **O pedido da capa:** grave o `capa-perfil.json` na pasta do vídeo:
 
        { "quadro": 4, "titulo": "Um dia para olhar *seu negócio.*", "selo": "24/10 · Centro" }

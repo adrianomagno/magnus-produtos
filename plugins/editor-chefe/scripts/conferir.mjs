@@ -22,17 +22,22 @@ const seg = (x) => x.toFixed(1).replace(".", ",");
 // Faixas de texto do projeto, no quadro 1080x1920: [{ nome, y0, y1, x0, x1, de, ate }]
 export function zonas(html, duracao) {
   const z = [], r = /#(legenda|palavra|chaves) \{[^}]*?left: (\d+)(?:px)?; right: (\d+)(?:px)?; top: (\d+)px; height: (\d+)px;/.exec(html);
-  if (r) z.push({ nome: r[1] === "legenda" ? "a legenda" : "a palavra na tela", y0: +r[4], y1: +r[4] + +r[5], x0: +r[2], x1: 1080 - +r[3], de: 0, ate: duracao });
   const d = /const D = (\{.*\});/.exec(html);
   let D = {};
   try { D = d ? JSON.parse(d[1]) : {}; } catch { /* molde ainda sem os dados */ }
+  // Com gancho de capa, o texto do estilo fica escondido até a camada da capa começar a sumir (capa.fim - 0,25 s, no
+  // comum.js); antes disso, o rosto que aparece é o da capa, em tela cheia, e não está embaixo da legenda
+  const solta = D.capa ? D.capa.fim - 0.25 : 0;
+  if (r) z.push({ nome: r[1] === "legenda" ? "a legenda" : "a palavra na tela", y0: +r[4], y1: +r[4] + +r[5], x0: +r[2], x1: 1080 - +r[3], de: solta, ate: duracao });
   // Faixas com tempo que o montador calcula para o vídeo (as frases e as peças do estilo 11, acima da cabeça ou embaixo do queixo)
   if (Array.isArray(D.faixas)) z.push(...D.faixas.map(({ nome, y0, y1, x0, x1, de, ate }) => ({ nome, y0, y1, x0, x1, de, ate })));
-  if (D.caixinha) z.push({ nome: "a caixinha", y0: D.caixinha.topo, y1: 1500, x0: 90, x1: 990, de: 0, ate: duracao });
+  if (D.caixinha) z.push(D.caixinha.lugar === "alto" ? { nome: "a caixinha", y0: D.caixinha.topo, y1: D.caixinha.fim, x0: 50, x1: 1030, de: 0, ate: duracao }
+    : { nome: "a caixinha", y0: D.caixinha.topo, y1: 1500, x0: 90, x1: 990, de: 0, ate: duracao });
   if (D.capa) {
     const { estilo, queixo, fim } = D.capa, topo = Math.max(1000, queixo + 160);
     const y = { faixa: [0, 550], manchete: [topo, topo + 345], editorial: [1200, 1480] }[estilo];
-    if (y) z.push({ nome: "o gancho de capa", y0: y[0], y1: y[1], x0: 90, x1: 990, de: 0, ate: fim });
+    // até a camada começar a sumir: dali ao fim ela se mistura com o vídeo do estilo, e o rosto achado é o dele
+    if (y) z.push({ nome: "o gancho de capa", y0: y[0], y1: y[1], x0: 90, x1: 990, de: 0, ate: fim - 0.25 });
   }
   return z;
 }

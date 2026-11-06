@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { trajetoria, recortar, reenquadrar, desligar, medidas, JANELA, planejarAproximacao, ZOOM, ZOOM_AMPLIADO, ZOOM_MIN } from '../plugins/editor-chefe/scripts/rosto.mjs';
+import { trajetoria, recortar, reenquadrar, desligar, medidas, JANELA, AREA, enquadrar, ZOOM_ENQ, FOLGA_OLHOS, rostoNaJanela, planejarAproximacao, ZOOM, ZOOM_AMPLIADO, ZOOM_MIN } from '../plugins/editor-chefe/scripts/rosto.mjs';
 
 const EST = new URL('../plugins/editor-chefe/estilos/', import.meta.url);
 const dir = mkdtempSync(join(tmpdir(), 'rosto-'));
@@ -140,4 +140,34 @@ test('aproximação: no recorte que segue o rosto, desconta o x do corte; vídeo
   const s = 1920 / 1080;
   assert.equal(a.ox, Math.round(300 * s - (608 * s - 1080) * 0.5));
   assert.equal(a.z, ZOOM_AMPLIADO, 'fonte de 1080 de altura ampliada 1,78 vez: aproximação contida');
+});
+
+// Enquadramento parado (0.9.2): os olhos no terço de cima da área útil, com a menor ampliação, até ZOOM_ENQ
+test('enquadrar: rosto baixo no vídeo em pé sobe com ampliação; rosto já alto fica como está; a testa nunca sai', () => {
+  const n = 10, rep = (c) => Array(n).fill(c);
+  // a gravação 480x848 de rosto baixo (olhos em 0,48 da altura): amplia e sobe os olhos até o alvo de 647
+  const baixo = enquadrar({ W: 480, H: 848, bw: 1080, bh: 1920, area: AREA['legenda-viva'], caixas: rep([240, 440, 170, 245]), olhos: rep(410) });
+  assert.equal(baixo.alvo, 647);
+  assert.ok(baixo.z > 1 && baixo.z <= ZOOM_ENQ, JSON.stringify(baixo));
+  assert.ok(Math.abs(baixo.olhos - 647) <= FOLGA_OLHOS, JSON.stringify(baixo));
+  assert.ok(Math.abs(baixo.cw / baixo.ch - 1080 / 1920) < 0.01 && baixo.y + baixo.ch <= 848 && baixo.y >= 0);
+  assert.ok(((440 - 245 / 2) - baixo.y) * (1920 / baixo.ch) >= 0, 'a testa fica dentro da janela');
+  // rosto já no alto: nada muda
+  assert.equal(enquadrar({ W: 480, H: 848, bw: 1080, bh: 1920, area: AREA['legenda-viva'], caixas: rep([240, 300, 170, 245]), olhos: rep(270) }).z, 1);
+  // rosto baixo demais para ZOOM_ENQ: o mais perto possível, sem passar do teto
+  const muito = enquadrar({ W: 480, H: 848, bw: 1080, bh: 1920, area: AREA['legenda-viva'], caixas: rep([240, 600, 150, 200]), olhos: rep(580) });
+  assert.equal(muito.z, ZOOM_ENQ);
+  // tela dividida, vídeo 1080x1920: sem ampliar, o recorte da janela (1080x1152) desce até os olhos ficarem no alvo
+  const div = enquadrar({ W: 1080, H: 1920, bw: 1080, bh: 1152, area: AREA['motion-dividido'], caixas: rep([540, 880, 450, 600]), olhos: rep(808) });
+  assert.deepEqual([div.z, div.cw, div.ch], [1, 1080, 1152]);
+  assert.ok(Math.abs(div.olhos - div.alvo) <= 1 && div.alvo === 244, JSON.stringify(div));
+  // caixinha: o queixo precisa ficar até 1010; rosto grande e baixo demais, nenhuma ampliação permitida chega: null
+  assert.equal(enquadrar({ W: 480, H: 848, bw: 1080, bh: 1920, area: AREA['caixinha-pergunta'], caixas: rep([240, 470, 170, 260]), olhos: rep(440) }), null);
+  assert.equal(enquadrar({ W: 480, H: 848, bw: 1080, bh: 1920, area: AREA['legenda-viva'], caixas: rep(null), olhos: rep(null) }), null);
+});
+
+test('rosto na janela com o recorte de cima (corte_y): o rastro desce junto com o recorte', () => {
+  const rosto = { corte_x: [0, 0], corte_y: 100, recorte: [480, 512], rastro: { qps: 2, W: 480, H: 848, caixas: [[240, 400, 100, 100], [240, 400, 100, 100]] } };
+  const c = rostoNaJanela(rosto, { W: 480, H: 512 }, [0, 768, 1080, 1152], '50% 40%', [{ ini: 0, dur: 1, src: 0 }])(0.2);
+  assert.deepEqual(c.map(Math.round), [540, 675, 225, 225]);
 });

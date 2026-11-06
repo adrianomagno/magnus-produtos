@@ -18,7 +18,7 @@ O dono escolhe pelo número. Cada estilo diz o que faz, o que precisa, se aceita
 
 ### Tela dividida (de 7 a 9)
 
-A pessoa grande na metade de baixo, texto ou animação na de cima. Todos precisam da gravação. No 7 e no 9 a legenda é corrida, sem caixa, dentro do vídeo; no 8 a palavra grande fica na emenda.
+A pessoa grande nos 60% de baixo da tela, texto ou animação nos 40% de cima. Todos precisam da gravação. No 7 e no 9 a legenda é corrida, sem caixa, dentro do vídeo; no 8 a palavra grande fica na emenda.
 
 7. **Painel escuro dividido** (`painel-escuro-dividido`): fundo escuro em cima, com os cartões de informação. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 8. **Editorial claro dividido** (`editorial-claro-dividido`): fundo claro em cima, com o título do cartão; uma palavra por vez no meio. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
@@ -35,7 +35,7 @@ Só animação, narrada por voz a partir de um texto do dono.
 Com gravação: o texto da fala entra na tela no instante em que é dito, sem cobrir o rosto.
 
 11. **Destaques tipográficos** (`destaques-tipograficos`): a pessoa em tela cheia e a legenda de uma palavra por vez, em caixa alta e letra condensada, com a palavra-chave na cor de destaque; acima da cabeça, no instante da palavra, a frase forte em letra grande e as peças animadas na marca do negócio: selo de aprovado ou reprovado, lista que se escreve com check, capítulo numerado, "Comenta PALAVRA", objeto (dinheiro, calendário, balança, dente e outros, em 3D colorido ou num estilo sóbrio de traço nas cores da marca, para médicos, advogados e profissionais da mesma linha), o ícone do aplicativo que a pessoa citou, uma janela com um print que o dono mandar e um esquema. O vídeo fica sempre na tela inteira, sem moldura: com a cabeça alta, ele aproxima um pouco para abrir lugar acima dela; quando em cima não cabe (a selfie com a cabeça colada no topo, a gravação de rosto grande), a frase e as peças entram logo abaixo do queixo e a legenda sai da tela enquanto elas estão ali, menos na janela com print, que não mostra a fala: com ela, a legenda fica e, se a janela também descer para embaixo do queixo, sobe para acima da cabeça. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
-12. **Papelaria** (`papelaria`): visual claro de papel de caderno na metade de cima, com cartões brancos em letra de mão; quando a fala enumera coisas, o cartão leva a lista, e cada item ganha o check (ou é riscado) no instante em que é dito. A pessoa na metade de baixo, com a legenda corrida, sem caixa, dentro do vídeo. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
+12. **Papelaria** (`papelaria`): visual claro de papel de caderno na parte de cima, com cartões brancos em letra de mão; quando a fala enumera coisas, o cartão leva a lista, e cada item ganha o check (ou é riscado) no instante em que é dito. A pessoa na metade de baixo, com a legenda corrida, sem caixa, dentro do vídeo. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 
 ### Tipo de vídeo e efeitos sonoros
 
