@@ -47,7 +47,7 @@
     </div>
     <script>
       const D = {{DADOS}};
-      const EC = window.EditorChefe, novo = EC.novo, { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = EC.iniciar(D.palavras);
+      const EC = window.EditorChefe, novo = EC.novo, C = EC.iniciar(D.palavras), { TOTAL, TRECHOS, PAL, CLARO, TEXTO, DESTAQUE } = C;
       const naEdicao = (t) => EC.naEdicao(t, "ini", TRECHOS, TOTAL);
       const tl = gsap.timeline({ paused: true });
 
@@ -59,7 +59,7 @@
         const el = host.appendChild(novo("div", "cartao", id));
         const olho = el.appendChild(novo("div", "olho", `${id}-olho`, `${String(i + 1).padStart(2, "0")} · ${D.nome}`));
         const tit = el.appendChild(novo("h2", "tit", `${id}-tit`));
-        c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? tit.appendChild(novo("em", "", "", parte.slice(1, -1))) : tit.append(parte)));
+        EC.fraseNaFala(tl, tit, c.titulo, C, ini, fim, { id: `${id}-tit`, risco: c.risco }); // cada palavra acende quando é dita
         const filete = el.appendChild(novo("div", "filete", `${id}-filete`));
         tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
         tl.fromTo(olho, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);

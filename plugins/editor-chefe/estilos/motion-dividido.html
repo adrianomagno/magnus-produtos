@@ -294,7 +294,7 @@
           el.appendChild(novo("div", "ideia-num", `${id}-num`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`));
           const tit = c.titulo && el.appendChild(novo("h2", "ideia-tit", `${id}-tit`));
           const frase = tit && tit.appendChild(novo("span", "", `${id}-tit-texto`)); // um item só no flex: os espaços em volta da *palavra* ficam
-          if (tit) c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? frase.appendChild(novo("em", "", "", parte.slice(1, -1))) : frase.append(parte)));
+          if (tit) EC.fraseNaFala(tl, frase, c.titulo, C, ini, fim, { id: `${id}-tit`, risco: c.risco, entra: EC.ENTRA_TITULO, fundo: [255, 255, 255] }); // cada palavra acende quando é dita
           if (tit) caber(tit, 124);
           const anim = el.appendChild(novo("div", `anim ${c.animacao}`, `${id}-anim`));
           ANIM[c.animacao](anim, c.itens, EC.batidas(PAL, c.itens, ini, fim).map((b) => b.t), id, ini, c.icones);

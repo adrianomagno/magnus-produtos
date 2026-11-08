@@ -17,6 +17,14 @@ GSAP 3.14.2 (Webflow)
   criação de animação sem código que concorra com o Webflow. O Editor Chefe usa o GSAP
   em código gerado para renderizar vídeo e não oferece editor visual de animação.
 
+bang-motion (Bang Tutorial)
+  Licença MIT: https://github.com/bangtutorial/bang-motion/blob/main/LICENSE
+  Copyright (c) 2026 Bang Tutorial. Desde a 0.9.3, a frase do cartão que acende palavra por palavra no
+  instante da fala, o marca-texto e o risco na palavra forte (função fraseNaFala, em
+  plugins/editor-chefe/estilos/comum.js) são adaptados de padrões do bang-motion, reescritos para o
+  Editor Chefe; o aviso de copyright e o texto da licença MIT acompanham o trecho adaptado, no próprio
+  comum.js. Nenhum arquivo do bang-motion é copiado inteiro para este repositório.
+
 Efeitos sonoros (Pixabay)
   Licença: Pixabay Content License, https://pixabay.com/service/license-summary/
   Uso comercial e não comercial permitido, sem atribuição obrigatória.

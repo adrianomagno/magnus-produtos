@@ -152,9 +152,9 @@ function pastaEfeitos() {
 const FAIXA = { "legenda-viva": [1250, 1470, 70, 1010], "palavra-chave": [1220, 1520, 60, 1020], "corte-seco-zoom": [1270, 1470, 80, 1000], "caixinha-pergunta": [1250, 1500, 90, 990],
   "painel-escuro": [1262, 1380, 78, 1002], "painel-escuro-dividido": [1500, 1650, 60, 1020], "motion-dividido": [1500, 1650, 60, 1020], papelaria: [1500, 1650, 60, 1020], "editorial-claro-dividido": [1500, 1650, 60, 1020] };
 const METADE = [0, 768, 1080, 1152], JANELA_FAIXA = { "painel-escuro": [48, 790, 984, 600], "painel-escuro-dividido": METADE, "motion-dividido": METADE, papelaria: METADE, "editorial-claro-dividido": METADE };
-// Estilos com a legenda corrida do Corte seco (e o 8 com "legenda": "corrida"): a ênfase sai do "enfase" ou da palavra forte de cada cartão
+// Estilos com a legenda corrida do Corte seco (e o 8, que a usa por padrão desde a 0.9.3): a ênfase sai do "enfase" ou da palavra forte de cada cartão
 const CORRIDA = ["painel-escuro", "painel-escuro-dividido", "motion-dividido", "papelaria"];
-// O #palavra do Editorial claro dividido, que a opção "corrida" troca pela faixa da legenda dentro do vídeo
+// O #palavra do Editorial claro dividido, que a legenda "corrida" (o padrão desde a 0.9.3) troca pela faixa da legenda dentro do vídeo
 const PALAVRA_8 = "      #palavra { position: absolute; left: 40px; right: 40px; top: 688px; height: 160px; }";
 const LEGENDA_8 = "      #legenda { position: absolute; left: 60px; right: 60px; top: 1500px; height: 150px; }";
 const CLARA = 130, CLARA_STOMP = 185; // luma média (0 a 255) da faixa, no 90º percentil dos quadros; acima disso, véu
@@ -210,7 +210,7 @@ function motionCartao(c, n) {
   });
   if (c.animacao === "numero" && !EC.numero(itens[0])) throw new Error(`montar: no cartão ${n} (numero), o primeiro item é o número dito na fala, com algarismos, como "30%" ou "R$ 2.000".`);
   if (letrasTitulo > MAX_TITULO_IDEIA) throw new Error(`montar: o título do cartão ${n} tem ${letrasTitulo} caracteres; no Motion dividido cabem até ${MAX_TITULO_IDEIA}. Use menos palavras da fala.`);
-  return { de: c.de, titulo, animacao: c.animacao, itens, ...(comIcone ? { icones } : {}) };
+  return { de: c.de, titulo, animacao: c.animacao, itens, ...(comIcone ? { icones } : {}), ...(c.risco ? { risco: true } : {}) };
 }
 // Papelaria: confere o título, a lista e a marca de um cartão e devolve o cartão limpo (texto colado numa linha só)
 function papelCartao(c, n) {
@@ -1050,11 +1050,21 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
     dados.enfase = esc.enfase ?? [];
     conferir("enfase", dados.enfase);
   }
+  // Editorial claro dividido (0.9.3): os cartões cobrem toda a fala; os do dono são opcionais
+  if (esc.estilo === "editorial-claro-dividido" && esc.cartoes == null) esc.cartoes = [];
   if (EC.COM_CARTOES.includes(esc.estilo)) {
-    if (!Array.isArray(esc.cartoes) || !esc.cartoes.length || esc.cartoes.some((c) => !c || typeof c.de !== "number" || typeof c.titulo !== "string"))
+    if (!Array.isArray(esc.cartoes) || (!esc.cartoes.length && esc.estilo !== "editorial-claro-dividido") || esc.cartoes.some((c) => !c || typeof c.de !== "number" || typeof c.titulo !== "string"))
       throw new Error('montar: este estilo pede "cartoes": [{ "de": segundo do original, "titulo": "..." }].');
     esc.cartoes.forEach((c, i) => {
       if (i && !(c.de > esc.cartoes[i - 1].de)) throw new Error(`montar: os cartões precisam estar na ordem da fala: o cartão ${i + 1} ("de": ${c.de}) não vem depois do cartão ${i} ("de": ${esc.cartoes[i - 1].de}).`);
+    });
+    // "risco": true (0.9.3): a palavra forte do cartão é riscada quando é dita, no lugar do marca-texto. Só quando o
+    // cartão pede; a Papelaria tem a "marca" dela, na lista
+    esc.cartoes.forEach((c, i) => {
+      if (c.risco == null) return;
+      if (esc.estilo === "papelaria") throw new Error(`montar: na Papelaria, o cartão ${i + 1} não leva "risco"; para riscar os itens da lista, use "marca": "risco".`);
+      if (typeof c.risco !== "boolean") throw new Error(`montar: no cartão ${i + 1}, "risco" é true (a palavra forte é riscada quando é dita) ou false.`);
+      if (c.risco && !/\*[^*]+\*/.test(c.titulo)) throw new Error(`montar: o cartão ${i + 1} pede "risco", mas o título não tem a palavra forte entre asteriscos, como "Não é a *lei*".`);
     });
     let cartoes = esc.cartoes;
     if (esc.estilo === "papelaria") { // título e item que não estão na fala daquele cartão são avisados
@@ -1073,13 +1083,23 @@ export function montar(pasta, avisar = (m) => console.error(m)) {
       cartoes.forEach((c, i) => EC.batidas(PAL, c.itens, em(c.de), cartoes[i + 1] ? em(cartoes[i + 1].de) : total).forEach((b, k) => b.achou ||
         avisar(`montar: o item "${c.itens[k]}" do cartão ${i + 1} não aparece igual na fala desse cartão; ${k ? "ele entra 0,5 s depois do anterior" : "ele entra junto com o título, mas o texto precisa ser da fala"}. Use as palavras da fala, seguidas e na ordem em que foram ditas.`)));
     }
+    if (esc.estilo === "editorial-claro-dividido") { // a fala inteira em cartões, os do dono nos trechos deles
+      const PALC = EC.mapear(palavras, trechos, total).map((p, i) => ({ ...p, src: palavras[i][1], srcFim: palavras[i][2] }));
+      const em = (s) => EC.naEdicao(s, "ini", trechos, total);
+      const r = EC.cobrirFala(PALC, cartoes.map((c, i) => ({ ...c, ini: em(c.de), fim: cartoes[i + 1] ? em(cartoes[i + 1].de) : total })));
+      r.fora.forEach((n) => avisar(`montar: o título "${cartoes[n - 1].titulo.replace(/\*/g, "")}" do cartão ${n} não aparece igual na fala desse cartão; no lugar dele entra a fala literal. Use as palavras da fala, seguidas e na ordem em que foram ditas.`));
+      cartoes = r.cartoes;
+      dados.cobrir = true;
+    }
     Object.assign(dados, { nome: marca.nome ?? "", cartoes });
   }
   // Legenda corrida do Corte seco nos estilos com cartões (4, 7, 9, 12 e, como opção de teste, o 8): as palavras de ênfase
   // são as de "enfase" (como no Corte seco) ou, sem ele, a palavra forte (*assim*) de cada cartão, dita no tempo dele
   if (esc.estilo === "editorial-claro-dividido") {
-    if (esc.legenda != null && !["palavra", "corrida"].includes(esc.legenda)) throw new Error('montar: "legenda" no Editorial claro dividido é "palavra" (a palavra grande na emenda, o padrão) ou "corrida" (a legenda do Corte seco dentro do vídeo, opção de teste).');
-    if (esc.legenda === "corrida") dados.legenda = "corrida";
+    // Desde a 0.9.3 os cartões mostram a fala inteira, palavra por palavra, então a legenda sai (decisão de 2026-11-08):
+    // repetia o texto. "corrida" traz a legenda sem caixa dentro do vídeo; "palavra", a palavra em caixa clara na emenda
+    if (esc.legenda != null && !["nenhuma", "palavra", "corrida"].includes(esc.legenda)) throw new Error('montar: "legenda" no Editorial claro dividido é "nenhuma" (o padrão: os cartões já mostram a fala inteira), "corrida" (a legenda sem caixa dentro do vídeo) ou "palavra" (a palavra grande em caixa clara na emenda, como até a 0.9.2).');
+    dados.legenda = esc.legenda ?? "nenhuma";
   }
   if (CORRIDA.includes(esc.estilo) || dados.legenda === "corrida") {
     if (esc.enfase != null && (!Array.isArray(esc.enfase) || esc.enfase.some((w) => typeof w !== "string"))) throw new Error('montar: "enfase" é a lista das palavras da fala que ganham o traço na legenda, como "enfase": ["cláusula", "calma"].');
@@ -1201,6 +1221,7 @@ ${copias.join("\n")}
   // do rastro do rosto (rosto.json, do passo 1b) e das faixas de texto do molde; o que não cabe fica de fora, com aviso.
   let molde = readFileSync(join(RAIZ, "estilos", `${esc.estilo}.html`), "utf8");
   if (dados.legenda === "corrida") molde = molde.replace(PALAVRA_8, LEGENDA_8).replace('<div id="palavra"></div>', '<div id="legenda"></div>');
+  if (dados.legenda === "nenhuma") molde = molde.replace(PALAVRA_8 + "\n", "").replace('      <div id="palavra"></div>\n', "");
   // Caixinha no alto: a faixa da legenda no CSS é a de verdade (a conferência e a aproximação leem dali)
   if (caixa?.lugar === "alto") molde = molde.replace(LEGENDA_CAIXINHA, LEGENDA_CAIXINHA.replace("top: 1250px; height: 250px;", `top: ${caixa.legenda}px; height: ${LEGENDA_ALTO}px;`));
   let trechosHtml = videos.join("\n");

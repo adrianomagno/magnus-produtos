@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { montar, planoDestaques, lerPecas, GSAP_SHA256 } from '../plugins/editor-chefe/scripts/montar.mjs';
-import { zonas, cobre } from '../plugins/editor-chefe/scripts/conferir.mjs';
+import { zonas, cobre, cobertura, bloco, ALTURA } from '../plugins/editor-chefe/scripts/conferir.mjs';
 
 // banco local de peças só deste arquivo de teste (o montador guarda ali as peças e o logo do cliente)
 const BIB_TESTE = mkdtempSync(join(tmpdir(), 'biblioteca-'));
@@ -838,27 +838,65 @@ test('legenda do Corte seco: com a faixa da legenda clara no vídeo, o contorno 
   }
 });
 
-test('estilo 8: a palavra grande na emenda continua o padrão; "legenda": "corrida" é a opção de teste com a legenda do Corte seco', () => {
+test('estilo 8: sem legenda por padrão desde a 0.9.3 (os cartões mostram a fala inteira); "corrida" e "palavra" trazem de volta', () => {
   const dir = projeto('editorial-claro-dividido');
   try {
     montar(dir, () => {});
     let html = readFileSync(join(dir, 'index.html'), 'utf8');
-    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a palavra na tela', 688, 848]]);
-    assert.equal(lerD(dir).legenda, undefined);
-    writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda: 'corrida' }));
-    montar(dir, () => {});
-    html = readFileSync(join(dir, 'index.html'), 'utf8');
-    assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [['a legenda', 1500, 1650]]); // a conferência vê a faixa nova
-    assert.match(html, /<div id="legenda"><\/div>/);
-    assert.doesNotMatch(html, /<div id="palavra"><\/div>/);
+    assert.deepEqual(zonas(html, 8.2), []); // nada sobre o vídeo
+    assert.doesNotMatch(html, /<div id="(palavra|legenda)"><\/div>/);
+    assert.doesNotMatch(html, /#palavra \{/);
     const D = lerD(dir);
-    assert.equal(D.legenda, 'corrida');
-    assert.deepEqual(D.fortes.map((i) => D.palavras[i][0]), ['resposta', 'solução']);
+    assert.equal(D.legenda, 'nenhuma');
+    assert.equal(D.cobrir, true);
+    assert.equal(D.cartoes.map((c) => c.titulo.replace(/\*/g, '')).join(' ').toLowerCase(), texto.join(' ').toLowerCase()); // a fala inteira, na ordem
+    assert.ok(D.cartoes.some((c) => c.titulo === 'A *solução* sai antes do almoço.')); // o cartão do dono vale no trecho dele
+    for (const [legenda, zona] of [['corrida', ['a legenda', 1500, 1650]], ['palavra', ['a palavra na tela', 688, 848]]]) {
+      writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda }));
+      montar(dir, () => {});
+      html = readFileSync(join(dir, 'index.html'), 'utf8');
+      assert.deepEqual(zonas(html, 8.2).map((z) => [z.nome, z.y0, z.y1]), [zona]);
+      assert.equal(lerD(dir).legenda, legenda);
+    }
+    assert.deepEqual(lerD(dir).fortes, undefined);
     writeFileSync(join(dir, 'escolhas.json'), JSON.stringify({ estilo: 'editorial-claro-dividido', marca: MARCA, ...ESCOLHAS['editorial-claro-dividido'], legenda: 'caixa' }));
-    assert.throws(() => montar(dir, () => {}), /"legenda" no Editorial claro dividido é "palavra" \(a palavra grande na emenda, o padrão\) ou "corrida"/);
+    assert.throws(() => montar(dir, () => {}), /"legenda" no Editorial claro dividido é "nenhuma"/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('estilo 8: os cartões cobrem toda a fala, até sem cartão do dono; cartão do dono que não está na fala vira fala literal, com aviso', () => {
+  for (const cartoes of [[], [{ de: 4.8, titulo: 'Nada disso foi *dito* aqui' }]]) {
+    const dir = projeto('editorial-claro-dividido', { cartoes }), avisos = [];
+    try {
+      montar(dir, (m) => avisos.push(m));
+      const D = lerD(dir), html = readFileSync(join(dir, 'index.html'), 'utf8');
+      assert.equal(D.cartoes.map((c) => c.titulo).join(' '), texto.join(' '));
+      assert.ok(D.cartoes.every((c) => c.auto && c.titulo.length <= EC.CARTAO_8.letras + 6));
+      assert.ok(D.cartoes.every((c, i) => !i || c.de > D.cartoes[i - 1].de));
+      assert.equal(cobertura(html).pct, 100);
+      assert.ok(cobertura(html).buraco.s <= 0.6);
+      const D2 = { ...D, cartoes: D.cartoes.slice(0, -1) }, sem = cobertura(html.replace(/const D = (.*);/, () => `const D = ${JSON.stringify(D2)};`));
+      assert.ok(sem.pct < 100 && sem.faltam.length > 0); // sem o último cartão, a conferência acusa as palavras de fora
+      assert.equal(cobertura(html.replace('"cobrir":true', '"cobrir":false')), null); // os outros estilos não medem
+      assert.equal(avisos.length, cartoes.length);
+      if (cartoes.length) assert.match(avisos[0], /não aparece igual na fala desse cartão; no lugar dele entra a fala literal/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+});
+
+test('cobrirFala: quebra no fim da frase e no tamanho, palavra solta cola no vizinho, o "de" vem antes da primeira palavra', () => {
+  const ws = 'Um dois três quatro cinco seis sete oito nove dez onze doze treze catorze quinze dezesseis dezessete dezoito. E'.split(' ');
+  const pal = ws.map((txt, i) => ({ txt, ini: i * 0.3, fim: i * 0.3 + 0.25, src: i * 0.3 + 1, srcFim: i * 0.3 + 1.25 }));
+  const { cartoes } = EC.cobrirFala(pal, []);
+  assert.equal(cartoes.map((c) => c.titulo).join(' '), ws.join(' '));
+  assert.ok(cartoes.length >= 3 && cartoes.every((c) => c.titulo.length <= EC.CARTAO_8.letras + 6), JSON.stringify(cartoes));
+  assert.ok(cartoes.at(-1).titulo.endsWith('dezoito. E')); // "E" sozinho no fim colou no anterior
+  assert.equal(cartoes[0].de, +(1 - EC.CARTAO_8.antes).toFixed(3));
+  // o cartão do dono entra inteiro; a palavra solta antes dele (começo de frase) vai junto, com a letra dele minúscula
+  const pal2 = 'Fim. Eu Escuto isso aqui.'.split(' ').map((txt, i) => ({ txt, ini: i * 0.3, fim: i * 0.3 + 0.25, src: i * 0.3, srcFim: i * 0.3 + 0.25 }));
+  const r = EC.cobrirFala(pal2, [{ titulo: 'Escuto *isso* aqui.', ini: 0.5, fim: 9 }]);
+  assert.deepEqual(r.cartoes.map((c) => c.titulo), ['Fim.', 'Eu escuto *isso* aqui.']);
+});
 // Aproximação no rosto: fonte.mp4 de verdade (1080x1920, para o montador medir) e o rosto.json gravado depois dela
 function comRosto(estilo, extra, caixa = [540, 900, 300, 300]) {
   const dir = projeto(estilo, extra);
@@ -1284,4 +1322,109 @@ test('nenhum molde carrega script da internet: o GSAP vem do plugin, com o SHA-2
     montar(dir, () => {});
     assert.equal(sha(readFileSync(join(dir, 'gsap.min.js'))), GSAP_SHA256);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// 0.9.3: frase do cartão no ritmo da fala, com o marca-texto (ou o risco) na palavra forte quando ela é dita
+test('ritmo: cada palavra do título acende quando é dita; antes da entrada, com o título; fora da fala, com a anterior', () => {
+  const pal = EC.mapear(PALAVRAS, TRECHOS, 8.2), em = (w) => pal.find((p) => p.txt.replace(/[.,]/g, '') === w).ini;
+  const ini = EC.naEdicao(4.8, 'ini', TRECHOS, 8.2);
+  const t = EC.ritmo(pal, ['A', 'solução', 'sai', 'antes', 'do', 'almoço.'], ini, 8.2);
+  assert.deepEqual(t.slice(1), ['solução', 'sai', 'antes', 'do', 'almoço'].map((w) => +em(w).toFixed(3)));
+  assert.ok(t.every((x, i) => i === 0 || x >= t[i - 1])); // sempre em ordem
+  assert.deepEqual(EC.ritmo(pal, ['Nada', 'disso', 'foi', 'dito'], ini, 8.2), Array(4).fill(+(ini + 0.15).toFixed(3))); // título que não é literal sai inteiro, como antes
+  assert.deepEqual(EC.ritmo(pal, ['Aqui', 'na', 'loja'], 1, 8.2, 0.15).every((x) => x === 1.15), true); // dita antes da entrada: acende com o título
+  assert.ok(EC.ritmo(pal, ['almoço'], 0, 6.5).every((x) => x <= 6)); // nunca depois de fim - 0,5 s
+});
+
+test('fraseNaFala: palavras com id, marca-texto na forte quando ela é dita; com risco, o risco no lugar', () => {
+  const els = [], doc = { head: null, getElementById: (i) => els.find((e) => e.id === i) ?? null, createElement: (tag) => {
+    const e = { tag, children: [], className: '', id: '', textContent: '', style: { setProperty() {} }, appendChild(x) { this.children.push(x); els.push(x); return x; }, append(x) { this.children.push(x); } };
+    return e;
+  } };
+  doc.head = doc.createElement('head');
+  globalThis.document = doc;
+  try {
+    for (const risco of [false, true]) {
+      const chamadas = [], tl = { fromTo: (el, de, ate, t) => chamadas.push({ el, de, ate, t }), set: (el, ate, t) => chamadas.push({ el, de: {}, ate, t }) }, alvo = doc.createElement('h2');
+      const c = { PAL: EC.mapear(PALAVRAS, TRECHOS, 8.2), CLARO: '#F5F0EA', ESCURO: '#2E231C', DESTAQUE: '#8F6C22' }, ini = EC.naEdicao(4.8, 'ini', TRECHOS, 8.2);
+      const ws = EC.fraseNaFala(tl, alvo, 'A *solução* sai antes do almoço.', c, ini, 8.2, { id: 'cartao-2-tit', risco });
+      assert.deepEqual(ws.map((w) => w.el.id), [1, 2, 3, 4, 5, 6].map((n) => `cartao-2-tit-p${n}`));
+      const forte = ws.find((w) => w.forte);
+      assert.equal(forte.txt, 'solução');
+      assert.equal(forte.el.className, risco ? 'fw risco' : 'fw marca');
+      const traco = chamadas.find((x) => x.el === forte.el && 'backgroundSize' in x.ate);
+      assert.ok(traco && Math.abs(traco.t - (c.PAL.find((p) => p.txt === 'solução').ini + 0.05)) < 1e-3);
+      assert.equal(chamadas.filter((x) => 'backgroundSize' in x.ate).length, 1); // só na palavra forte
+      assert.ok(chamadas.filter((x) => 'opacity' in x.ate).every((x) => x.de.opacity === EC.RITMO.apagada && x.ate.opacity === 1));
+      assert.equal(chamadas.filter((x) => 'color' in x.ate).length, risco ? 0 : 1); // com o marca-texto, a letra troca para ler sobre a faixa
+    }
+  } finally { delete globalThis.document; }
+});
+
+test('os estilos 4, 5, 7, 8 e 9 montam o título pela fala; a letra dos cartões não diminui; a Papelaria fica como era', () => {
+  const molde = (n) => readFileSync(new URL(`../plugins/editor-chefe/estilos/${n}.html`, import.meta.url), 'utf8');
+  for (const n of ['painel-escuro', 'editorial-claro', 'painel-escuro-dividido', 'editorial-claro-dividido', 'motion-dividido']) assert.match(molde(n), /EC\.fraseNaFala\(tl, (tit|frase), c\.titulo, C, ini, fim/, n);
+  assert.doesNotMatch(molde('papelaria'), /fraseNaFala/);
+  assert.match(molde('editorial-claro-dividido'), /\.tit \{ [^\n]*font-size: 84px/);
+  assert.match(molde('editorial-claro'), /\.tit \{ [^\n]*font-size: 84px/);
+  assert.match(molde('painel-escuro-dividido'), /\.tit \{ [^\n]*font-size: 120px/);
+  assert.match(molde('painel-escuro'), /\.tit \{ [^\n]*font-size: 88px/);
+});
+
+test('"risco": true passa para o molde (também no Motion dividido); fora do formato, sem palavra forte ou na Papelaria é erro', () => {
+  for (const estilo of ['painel-escuro-dividido', 'motion-dividido']) {
+    const cartoes = ESCOLHAS[estilo].cartoes.map((c, i) => (i ? { ...c, risco: true } : c)), dir = projeto(estilo, { cartoes });
+    try { montar(dir, () => {}); assert.deepEqual(lerD(dir).cartoes.map((c) => c.risco ?? false), [false, true]); }
+    finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+  const com = (risco, titulo = 'A *solução* sai antes do almoço.') => ({ cartoes: [ESCOLHAS['painel-escuro'].cartoes[0], { de: 4.8, titulo, risco }] });
+  assert.match(erro('painel-escuro', 'escolhas.json', { estilo: 'painel-escuro', marca: MARCA, ...com('sim') }), /"risco" é true/);
+  assert.match(erro('painel-escuro', 'escolhas.json', { estilo: 'painel-escuro', marca: MARCA, ...com(true, 'A solução sai antes do almoço.') }), /não tem a palavra forte/);
+  assert.match(erro('papelaria', 'escolhas.json', { estilo: 'papelaria', marca: MARCA, cartoes: [{ de: 0.5, titulo: 'Todo cliente recebe *resposta*', risco: true }] }), /use "marca": "risco"/);
+});
+
+test('o aviso da licença MIT do bang-motion está no trecho adaptado e no NOTICE', () => {
+  const nota = /MIT License, Copyright \(c\) 2026 Bang Tutorial/;
+  assert.match(readFileSync(new URL('../plugins/editor-chefe/estilos/comum.js', import.meta.url), 'utf8'), nota);
+  assert.match(readFileSync(new URL('../NOTICE', import.meta.url), 'utf8'), /bang-motion[\s\S]*Copyright \(c\) 2026 Bang Tutorial/);
+});
+
+test('coresMarca: faixa forte com a letra por cima a 4,5:1 ou mais, no fundo claro, no escuro e no painel branco', () => {
+  const [CLARO, ESCURO] = ['#F5F0EA', '#2E231C'];
+  for (const [destaque, fundo] of [['#8F6C22', CLARO], ['#8F6C22', ESCURO], ['#8F6C22', '#FFFFFF'], ['#F2B210', '#111111'], ['#E8590C', '#FFFFFF'], ['#1D4ED8', '#F8FAFC']]) {
+    const { faixa, letra } = EC.coresMarca(destaque, fundo, CLARO, ESCURO);
+    assert.ok(EC.contraste(letra, faixa) >= 4.5, `${destaque} em ${fundo}`);
+    assert.ok(EC.contraste(faixa, fundo) >= 1.5, `faixa visível: ${destaque} em ${fundo}`); // a faixa se destaca do fundo do cartão
+  }
+});
+
+// 0.9.3 v4: o cartão automático não termina em palavra fraca (casos reais do M1-03 da gravação de teste)
+const falaDe = (txt, pausas = {}) => { let t = 0; return txt.split(' ').map((w, i) => { const p = { txt: w, ini: t, fim: t + 0.25, src: t, srcFim: t + 0.25 }; t += 0.3 + (pausas[i] ?? 0); return p; }); };
+test('cobrirFala: nenhum cartão automático termina em artigo, preposição, conjunção ou pronome átono', () => {
+  // "no pedido de isenção de" + "imposto de renda." vira um cartão só
+  let pal = falaDe('Isso é muito importante no pedido de isenção de imposto de renda.');
+  let r = EC.cobrirFala(pal, [{ titulo: 'Isso é muito *importante*', ini: 0, fim: 9 }]);
+  assert.deepEqual(r.cartoes.map((c) => c.titulo), ['Isso é muito *importante*', 'no pedido de isenção de imposto de renda.']);
+  // "para solicitar a" antes do cartão do dono: o "a" passa para a frente do título dele
+  pal = falaDe('Usei o laudo para solicitar a isenção do imposto.');
+  r = EC.cobrirFala(pal, [{ titulo: 'Usei o *laudo*', ini: 0, fim: 0.8 }, { titulo: 'Isenção do *imposto*.', ini: 1.5, fim: 9 }]);
+  assert.deepEqual(r.cartoes.map((c) => c.titulo), ['Usei o *laudo* para solicitar', 'a isenção do *imposto*.']);
+  // frase longa sem pontuação: quebra em vírgula ou antes da preposição, nunca depois dela
+  pal = falaDe('Sempre que você precisar pedir a isenção de imposto de renda em decorrência de uma doença grave, procura um profissional que consiga te ajudar com as exigências legais do pedido.');
+  r = EC.cobrirFala(pal, []);
+  assert.equal(r.cartoes.map((c) => c.titulo).join(' '), pal.map((p) => p.txt).join(' '));
+  for (const c of r.cartoes) {
+    const ult = c.titulo.split(' ').at(-1);
+    assert.ok(!(EC.FRACAS.has(ult.toLowerCase()) && !/[.,;:?!]$/.test(ult)), `termina em palavra fraca: "${c.titulo}"`);
+    assert.ok(c.titulo.length <= EC.CARTAO_8.max, c.titulo);
+  }
+  assert.ok(r.cartoes.some((c) => c.titulo.endsWith('grave,'))); // a vírgula é o lugar preferido da quebra
+});
+
+test('conferir: o bloco de texto do cartão é medido pela tinta na faixa de cima', () => {
+  const { y0, y1 } = ALTURA, w = 1080, h = y1 - y0, buf = Buffer.alloc(w * h, 240);
+  for (let y = 100; y < 400; y++) for (let x = 100; x < 400; x++) buf[y * w + x] = 40; // 300 px de letra escura
+  assert.deepEqual(bloco(buf, w, h), { topo: y0 + 100, fim: y0 + 399 });
+  assert.equal(bloco(Buffer.alloc(w * h, 240), w, h), null);
+  assert.ok(ALTURA.max > 326 && ALTURA.max < 326 + 90); // entre 3 linhas (326 px medidos) e 4
 });

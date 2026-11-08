@@ -60,7 +60,7 @@
           const el = host.appendChild(novo("div", "cartao", id));
           const num = el.appendChild(novo("div", "cab-num", `${id}-num`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`));
           const tit = el.appendChild(novo("h2", "tit", `${id}-tit`)), frase = tit.appendChild(novo("span", "", `${id}-tit-texto`)); // um item só no flex: os espaços ficam
-          c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? frase.appendChild(novo("em", "", "", parte.slice(1, -1))) : frase.append(parte)));
+          EC.fraseNaFala(tl, frase, c.titulo, C, ini, fim, { id: `${id}-tit`, risco: c.risco, fundo: ESCURO }); // cada palavra acende quando é dita
           for (let s = 120; s > 88 && tit.scrollHeight > tit.clientHeight; s -= 4) tit.style.fontSize = s - 4 + "px"; // título curto, letra grande
           tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
           tl.fromTo(num, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);

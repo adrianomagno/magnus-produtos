@@ -18,10 +18,10 @@ O dono escolhe pelo número. Cada estilo diz o que faz, o que precisa, se aceita
 
 ### Tela dividida (de 7 a 9)
 
-A pessoa grande nos 60% de baixo da tela, texto ou animação nos 40% de cima. Todos precisam da gravação. No 7 e no 9 a legenda é corrida, sem caixa, dentro do vídeo; no 8 a palavra grande fica na emenda.
+A pessoa grande nos 60% de baixo da tela, texto ou animação nos 40% de cima. Todos precisam da gravação. No 7 e no 9 a legenda é corrida, sem caixa, dentro do vídeo, embaixo e longe do rosto; no 8 não tem legenda, porque os cartões mostram a fala inteira. No 7, no 8 e no 9 (e também no 4 e no 5), cada palavra do título do cartão acende no instante em que é dita, e a palavra forte ganha um marca-texto na cor de destaque; se o dono pedir, ela é riscada no lugar.
 
 7. **Painel escuro dividido** (`painel-escuro-dividido`): fundo escuro em cima, com os cartões de informação. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
-8. **Editorial claro dividido** (`editorial-claro-dividido`): fundo claro em cima, com o título do cartão; uma palavra por vez no meio. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
+8. **Editorial claro dividido** (`editorial-claro-dividido`): fundo claro em cima, com cartões que mostram a fala inteira, um depois do outro, cada palavra acendendo quando é dita; sem legenda. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 9. **Motion dividido** (`motion-dividido`): em cima, uma animação com ícones para cada ideia, feita com as palavras da fala. Precisa da gravação. Aceita gancho de capa. Efeitos sonoros: conforme o tipo de vídeo.
 
 ### Sem gravação (o 10)

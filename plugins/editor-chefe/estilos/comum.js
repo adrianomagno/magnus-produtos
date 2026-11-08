@@ -174,7 +174,7 @@
     if (COM_CARTOES.includes(estilo)) // entrada de cada cartão (no Motion dividido, de cada animação, e cada item seguinte quando é dito; na Papelaria, cada check ou risco)
       d.cartoes.forEach((c, i) => {
         const ini = naEdicao(c.de, "ini", trechos, total), fim = d.cartoes[i + 1] ? naEdicao(d.cartoes[i + 1].de, "ini", trechos, total) : total;
-        ev.push({ t: ini, f: "cartao" });
+        if (!c.auto) ev.push({ t: ini, f: "cartao" }); // o cartão automático do estilo 8 (a fala literal) entra sem som
         if (estilo === "motion-dividido") batidas(pal, c.itens, ini, fim).slice(1).forEach((b) => ev.push({ t: b.t, f: "item" }));
         if (estilo === "papelaria" && c.lista) batidas(pal, c.lista, ini, fim, { comTitulo: false, naUltima: true }).forEach((b) => ev.push({ t: b.t, f: "item" }));
       });
@@ -352,6 +352,196 @@
     });
   }
 
+  // Frase do cartão no ritmo da fala (0.9.3, estilos 4, 5, 7, 8 e 9). O título entra como antes, mas apagado, e cada palavra
+  // acende e sobe um pouco no instante em que é dita; a palavra forte (*assim*) ganha o marca-texto na cor destaque nesse
+  // mesmo instante ou, com "risco": true no cartão, um risco por cima. O tamanho da letra não muda (o do molde).
+  // Marca-texto, risco e palavra que acende quando é dita: padrões adaptados de bang-motion
+  // (github.com/bangtutorial/bang-motion), MIT License, Copyright (c) 2026 Bang Tutorial. Permission is hereby granted,
+  // free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+  // to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge,
+  // publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+  // furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall
+  // be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY
+  // OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  // PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  //
+  // ritmo: o instante (na edição) em que cada palavra do título acende. Procura cada uma na fala, em ordem, dentro do
+  // cartão (de ini - 0,5 s a fim). Palavra dita antes da entrada do título acende com ele (ini + entra); palavra que não
+  // está na fala acende junto com a anterior (título que não é literal sai inteiro, como antes); nenhuma depois de
+  // fim - 0,5 s, para ficar acesa antes da saída do cartão.
+  const RITMO = { apagada: 0.3, acende: 0.2, sobe: 12, marca: 0.4 };
+  // Cores do marca-texto (0.9.3 v2): a faixa é a cor de destaque, puxada para o fundo do cartão só o necessário para a
+  // letra por cima passar de 4,5:1; a letra é o claro ou o escuro da marca, o que ler mais na faixa. Assim a faixa fica
+  // forte (no creme, um dourado cheio com a letra escura; no escuro, um tom de destaque com a letra clara) e o hf check
+  // passa. Sem tom que chegue a 4,5:1 até 80% de mistura, fica o que mais se aproximou. fundo: o fundo do cartão. [r, g, b].
+  function coresMarca(destaque, fundo, claro, escuro) {
+    let melhor = null;
+    for (let t = 0; t <= 0.801; t += 0.02) {
+      const faixa = mistura(destaque, fundo, t), letra = contraste(claro, faixa) >= contraste(escuro, faixa) ? rgb(claro) : rgb(escuro), c = contraste(letra, faixa);
+      if (!melhor || c > melhor.c) melhor = { faixa, letra, c };
+      if (c >= 4.5) return { faixa, letra };
+    }
+    return { faixa: melhor.faixa, letra: melhor.letra };
+  }
+  // achar: o índice na fala de cada palavra (ou -1), procurando em ordem dentro de [ini - 0,5 s, fim). O ritmo, o
+  // montador (cartões que cobrem a fala) e a conferência de cobertura usam a mesma busca.
+  function achar(pal, palavras, ini, fim, antes = 0.5) {
+    let k = pal.findIndex((p) => p.ini >= ini - antes);
+    if (k < 0) k = pal.length;
+    return palavras.map((w) => {
+      const x = limpa(w);
+      let j = k;
+      while (x && j < pal.length && pal[j].ini < fim && limpa(pal[j].txt) !== x) j++;
+      const achou = !!x && j < pal.length && pal[j].ini < fim;
+      if (achou) k = j + 1;
+      return achou ? j : -1;
+    });
+  }
+  // segura: quanto antes da saída do cartão a última palavra já precisa estar acesa (no estilo 8, em que a última palavra
+  // é dita logo antes da troca, 0,2 s)
+  function ritmo(pal, palavras, ini, fim, entra = 0.15, antes = 0.5, segura = 0.5) {
+    let ant = ini + entra;
+    const teto = Math.max(ant, fim - segura);
+    return achar(pal, palavras, ini, fim, antes).map((j) => (ant = +Math.min(teto, Math.max(ant, j >= 0 ? pal[j].ini : ant)).toFixed(3)));
+  }
+
+  // Editorial claro dividido (0.9.3): cartões que cobrem toda a fala da edição, no lugar da legenda. pal: as palavras da
+  // edição ({ txt, ini, fim } do mapear, com src e srcFim, o tempo no original). dono: os cartões do escolhas.json, cada um
+  // com ini e fim na edição. O cartão do dono vale nas palavras dele, se o título está na fala, seguido (no máximo uma
+  // palavra a mais no meio); o resto da fala vira cartões com o texto literal, quebrados no fim de frase, na pausa de
+  // 0,5 s e no tamanho (até CARTAO_8.letras letras, em partes do mesmo tamanho). Trecho de 1 ou 2 palavras curtas cola no
+  // cartão vizinho, se couber, para não piscar sozinho. Devolve { cartoes: [{ de, titulo, risco?, auto? }], fora } com
+  // "de" no tempo do original (0,25 s antes da primeira palavra, sem passar da última do cartão anterior) e fora: os
+  // números (1, 2...) dos cartões do dono que não estão na fala e viraram fala literal.
+  const CARTAO_8 = { letras: 40, max: 44, linhas: 3, antes: 0.25, sai: 0.12, entra: 0.18, cola: 14 };
+  // Palavras que não fecham um cartão: artigo, preposição (e as contrações), conjunção e pronome átono
+  const FRACAS = new Set(["a", "o", "as", "os", "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das", "no", "na", "nos", "nas", "num", "numa",
+    "em", "ao", "aos", "à", "às", "para", "pra", "pro", "por", "pelo", "pela", "pelos", "pelas", "com", "sem", "sob", "sobre", "até", "entre",
+    "e", "ou", "mas", "nem", "que", "se", "porque", "quando", "como", "te", "me", "lhe", "lhes", "nos", "vos"]);
+  function cobrirFala(pal, dono) {
+    const letras = (ws) => ws.reduce((n, i) => n + pal[i].txt.length + 1, -1), seg = [], fora = [];
+    // palavra fraca sem pontuação colada: o cartão não termina nela
+    const fraca = (j) => FRACAS.has(limpa(pal[j].txt)) && !/[.,;:?!…]$/.test(pal[j].txt);
+    // Quebra de uma frase longa em cartões, pela menor conta: cada cartão custa 25 (menos cartões), mais 30 se tiver menos
+    // de 14 letras, 0,3 por letra de distância de 30 (duas linhas) e 10 por vírgula no meio dele; quebrar depois de vírgula tira 30, numa pausa de
+    // 0,25 s tira 15 e antes de palavra fraca (preposição, conjunção) tira 8. Nunca passa de CARTAO_8.max letras (só
+    // palavra sozinha maior que isso) nem termina em palavra fraca, a não ser no fim da frase.
+    const quebrar = (w) => {
+      const m = w.length, custo = [0], de = [0];
+      for (let b = 1; b <= m; b++) {
+        custo[b] = Infinity;
+        for (let a = b - 1; a >= 0; a--) {
+          const parte = w.slice(a, b), L = letras(parte);
+          if (L > CARTAO_8.max && parte.length > 1) break;
+          if (b < m && fraca(w[b - 1])) continue;
+          let c = custo[a] + 25 + (L < 14 ? 30 : 0) + Math.abs(L - 30) * 0.3 + 10 * parte.slice(0, -1).filter((j) => /[,;:]$/.test(pal[j].txt)).length;
+          if (b < m) {
+            if (/[,;:]$/.test(pal[w[b - 1]].txt)) c -= 30;
+            if (pal[w[b]].src - pal[w[b - 1]].srcFim > 0.25) c -= 15;
+            if (FRACAS.has(limpa(pal[w[b]].txt))) c -= 8;
+          }
+          if (c < custo[b]) { custo[b] = c; de[b] = a; }
+        }
+      }
+      if (!Number.isFinite(custo[m])) return [w]; // sem jeito de quebrar sem palavra fraca: a frase inteira
+      const partes = [];
+      for (let b = m; b > 0; b = de[b]) partes.unshift(w.slice(de[b], b));
+      return partes;
+    };
+    let livre = 0;
+    dono.forEach((c, n) => {
+      // o título inteiro, seguido, na fala do cartão (de ini - 0,5 s a fim), depois do cartão do dono anterior
+      const ws = c.titulo.replace(/\*/g, "").split(/\s+/).map(limpa).filter(Boolean);
+      let a = Math.max(livre, pal.findIndex((p) => p.ini >= c.ini - 0.5));
+      while (a >= 0 && a < pal.length && pal[a].ini < c.fim && !ws.every((w, m) => limpa(pal[a + m]?.txt ?? "") === w)) a++;
+      if (!ws.length || a < 0 || a >= pal.length || pal[a].ini >= c.fim) { fora.push(n + 1); return; }
+      seg.push({ a, b: a + ws.length - 1, c });
+      livre = a + ws.length;
+    });
+    // trechos sem cartão do dono: frases, depois partes que cabem
+    const todos = [];
+    let i = 0;
+    const lacuna = (de, ate) => {
+      let frase = [];
+      const fecha = () => {
+        if (frase.length) quebrar(frase).forEach((ws) => todos.push({ ws }));
+        frase = [];
+      };
+      for (let j = de; j < ate; j++) {
+        frase.push(j);
+        const pausa = j + 1 < pal.length && pal[j + 1].src - pal[j].srcFim > 0.5;
+        if (/[.?!…]$/.test(pal[j].txt) || pausa) fecha();
+      }
+      fecha();
+    };
+    for (const s of seg) {
+      lacuna(i, s.a);
+      // a frase que continua no cartão do dono: a palavra fraca do fim do trecho passa para a frente do título dele
+      // ("para solicitar a" + "Isenção do..." vira "para solicitar" + "a isenção do...")
+      const ult = todos[todos.length - 1], a0 = s.a;
+      while (ult && !ult.c && ult.ws.length && i < s.a && fraca(ult.ws[ult.ws.length - 1]) && ult.ws[ult.ws.length - 1] === s.a - 1) s.a--, ult.ws.pop();
+      if (ult && !ult.ws.length) todos.pop();
+      const novo = { ws: Array.from({ length: s.b - s.a + 1 }, (_, k) => s.a + k), c: s.c };
+      if (s.a < a0) novo.antes = novo.ws.slice(0, a0 - s.a).map((j) => pal[j].txt).join(" ") + " ";
+      todos.push(novo);
+      i = s.b + 1;
+    }
+    lacuna(i, pal.length);
+    // trecho curto cola no vizinho (antes no anterior, senão no seguinte)
+    for (let k = 0; k < todos.length; k++) {
+      const t = todos[k];
+      if (t.c || t.ws.length > 2 || letras(t.ws) > CARTAO_8.cola) continue;
+      const ant = todos[k - 1], prox = todos[k + 1], fim = (x) => /[.?!…]$/.test(pal[x.ws[x.ws.length - 1]].txt);
+      const noAnt = () => ant && letras([...ant.ws, ...t.ws]) <= CARTAO_8.letras + 6 && (ant.ws.push(...t.ws), ant.c && (ant.extra = (ant.extra ?? "") + " " + t.ws.map((j) => pal[j].txt).join(" ")), true);
+      const noProx = () => prox && letras([...t.ws, ...prox.ws]) <= CARTAO_8.letras + 6 && (prox.ws.unshift(...t.ws), prox.c && (prox.antes = t.ws.map((j) => pal[j].txt).join(" ") + " " + (prox.antes ?? "")), true);
+      // começo de frase vai para a frente (com a frase dele); o resto, para trás
+      // fim de frase só cola para trás
+      // termina em palavra fraca: só para a frente (no fim da fala, para trás)
+      if (fim(t) ? noAnt() : fraca(t.ws[t.ws.length - 1]) ? noProx() || (!prox && noAnt()) : ant && fim(ant) ? noProx() || noAnt() : noAnt() || noProx()) todos.splice(k--, 1);
+    }
+    let fimAnt = 0;
+    const cartoes = todos.map((t) => {
+      const p = pal[t.ws[0]], de = +Math.max(fimAnt, p.src - CARTAO_8.antes).toFixed(3);
+      fimAnt = pal[t.ws[t.ws.length - 1]].srcFim;
+      if (!t.c) return { de, titulo: t.ws.map((j) => pal[j].txt).join(" "), auto: true };
+      // com palavras na frente, o título do dono continua a frase: a primeira letra dele fica minúscula ("Eu escuto...")
+      const titulo = t.antes ? t.antes + t.c.titulo.replace(/^(\*?)(\p{Lu})(?!\p{Lu})/u, (m, a, l) => a + l.toLowerCase()) : t.c.titulo;
+      return { de, titulo: titulo + (t.extra ?? ""), ...(t.c.risco ? { risco: true } : {}) };
+    });
+    return { cartoes, fora };
+  }
+  // Monta o título em alvo, palavra por palavra (span .fw; a forte dentro do em do molde), e anima. c: o que o iniciar()
+  // devolve. id: o prefixo dos ids das palavras.
+  // fundo: o fundo do cartão (#RRGGBB ou [r, g, b]), para as cores do marca-texto (coresMarca).
+  // antes: quanto antes da entrada a busca das palavras começa (o estilo 8, com um cartão colado no outro, usa 0,1 s).
+  function fraseNaFala(tl, alvo, titulo, c, ini, fim, { id, risco = false, entra = 0.15, fundo = c.CLARO, antes = 0.5, segura = 0.5 } = {}) {
+    if (!document.getElementById("frase-na-fala-estilo")) document.head.appendChild(novo("style", "", "frase-na-fala-estilo")).textContent = `
+      .fw { display: inline-block; }
+      .fw.marca { margin: 0 -0.08em; padding: 0 0.08em; border-radius: 0.06em; background: linear-gradient(var(--marca-faixa), var(--marca-faixa)) no-repeat 0 92% / 0% 74%; }
+      .fw.risco { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 0.09em; }`;
+    const M = coresMarca(c.DESTAQUE, fundo, c.CLARO, c.ESCURO);
+    alvo.style.setProperty("--marca-faixa", `rgb(${M.faixa.join(",")})`);
+    const ws = [];
+    titulo.split(/(\*[^*]+\*)/).filter(Boolean).forEach((parte) => {
+      const forte = parte.startsWith("*"), pai = forte ? alvo.appendChild(novo("em", "", `${id}-forte`)) : alvo;
+      parte.replace(/\*/g, "").split(/(\s+)/).filter(Boolean).forEach((p) => {
+        if (/^\s+$/.test(p)) return pai.append(p);
+        const el = pai.appendChild(novo("span", forte ? `fw ${risco ? "risco" : "marca"}` : "fw", `${id}-p${ws.length + 1}`, p));
+        ws.push({ el, txt: p, forte });
+      });
+    });
+    ritmo(c.PAL, ws.map((w) => w.txt), ini, fim, entra, antes, segura).forEach((t, i) => {
+      const w = ws[i];
+      tl.fromTo(w.el, { opacity: RITMO.apagada, y: RITMO.sobe }, { opacity: 1, y: 0, duration: RITMO.acende, ease: "power2.out" }, t);
+      if (!w.forte) return;
+      tl.fromTo(w.el, { backgroundSize: risco ? "0% 0.09em" : "0% 74%" }, { backgroundSize: risco ? "100% 0.09em" : "100% 74%", duration: RITMO.marca, ease: "power3.out" }, t + 0.05);
+      if (!risco) tl.set(w.el, { color: `rgb(${M.letra.join(",")})` }, t + 0.05); // a letra troca junto com a faixa, para ler por cima dela
+    });
+    return ws;
+  }
+
   // Gancho de capa (só no navegador): a frase por cima das cópias mudas dos trechos, na camada #capa que o montar.mjs
   // põe por cima de tudo (com o CSS de cada estilo). c: { estilo, texto, queixo, fim }. A palavra forte (*assim*) abre
   // a segunda linha; linha mais larga que a área segura encolhe até caber. A animação só mexe em opacidade, deslocamento
@@ -433,7 +623,7 @@
   }
 
   const api = { aproximar, naEdicao, mapear, marcar, agrupar, trocas, efeitos, SONS, contraste, legivel, mistura, coresMotion, coresPapelaria, semDestaques, iniciar, novo, capa, COM_CARTOES, batidas, ENTRA_TITULO, numero, escrever, legendaEmCaixa, ICONES, NEUTROS,
-    PECA, alturaPeca, coresPecas, coresLegenda, palavraPorVez, legendaCorrida };
+    PECA, alturaPeca, coresPecas, coresLegenda, palavraPorVez, legendaCorrida, ritmo, fraseNaFala, RITMO, coresMarca, achar, cobrirFala, CARTAO_8, FRACAS };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.EditorChefe = api;
 })(this);

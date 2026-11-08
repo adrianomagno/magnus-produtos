@@ -59,7 +59,7 @@
         cab.appendChild(novo("span", "", `${id}-marca`, D.nome));
         cab.appendChild(novo("span", "", `${id}-num`, `${String(i + 1).padStart(2, "0")} / ${String(D.cartoes.length).padStart(2, "0")}`));
         const tit = el.appendChild(novo("h2", "tit", `${id}-tit`));
-        c.titulo.split(/(\*[^*]+\*)/).forEach((parte) => (parte.startsWith("*") ? tit.appendChild(novo("em", "", "", parte.slice(1, -1))) : tit.append(parte)));
+        EC.fraseNaFala(tl, tit, c.titulo, C, ini, fim, { id: `${id}-tit`, risco: c.risco, fundo: ESCURO }); // cada palavra acende quando é dita
         tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, ini);
         tl.fromTo(cab, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, ini + 0.05);
         tl.fromTo(tit, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, ini + 0.15);

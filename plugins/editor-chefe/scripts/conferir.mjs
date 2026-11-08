@@ -12,6 +12,8 @@ import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { detector, quadros, medidas } from "./rosto.mjs";
+import { createRequire } from "node:module";
+const EC = createRequire(import.meta.url)("../estilos/comum.js");
 
 const TEMPO_MAX = 600000;
 export const ALVO_LUFS = -16, FOLGA_LUFS = 1.5, FOLGA_DURACAO = 0.2, TETO_DBTP = -1;
@@ -40,6 +42,61 @@ export function zonas(html, duracao) {
     if (y) z.push({ nome: "o gancho de capa", y0: y[0], y1: y[1], x0: 90, x1: 990, de: 0, ate: fim - 0.25 });
   }
   return z;
+}
+
+// Cobertura da fala pelos cartões (Editorial claro dividido, desde a 0.9.3, quando o montador grava "cobrir"): quantas
+// palavras da edição aparecem em algum cartão, achadas com a mesma busca do molde (EC.achar, dentro do tempo do cartão),
+// e o maior tempo sem texto na tela: antes do primeiro cartão (ou do fim do gancho de capa) e em cada troca, contando o
+// cartão como visível da metade da entrada à metade da saída. Sem "cobrir", devolve null.
+// Devolve { cobertas, total, pct, buraco: { s, em }, faltam: [palavras] }.
+export function cobertura(html) {
+  const d = /const D = (\{.*\});/.exec(html);
+  let D = {};
+  try { D = d ? JSON.parse(d[1]) : {}; } catch { return null; }
+  if (!D.cobrir || !Array.isArray(D.cartoes)) return null;
+  const tr = [...html.matchAll(/class="trecho[^"]*" src="[^"]*" data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/g)].map((m) => ({ ini: +m[1], dur: +m[2], src: +m[3] }));
+  const total = +/data-duration="([\d.]+)" data-width/.exec(html)[1], pal = EC.mapear(D.palavras, tr, total), T = EC.CARTAO_8;
+  const ini = D.cartoes.map((c) => EC.naEdicao(c.de, "ini", tr, total)), achadas = new Set();
+  D.cartoes.forEach((c, i) => EC.achar(pal, c.titulo.replace(/\*/g, "").split(/\s+/).filter(Boolean), ini[i], ini[i + 1] ?? total, 0.1).forEach((j) => j >= 0 && achadas.add(j)));
+  const comeco = D.capa ? D.capa.fim - 0.25 : 0;
+  let buraco = { s: Math.max(0, ini[0] + T.entra / 2 - comeco), em: comeco };
+  for (let i = 1; i < ini.length; i++) {
+    const s = T.sai / 2 + T.entra / 2; // do meio da saída de um ao meio da entrada do seguinte
+    if (s > buraco.s) buraco = { s, em: ini[i] };
+  }
+  return { cobertas: achadas.size, total: pal.length, pct: pal.length ? (100 * achadas.size) / pal.length : 100, buraco: { s: +buraco.s.toFixed(2), em: +buraco.em.toFixed(2) }, faltam: pal.filter((_, j) => !achadas.has(j)).map((p) => p.txt) };
+}
+export const COBERTURA = { pct: 100, buraco: 0.6 }; // meta: toda palavra num cartão; no máximo 0,6 s sem texto
+
+// Altura de cada cartão do estilo 8, medida no vídeo pronto: no quadro do meio do cartão (0,4 s depois da entrada), as
+// linhas da faixa de cima (de 228 a 720 px, abaixo da assinatura) com letra, isto é, com 3 pixels ou mais longe do fundo
+// (a mediana da faixa) mais de 40 tons. O bloco vai do título ao filete; 3 linhas de 84 px dão até 326 px de tinta (medido, com a palavra
+// forte em itálico) e 4 linhas, uns 90 px a mais. Reprova cartão com mais de 3 linhas (bloco acima de ALTURA.max) ou fora da faixa de 236 a 680.
+export const ALTURA = { y0: 228, y1: 720, faixa: [236, 680], max: 370 };
+export function bloco(buf, w, h) {
+  const v = [...buf].sort((a, b) => a - b), fundo = v[v.length >> 1];
+  let topo = -1, fim = -1;
+  for (let y = 0; y < h; y++) {
+    let n = 0;
+    for (let x = 0; x < w && n < 3; x++) if (Math.abs(buf[y * w + x] - fundo) > 40) n++;
+    if (n >= 3) { if (topo < 0) topo = y; fim = y; }
+  }
+  return topo < 0 ? null : { topo: topo + ALTURA.y0, fim: fim + ALTURA.y0 };
+}
+export function alturas(video, html) {
+  const d = /const D = (\{.*\});/.exec(html);
+  let D = {};
+  try { D = d ? JSON.parse(d[1]) : {}; } catch { return []; }
+  if (!D.cobrir || !Array.isArray(D.cartoes)) return [];
+  const tr = [...html.matchAll(/class="trecho[^"]*" src="[^"]*" data-start="([\d.]+)" data-duration="([\d.]+)" data-media-start="([\d.]+)"/g)].map((m) => ({ ini: +m[1], dur: +m[2], src: +m[3] }));
+  const total = +/data-duration="([\d.]+)" data-width/.exec(html)[1], ini = D.cartoes.map((c) => EC.naEdicao(c.de, "ini", tr, total)), H = ALTURA.y1 - ALTURA.y0;
+  return D.cartoes.map((c, i) => {
+    const fim = ini[i + 1] ?? total, t = Math.min(Math.max(ini[i] + 0.4, D.capa ? D.capa.fim + 0.05 : 0), fim - 0.15);
+    if (t <= ini[i] || (D.capa && D.capa.fim + 0.05 > fim - 0.15)) return null; // cartão inteiro embaixo do gancho de capa
+    const r = spawnSync(ffmpeg(), ["-v", "error", "-ss", t.toFixed(3), "-i", video, "-frames:v", "1", "-vf", `crop=1080:${H}:0:${ALTURA.y0},format=gray`, "-f", "rawvideo", "-"], { timeout: TEMPO_MAX, maxBuffer: 1 << 24 });
+    const b = r.stdout?.length === 1080 * H ? bloco(r.stdout, 1080, H) : null;
+    return b && { n: i + 1, t: +t.toFixed(2), titulo: c.titulo.replace(/\*/g, ""), ...b, altura: b.fim - b.topo };
+  }).filter(Boolean);
 }
 
 // Rosto (caixa no quadro 1080x1920, no instante t) que fica embaixo de alguma faixa: a faixa cobre ao menos um quarto da altura dele
@@ -137,6 +194,17 @@ export async function conferir(pasta, video, { previa = false, dados, avisar = (
       else avisar(`conferir: nenhum texto em cima do rosto (rosto achado em ${rostos} de ${n} quadros)`);
       if (!rostos) avisar("conferir: nenhum rosto achado no vídeo; olhe a folha de quadros para ver o enquadramento.");
     }
+  }
+  const cob = cobertura(html);
+  if (cob) {
+    const linha = `os cartões mostram ${cob.pct.toFixed(1).replace(".", ",")}% das palavras faladas (${cob.cobertas} de ${cob.total}); o maior tempo sem texto é ${cob.buraco.s.toFixed(2).replace(".", ",")} s, em ${seg(cob.buraco.em)} s`;
+    if (cob.pct < COBERTURA.pct) ruim.push(`${linha}. Ficaram fora: "${cob.faltam.slice(0, 12).join(" ")}${cob.faltam.length > 12 ? " ..." : ""}".`);
+    else if (cob.buraco.s > COBERTURA.buraco) ruim.push(`${linha}; o máximo é ${seg(COBERTURA.buraco)} s.`);
+    else avisar(`conferir: ${linha}`);
+    const alt = alturas(video, html), [f0, f1] = ALTURA.faixa;
+    const ruins = alt.filter((a) => a.altura > ALTURA.max || a.topo < f0 || a.fim > f1);
+    if (ruins.length) ruim.push(`${ruins.length} ${ruins.length > 1 ? "cartões passam" : "cartão passa"} de 3 linhas ou saem da faixa de ${f0} a ${f1} px: ${ruins.slice(0, 4).map((a) => `o ${a.n} ("${a.titulo}", de ${a.topo} a ${a.fim} px, em ${seg(a.t)} s)`).join("; ")}.`);
+    else if (alt.length) avisar(`conferir: os ${alt.length} cartões cabem em até 3 linhas na faixa de cima (o mais alto com ${Math.max(...alt.map((a) => a.altura))} px, de ${Math.min(...alt.map((a) => a.topo))} a ${Math.max(...alt.map((a) => a.fim))} px)`);
   }
   // Folha de quadros, para o Claude olhar antes de mostrar ao dono
   const folha = join(pasta, "conferencia.jpg");
