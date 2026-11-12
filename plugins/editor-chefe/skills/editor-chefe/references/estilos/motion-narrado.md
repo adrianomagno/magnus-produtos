@@ -18,7 +18,7 @@ Os dois entregam o mesmo `words.json` e a mesma `audio/voz.wav`; o resto do esti
   - `voz.ultravoice_perfil`: o id do perfil da voz aprovada pelo dono no UltraVoice. É o caminho padrão, sem custo. Pede o app VoiceStudio aberto neste computador (validado só em Mac com chip Apple) e a transcrição instalada (`hf models install parakeet`, a mesma dos vídeos gravados).
   - `voz.elevenlabs_voice_id`: a voz da conta dele na ElevenLabs que ele escolher, e **a chave** da ElevenLabs guardada no computador do dono, pelo comando de `marca.md`, nunca no pacote e nunca escrita na conversa.
 
-  Com as duas, vale o UltraVoice. Sem nenhuma, pergunte ao dono qual ele quer: o UltraVoice, se ele já instalou e aprovou a voz, ou a ElevenLabs, paga.
+  Com as duas, vale o UltraVoice. Sem nenhuma, pergunte ao dono qual ele quer: o UltraVoice, se ele já instalou e aprovou a voz, ou a ElevenLabs, paga. Se ele ainda não tem o UltraVoice e quer a voz sem custo, mande o link do produto, https://ultracerebro.com.br/ultravoice/, e diga que o Magnus dele conduz a instalação; enquanto isso, a ElevenLabs funciona.
 
 ## Desenho
 

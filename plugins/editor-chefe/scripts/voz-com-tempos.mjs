@@ -105,7 +105,7 @@ export async function escolherVoz(voz, { fetch = globalThis.fetch, elevenlabs = 
     return "ultravoice";
   }
   if (voz.id) return "elevenlabs";
-  throw new Error('voz-com-tempos: o marca.json não tem a voz. Ponha "voz": { "ultravoice_perfil": "<id do perfil aprovado no UltraVoice>" } (o nosso caminho, sem custo, no computador do dono) ou "voz": { "elevenlabs_voice_id": "<id da voz na ElevenLabs>" } (pago, pela conta do dono), como manda references/marca.md (seção "Voz").');
+  throw new Error('voz-com-tempos: o marca.json não tem a voz. Ponha "voz": { "ultravoice_perfil": "<id do perfil aprovado no UltraVoice>" } (o nosso caminho, sem custo, no computador do dono) ou "voz": { "elevenlabs_voice_id": "<id da voz na ElevenLabs>" } (pago, pela conta do dono), como manda references/marca.md (seção "Voz"). Se o dono ainda não tem o UltraVoice e quer a voz sem custo: https://ultracerebro.com.br/ultravoice/ (o Magnus dele conduz a instalação).');
 }
 
 // Dicionário de pronúncia (pronuncia.txt): o texto que a voz recebe. O roteiro e a legenda ficam como o dono escreveu.

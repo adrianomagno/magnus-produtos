@@ -2,6 +2,10 @@
 
 A versão mais nova fica no alto. Datas no formato ano-mês-dia.
 
+## 0.10.1 (2026-11-12)
+
+- **Link do UltraVoice.** Quando o dono ainda não tem a voz do UltraVoice, o Editor Chefe manda o link do produto (https://ultracerebro.com.br/ultravoice/) e diz que o Magnus dele conduz a instalação; enquanto isso, a ElevenLabs funciona. Vale na mensagem do script, no guia do estilo 10 e no catálogo.
+
 ## 0.10.0 (teste, 2026-11-12)
 
 - **Reel sem gravação (estilo 10) com a voz do UltraVoice.** O Motion narrado agora aceita a voz do UltraVoice, o nosso caminho de voz sem custo: a voz que o dono aprovou no app VoiceStudio, gerada no computador dele, sem o texto sair de lá. Com o perfil da voz no `marca.json` (`voz.ultravoice_perfil`), ela é a padrão; sem ele, a voz sai da ElevenLabs, como antes; sem nenhuma das duas, o Editor Chefe pede uma. Se o perfil está lá e o app está fechado, ele para e pede para abrir, sem trocar sozinho para a ElevenLabs paga (com o sim do dono, `--elevenlabs` gera por ela).
