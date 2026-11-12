@@ -19,7 +19,7 @@ Esquema:
       "cores": { "fundo_claro": "#FAF8F3", "fundo_escuro": "#111111", "texto": "#111111", "destaque": "#9A6A5A" },
       "fontes": { "titulo": "Montserrat", "destaque": "Playfair Display", "corpo": "Inter" },
       "chamada_caixinha": "Pergunta aqui sobre emagrecimento",
-      "voz": { "elevenlabs_voice_id": "<id da voz>", "ritmo": 2.54 },
+      "voz": { "ultravoice_perfil": "<id do perfil no UltraVoice>", "elevenlabs_voice_id": "<id da voz na ElevenLabs>", "ritmo": 2.54 },
       "logo": "logo-claro.png"
     }
 
@@ -29,10 +29,12 @@ Fontes: baixe cada família de `fontes` direto na pasta `fonts/` da pasta do ví
 
 ## Voz (só o Motion narrado)
 
-- **A voz:** `voz.elevenlabs_voice_id` é o ID de uma voz da conta do dono na ElevenLabs (no site, em Voices, o botão de copiar o ID da voz). Pode ser qualquer voz da conta dele, a que ele escolher. Não há voz padrão: sem esse campo, o `voz-com-tempos.mjs` para e pede.
+- **A voz:** uma das duas, ou as duas (com as duas, vale o UltraVoice). Não há voz padrão: sem nenhuma, o `voz-com-tempos.mjs` para e pede.
+  - `voz.ultravoice_perfil`: o id do perfil da voz que o dono aprovou no UltraVoice (o nosso caminho de voz, sem custo, no app VoiceStudio do computador dele; o guia de instalação é o do UltraVoice). É o mesmo id do `PERFIL=` do arquivo da voz em `vozes/<nome>.conf` da pasta do UltraVoice. Só ponha o perfil depois que o dono ouviu e aprovou a voz. A voz é gerada e transcrita no computador dele; o texto não sai de lá.
+  - `voz.elevenlabs_voice_id`: o ID de uma voz da conta do dono na ElevenLabs, o opcional pago (no site, em Voices, o botão de copiar o ID da voz). Pode ser qualquer voz da conta dele, a que ele escolher. Pede a chave da API, abaixo.
 - **O ritmo:** `voz.ritmo` (opcional) é a velocidade da fala, em palavras por segundo; o padrão é 2,54. A voz é acelerada até 10% para chegar nele, nunca desacelerada.
 - **O logo:** `logo` (opcional) é o caminho de um PNG, JPG, WebP ou SVG a partir da pasta do `marca.json`, de preferência a versão clara com fundo transparente, porque o fecho fica sobre o fundo escuro. Sem logo, o fecho mostra o `nome`. O Editor Chefe guarda uma cópia do logo na biblioteca do dono (`Documentos/Editor Chefe/biblioteca/cliente/`), só no computador dele; o logo, os prints e qualquer dado do cliente nunca vão para o banco central.
-- **A chave da API** fica só no computador do dono, num arquivo que só ele lê, e **nunca** na conversa. Ele cria a chave no site da ElevenLabs (no perfil, em API Keys; se o site oferecer, só com a permissão de texto para fala) e guarda com um comando de uma linha, no Terminal do Mac ou no Git Bash do Windows (vem com o Git que o Claude Code usa); o comando chama o `bash`, então vale também no zsh, o padrão do Mac. Mande este comando a ele com a pasta de dados escrita por extenso no lugar de CLAUDE_PLUGIN_DATA entre chaves, porque o Terminal dele não conhece essa variável (no Windows, com barras normais, como `C:/Users/...`):
+- **A chave da API da ElevenLabs** (só nesse caminho) fica só no computador do dono, num arquivo que só ele lê, e **nunca** na conversa. Ele cria a chave no site da ElevenLabs (no perfil, em API Keys; se o site oferecer, só com a permissão de texto para fala) e guarda com um comando de uma linha, no Terminal do Mac ou no Git Bash do Windows (vem com o Git que o Claude Code usa); o comando chama o `bash`, então vale também no zsh, o padrão do Mac. Mande este comando a ele com a pasta de dados escrita por extenso no lugar de CLAUDE_PLUGIN_DATA entre chaves, porque o Terminal dele não conhece essa variável (no Windows, com barras normais, como `C:/Users/...`):
 
       bash -c 'read -rsp "Chave da ElevenLabs (não aparece na tela): " K; echo; umask 077; printf %s "$K" > "$1"; chmod 600 "$1"' _ "${CLAUDE_PLUGIN_DATA}/chave-elevenlabs"
 

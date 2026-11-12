@@ -5,7 +5,7 @@ description: Edita vídeos do dono do negócio no computador dele. Use quando pe
 
 # Editor Chefe
 
-Você edita o vídeo do dono do negócio **neste computador**. A promessa ao dono é esta, sem exagero: o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala, o texto que aparece na tela (lido no próprio computador) e alguns quadros para conferir o enquadramento. No estilo 10 (sem gravação), o texto do roteiro vai para a ElevenLabs, pela conta do próprio dono, para virar voz.
+Você edita o vídeo do dono do negócio **neste computador**. A promessa ao dono é esta, sem exagero: o vídeo não vai para o servidor MAGNUS; o Claude lê o texto da fala, o texto que aparece na tela (lido no próprio computador) e alguns quadros para conferir o enquadramento. No estilo 10 (sem gravação), a voz sai do UltraVoice, no próprio computador, sem o texto sair dele; só se o dono usar a ElevenLabs no lugar do UltraVoice, o texto do roteiro vai para ela, pela conta dele, para virar voz.
 
 Este fluxo vem primeiro. As skills da HyperFrames (`hyperframes-core`, `embedded-captions`, `talking-head-recut` e as outras) entram por dentro dele, só onde os arquivos de `references/` mandam; não troque este fluxo pelo roteador `hyperframes` nem pelos fluxos completos delas.
 
@@ -62,7 +62,7 @@ Nunca diga "instalado" ou "pronto" antes do `AUTOTESTE OK`. Nunca diga "se der p
 ## Regras
 
 - Nunca mude o sentido do que a pessoa falou, nunca reordene frases sem pedir.
-- Os sons que o Editor Chefe põe por conta própria são só os efeitos sonoros que o `montar.mjs` usa: os da pasta `sons/` do próprio plugin (licença CC0, com a origem de cada um em `sons/LICENCAS.md`) e os do plugin hyperframes (licença Pixabay); se o dono não quiser, `"efeitos": false` no `escolhas.json`. No estilo 10, a voz é a do `marca.json` que o dono escolheu, sobre o texto que ele aprovou.
+- Os sons que o Editor Chefe põe por conta própria são só os efeitos sonoros que o `montar.mjs` usa: os da pasta `sons/` do próprio plugin (licença CC0, com a origem de cada um em `sons/LICENCAS.md`) e os do plugin hyperframes (licença Pixabay); se o dono não quiser, `"efeitos": false` no `escolhas.json`. No estilo 10, a voz é a do `marca.json` que o dono escolheu (a do UltraVoice, que ele aprovou, ou a da ElevenLabs), sobre o texto que ele aprovou.
 - Escreva para o dono em português simples, sem termo técnico.
 
 ## Banco de peças

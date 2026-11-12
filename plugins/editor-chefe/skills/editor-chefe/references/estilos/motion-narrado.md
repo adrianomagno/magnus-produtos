@@ -2,15 +2,23 @@
 
 **Quando usar:** o dono não tem gravação. Ele tem um texto, de preferência uma frase que ele já disse numa aula, live ou áudio, e quer um Reel só de animação, narrado com voz, com cada palavra-chave entrando na tela no instante em que é dita. De 20 a 30 segundos.
 
-**Fluxo da HyperFrames:** composição da `hyperframes-core` sem vídeo, com o tempo de cada palavra tirado do alinhamento do próprio texto (não há transcrição), no molde `estilos/motion-narrado.html` do plugin, que o `scripts/montar.mjs` preenche com a marca, as palavras e as escolhas. A voz sai do `scripts/voz-com-tempos.mjs` (ElevenLabs, endpoint `with-timestamps`, modelo `eleven_v3`). A animação é determinística: cada quadro sai igual, em qualquer ordem em que o render pedir.
+**Fluxo da HyperFrames:** composição da `hyperframes-core` sem vídeo, com o tempo de cada palavra do texto aprovado, no molde `estilos/motion-narrado.html` do plugin, que o `scripts/montar.mjs` preenche com a marca, as palavras e as escolhas. A voz sai do `scripts/voz-com-tempos.mjs`, por um de dois caminhos:
 
-**O que sai do computador:** o texto do roteiro vai para a ElevenLabs, pela conta do próprio dono, para virar voz. Nada vai para o servidor MAGNUS. Diga isso ao dono antes de gerar a voz.
+- **UltraVoice (o nosso, sem custo, o padrão):** o app VoiceStudio no computador do dono, com a voz que ele aprovou (o perfil). O UltraVoice não devolve o tempo das palavras: o script transcreve a voz gerada com a mesma transcrição que legenda os vídeos gravados (`hf transcribe`, Parakeet) e alinha com o texto, palavra por palavra.
+- **ElevenLabs (o opcional pago):** pela conta do dono, endpoint `with-timestamps`, modelo `eleven_v3`, que já devolve o tempo de cada letra do texto.
+
+Os dois entregam o mesmo `words.json` e a mesma `audio/voz.wav`; o resto do estilo não muda. A animação é determinística: cada quadro sai igual, em qualquer ordem em que o render pedir.
+
+**O que sai do computador:** com o UltraVoice, nada: a voz é gerada e transcrita no computador do dono. Com a ElevenLabs, o texto do roteiro vai para ela, pela conta do próprio dono, para virar voz; diga isso ao dono antes de gerar. Nos dois caminhos, nada vai para o servidor MAGNUS.
 
 ## Antes de começar, confira
 
-- **O texto aprovado pelo dono**, com 55 a 70 palavras (cerca de 20 a 30 s). Frase que ele já disse rende mais que frase de efeito escrita do zero. A voz fala exatamente o que estiver escrito: mostre o texto final e espere o ok dele antes de gerar a voz, porque cada geração gasta créditos da conta dele.
-- **A voz:** `voz.elevenlabs_voice_id` no `marca.json` (`marca.md`, seção "Voz"). É a voz da conta dele na ElevenLabs que ele escolher.
-- **A chave** da ElevenLabs guardada no computador do dono, pelo comando de `marca.md`, nunca no pacote e nunca escrita na conversa.
+- **O texto aprovado pelo dono**, com 55 a 70 palavras (cerca de 20 a 30 s). Frase que ele já disse rende mais que frase de efeito escrita do zero. A voz fala exatamente o que estiver escrito: mostre o texto final e espere o ok dele antes de gerar a voz (na ElevenLabs, cada geração gasta créditos da conta dele; no UltraVoice, cerca de 1 minuto para cada 5 segundos de fala).
+- **A voz**, uma das duas no `marca.json` (`marca.md`, seção "Voz"):
+  - `voz.ultravoice_perfil`: o id do perfil da voz aprovada pelo dono no UltraVoice. É o caminho padrão, sem custo. Pede o app VoiceStudio aberto neste computador (validado só em Mac com chip Apple) e a transcrição instalada (`hf models install parakeet`, a mesma dos vídeos gravados).
+  - `voz.elevenlabs_voice_id`: a voz da conta dele na ElevenLabs que ele escolher, e **a chave** da ElevenLabs guardada no computador do dono, pelo comando de `marca.md`, nunca no pacote e nunca escrita na conversa.
+
+  Com as duas, vale o UltraVoice. Sem nenhuma, pergunte ao dono qual ele quer: o UltraVoice, se ele já instalou e aprovou a voz, ou a ElevenLabs, paga.
 
 ## Desenho
 
@@ -37,7 +45,11 @@ Volume medido, não chutado: o principal a 2 dB abaixo do momentâneo máximo da
 Na pasta do vídeo, `Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/`, sempre com o prefixo `eval` da SKILL:
 
 1. **O texto:** salve o texto aprovado em `roteiro.txt`. Escreva número, sigla e símbolo por extenso ("quinhentos reais", não "R$ 500"): a voz fala por extenso e as palavras precisam bater com o roteiro.
-2. **A voz e o tempo de cada palavra:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/voz-com-tempos.mjs" .` grava `audio/voz.wav` e `words.json` (e guarda `audio/voz-crua.mp3` e `audio/alinhamento-caracteres.json`). Ele acelera a voz até 1,10x quando ela vem lenta (alvo de 2,54 palavras por segundo, que `voz.ritmo` muda) e para se as palavras da voz não baterem com o roteiro, dizendo qual; aí corrija o `roteiro.txt` e rode de novo. Cada rodada gasta créditos: não rode de novo sem mudar o texto. Antes de mandar o texto para a ElevenLabs, ele procura no roteiro o que parece dado pessoal (CPF, CNPJ, telefone, e-mail, nome de pessoa; o nome do negócio e os aplicativos não contam) e para se achar, dizendo o quê. Aí diga ao dono, numa frase, o que achou e espere a resposta: se ele tirar, salve o `roteiro.txt` novo e rode de novo; se ele confirmar que pode ir assim, rode com `--confirmado` no fim.
+2. **A voz e o tempo de cada palavra:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/voz-com-tempos.mjs" .` escolhe a voz (o UltraVoice, se o `marca.json` tem o perfil; senão a ElevenLabs), grava `audio/voz.wav` e `words.json` e diz qual voz usou. Ele guarda também a voz crua (`audio/voz-crua.wav` e `audio/transcricao.json` do UltraVoice; `audio/voz-crua.mp3` e `audio/alinhamento-caracteres.json` da ElevenLabs). Rode com o tempo máximo da ferramenta: no UltraVoice a geração e a transcrição levam alguns minutos.
+   - **Pronúncia:** antes de gerar, o texto passa pelo dicionário `scripts/pronuncia.txt`, o mesmo do UltraVoice e o mesmo nos dois caminhos ("OAB" vira "Óabê", "A.I." vira "Ei Ai"). A voz fala a troca; o `words.json` e a legenda ficam com a palavra do roteiro. Palavra que a voz lê errado sempre: acrescente uma linha no dicionário, gere e ouça.
+   - **UltraVoice fechado:** se o perfil está no `marca.json` e o app não responde, o script para. Abra o app (no Mac, `open -g /Applications/VoiceStudio.app`), espere um minuto e rode de novo. Ele não troca sozinho para a ElevenLabs, que é paga: só com o sim do dono rode com `--elevenlabs` no fim.
+   - **O que ele confere:** acelera a voz até 1,10x quando ela vem lenta (alvo de 2,54 palavras por segundo, que `voz.ritmo` muda). Na ElevenLabs, para se as palavras da voz não baterem com o texto, dizendo qual; aí corrija o `roteiro.txt` e rode de novo. No UltraVoice, para se a transcrição reconhecer menos de 70% das palavras (a voz pulou ou trocou trechos: ouça `audio/voz-crua.wav` e gere de novo) e, quando ela ouvir uma palavra diferente aqui e ali, segue com o tempo do lugar e lista esses trechos: ouça cada um na prévia. Na ElevenLabs, cada rodada gasta créditos: não rode de novo sem mudar o texto.
+   - **Dado pessoal:** antes de gerar, nos dois caminhos, ele procura no roteiro o que parece dado pessoal (CPF, CNPJ, telefone, e-mail, nome de pessoa; o nome do negócio e os aplicativos não contam) e para se achar, dizendo o quê. Aí diga ao dono, numa frase, o que achou e espere a resposta: se ele tirar, salve o `roteiro.txt` novo e rode de novo; se ele confirmar que pode ir assim, rode com `--confirmado` no fim.
 3. **As fontes:** baixe as de `fontes.titulo` e `fontes.corpo`, como manda `marca.md`.
 4. **As palavras-chave**, de 5 a 7, na ordem em que são ditas, uma a cada 2 a 4 segundos; a primeira é a capa e deve ser dita nos primeiros segundos. Cada uma tem até 3 palavras seguidas e 24 caracteres, escritas como no `words.json` (acento e pontuação não contam). Leia o `words.json` para escolher. Escreva o `escolhas.json` na pasta do vídeo:
 
@@ -64,7 +76,7 @@ Na pasta do vídeo, `Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/`, sempre
        hf render . -c previa.html -o previa.mp4
        rm previa.html
 
-   Ajuste pelo que o dono disser no `escolhas.json` e monte de novo; não edite o `index.html` à mão. Texto novo é voz nova: volte ao passo 2 (gasta créditos).
+   Ajuste pelo que o dono disser no `escolhas.json` e monte de novo; não edite o `index.html` à mão. Texto novo é voz nova: volte ao passo 2 (na ElevenLabs, gasta créditos).
 2. Antes do render final: `hf lint .` e `hf check . --strict`, os dois sem erro e sem aviso.
 3. Render final: `hf render . -o "../prontos/<AAAA-MM-DD>-<nome curto>.mp4"`.
 4. **Antes de entregar**, além do que pede `entrega.md`:
@@ -75,8 +87,9 @@ Na pasta do vídeo, `Documentos/Editor Chefe/<AAAA-MM-DD>-<nome curto>/`, sempre
 ## Cuidados
 
 - **Palavras do dono, nunca inventadas:** o texto é o que ele aprovou, e as palavras-chave e a legenda saem dele. Não acrescente promessa, número ou resultado.
-- **A voz fala o que está escrito:** sigla vira letra por letra, número com algarismo pode virar outra grafia e parar o `voz-com-tempos.mjs`. Escreva como se fala.
-- **Créditos da ElevenLabs:** cada rodada do `voz-com-tempos.mjs` gasta créditos da conta do dono, cerca de um por caractere. Gere a voz só com o texto aprovado.
+- **A voz fala o que está escrito:** sigla vira letra por letra (menos as do dicionário de pronúncia), número com algarismo pode virar outra grafia e parar o `voz-com-tempos.mjs`. Escreva como se fala.
+- **Créditos da ElevenLabs:** cada rodada do `voz-com-tempos.mjs` pela ElevenLabs gasta créditos da conta do dono, cerca de um por caractere. Gere a voz só com o texto aprovado. O UltraVoice não gasta créditos.
+- **Voz do dono no UltraVoice:** na voz dele só sai o texto que ele aprovou, e ele ouve o vídeo antes de publicar. O UltraVoice grava no áudio uma marca d'água inaudível de IA.
 - **O render não precisa de internet:** o GSAP vem no plugin (`estilos/gsap.min.js`, conferido pelo SHA-256), e o montador copia o arquivo para a pasta do vídeo.
 - **Sem o plugin hyperframes:** o montador para dizendo que não achou os efeitos sonoros. Instale o plugin hyperframes do mesmo marketplace e abra uma conversa nova; se não der, monte com `"efeitos": false`.
 - **Logo escuro:** o fecho fica sobre o fundo escuro. Use a versão clara do logo, com fundo transparente (PNG ou SVG); se não houver, deixe sem logo e o fecho mostra o nome.

@@ -28,7 +28,7 @@ A pessoa grande nos 60% de baixo da tela, texto ou animação nos 40% de cima. T
 
 Só animação, narrada por voz a partir de um texto do dono.
 
-10. **Motion narrado** (`motion-narrado`): cada palavra-chave entra grande na tela no instante em que é dita, com a legenda da narração embaixo; de 20 a 30 segundos. Não precisa de gravação: precisa do texto do dono (de 55 a 70 palavras, de preferência uma frase que ele já disse) e de uma voz da conta dele na ElevenLabs; o texto vai para a ElevenLabs, pela conta do dono, para virar voz. Não leva gancho de capa: a primeira palavra-chave é a capa. Efeitos sonoros: sempre ligados, sem perguntar.
+10. **Motion narrado** (`motion-narrado`): cada palavra-chave entra grande na tela no instante em que é dita, com a legenda da narração embaixo; de 20 a 30 segundos. Não precisa de gravação: precisa do texto do dono (de 55 a 70 palavras, de preferência uma frase que ele já disse) e de uma voz. A voz padrão é a do UltraVoice, o nosso caminho sem custo: a voz que o dono aprovou, gerada no computador dele, sem o texto sair de lá. Sem o UltraVoice, uma voz da conta dele na ElevenLabs (paga), e aí o texto vai para a ElevenLabs, pela conta do dono, para virar voz. Não leva gancho de capa: a primeira palavra-chave é a capa. Efeitos sonoros: sempre ligados, sem perguntar.
 
 ### Animado pela fala (11 e 12)
 

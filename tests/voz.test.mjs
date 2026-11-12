@@ -1,4 +1,5 @@
-// tests/voz.test.mjs: voz-com-tempos.mjs sem chamar a ElevenLabs (a resposta da API é montada aqui, com um áudio sintético).
+// tests/voz.test.mjs: voz-com-tempos.mjs sem chamar a ElevenLabs nem o UltraVoice (as respostas das APIs e a transcrição são
+// montadas aqui, com um áudio sintético).
 // Precisa de ffmpeg e ffprobe no PATH (o prefixo do ambiente.sh resolve).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { palavras, aceleracao, conferir, lerChave, vozComTempos, RITMO, ARQUIVO_CHAVE } from '../plugins/editor-chefe/scripts/voz-com-tempos.mjs';
+import { palavras, aceleracao, conferir, lerChave, vozComTempos, escolherVoz, pronunciar, alinhar, RITMO, ARQUIVO_CHAVE, ULTRAVOICE } from '../plugins/editor-chefe/scripts/voz-com-tempos.mjs';
 
 const raiz = mkdtempSync(join(tmpdir(), 'voz-'));
 test.after(() => rmSync(raiz, { recursive: true, force: true }));
@@ -182,4 +183,128 @@ test('roteiro com dado pessoal: para antes de mandar à ElevenLabs e só segue c
   // o nome do negócio e um aplicativo no meio da frase não pedem confirmação
   const t2 = 'Aqui no Estúdio Exemplo, todo cliente chama no WhatsApp.';
   assert.equal((await vozComTempos(pasta(undefined, t2), { env, fetch: api(exemplo(2.5, t2)) })).palavras, t2.split(' ').length);
+});
+
+// UltraVoice (VoiceStudio local): dublê da API em 127.0.0.1:3900 e do transcritor. A voz é um tom com a duração da fala.
+function uv(ws, { saude = true, perfil = 200, status = 200, cabecalhos = {} } = {}) {
+  const wav = join(raiz, `uv-${ws.length}-${ws.at(-1)[2]}.wav`);
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `sine=f=180:d=${ws.at(-1)[2] + 0.3}`, '-ar', '24000', wav]);
+  const f = async (url, op = {}) => {
+    f.pedidos.push({ url, metodo: op.method ?? 'GET', campos: op.body instanceof FormData ? Object.fromEntries(op.body) : undefined });
+    if (url === `${ULTRAVOICE}/health`) { if (!saude) throw new TypeError('fetch failed'); return new Response('{"status":"ok","device":"mps","version":"0.5.6"}'); }
+    if (url.startsWith(`${ULTRAVOICE}/profiles/`)) return new Response('{}', { status: perfil });
+    if (url === `${ULTRAVOICE}/generate`) return status === 200 ? new Response(readFileSync(wav), { headers: cabecalhos }) : new Response('{"detail":"OmniVoice não instalado"}', { status });
+    throw new Error(`não devia chamar ${url}`);
+  };
+  f.pedidos = [];
+  return f;
+}
+// transcritor de mentira: devolve as palavras "ouvidas" e guarda o arquivo que recebeu
+const ouvir = (ws) => { const t = (arq) => { t.arquivos.push(arq); return ws.map(([text, start, end]) => ({ text, start, end })); }; t.arquivos = []; return t; };
+const MARCA_UV = { nome: 'Estúdio Exemplo', voz: { ultravoice_perfil: 'perfil-dono_1' } };
+const MARCA_DUAS = { nome: 'Estúdio Exemplo', voz: { ultravoice_perfil: 'perfil-dono_1', elevenlabs_voice_id: 'vozDeTeste123' } };
+
+test('escolha da voz: UltraVoice com perfil aprovado e app aberto; ElevenLabs sem perfil ou com --elevenlabs; sem nenhum, pede um', async () => {
+  const f = uv(exemplo(2.4));
+  assert.equal(await escolherVoz({ perfil: 'perfil-dono_1', id: 'vozDeTeste123' }, { fetch: f }), 'ultravoice'); // padrão, sem custo
+  assert.deepEqual(f.pedidos.map((p) => p.url), [`${ULTRAVOICE}/health`, `${ULTRAVOICE}/profiles/perfil-dono_1`]);
+  const nada = async (url) => { throw new Error(`não devia chamar ${url}`); };
+  assert.equal(await escolherVoz({ id: 'vozDeTeste123' }, { fetch: nada }), 'elevenlabs'); // sem perfil: como hoje
+  assert.equal(await escolherVoz({ perfil: 'perfil-dono_1', id: 'vozDeTeste123' }, { fetch: nada, elevenlabs: true }), 'elevenlabs');
+  await assert.rejects(escolherVoz({ perfil: 'perfil-dono_1' }, { fetch: nada, elevenlabs: true }), /pediram a ElevenLabs.*elevenlabs_voice_id/);
+  await assert.rejects(escolherVoz({}, { fetch: nada }), /não tem a voz.*ultravoice_perfil.*sem custo.*elevenlabs_voice_id.*pago/);
+});
+
+test('UltraVoice fechado ou sem o perfil: para, sem trocar sozinho para a ElevenLabs paga', async () => {
+  await assert.rejects(escolherVoz({ perfil: 'p1', id: 'vozDeTeste123' }, { fetch: uv(exemplo(2.4), { saude: false }) }),
+    (e) => /não respondeu em http:\/\/127\.0\.0\.1:3900.*open -g \/Applications\/VoiceStudio\.app.*--elevenlabs/.test(e.message));
+  await assert.rejects(escolherVoz({ perfil: 'p1' }, { fetch: uv(exemplo(2.4), { saude: false }) }), (e) => /não respondeu/.test(e.message) && !/--elevenlabs/.test(e.message));
+  await assert.rejects(escolherVoz({ perfil: 'p1', id: 'x' }, { fetch: uv(exemplo(2.4), { perfil: 404 }) }), /o perfil "p1" não existe no UltraVoice/);
+  // perfil com caractere fora do formato não chega à URL
+  await assert.rejects(vozComTempos(pasta({ nome: 'X', voz: { ultravoice_perfil: '../models' } }), { env, fetch: uv(exemplo(2.4)) }), /voz\.ultravoice_perfil/);
+});
+
+test('dicionário de pronúncia: OAB vira "Óabê" e A.I. vira "Ei Ai", igual ao do UltraVoice', () => {
+  assert.equal(pronunciar('A OAB aprovou.'), 'A Óabê aprovou.');
+  assert.equal(pronunciar('Usamos A.I. no atendimento.'), 'Usamos Ei Ai no atendimento.');
+  assert.equal(pronunciar('Tudo com A.I. Depois, a OAB.'), 'Tudo com Ei Ai. Depois, a Óabê.');
+  assert.equal(pronunciar('Fim com A.I.'), 'Fim com Ei Ai.');
+  assert.equal(pronunciar('AIDS e OABX ficam como estão.'), 'AIDS e OABX ficam como estão.');
+});
+
+test('alinhamento texto x transcrição: palavra trocada leva o tempo do lugar; pulada fica no vão; a mais vai junto', () => {
+  const ouvidas = [['Aqui', 0, 0.3], ['na', 0.35, 0.5], ['lousa', 0.55, 1], ['todo', 1.1, 1.4], ['cliente', 1.45, 1.9], ['recebem', 2, 2.5], ['a', 2.55, 2.6], ['resposta', 2.6, 3.1], ['dia.', 3.6, 4]]
+    .map(([text, start, end]) => ({ text, start, end }));
+  const { palavras: p, trocas, iguais } = alinhar('Aqui na loja, todo cliente recebe resposta no mesmo dia.'.split(' '), ouvidas);
+  assert.deepEqual(p.map((w) => w.text), ['Aqui', 'na', 'loja,', 'todo', 'cliente', 'recebe', 'resposta', 'no', 'mesmo', 'dia.']); // as palavras do roteiro
+  assert.deepEqual(p[2], { text: 'loja,', start: 0.55, end: 1 }); // trocada: o tempo do que foi ouvido no lugar
+  assert.deepEqual(p[5], { text: 'recebe', start: 2, end: 2.6 }); // trocada com uma a mais depois: fica com as duas
+  assert.deepEqual(p[6], { text: 'resposta', start: 2.6, end: 3.1 });
+  assert.deepEqual([p[7].start, p[8].end], [3.1, 3.6]); // "no mesmo" pulados: dividem o vão até "dia."
+  assert.ok(p[7].end <= p[8].start && p[8].end - p[8].start > p[7].end - p[7].start); // pelo tamanho da palavra
+  assert.equal(iguais, 6);
+  assert.deepEqual(trocas, [{ roteiro: 'loja,', ouvido: 'lousa' }, { roteiro: 'recebe', ouvido: 'recebem a' }, { roteiro: 'no mesmo', ouvido: '' }]);
+  p.forEach((w, i) => assert.ok(w.end >= w.start && (!i || w.start >= p[i - 1].start))); // o que o montar.mjs exige
+  // palavra a mais logo antes de uma igual vai junto com ela: "Ei Ai" falado no lugar de "A.I."
+  const q = alinhar(['com', 'A.I.', 'hoje.'], [['com', 0, 0.3], ['Ei', 0.35, 0.5], ['Ai', 0.55, 0.8], ['hoje.', 0.9, 1.3]].map(([text, start, end]) => ({ text, start, end }))).palavras;
+  assert.deepEqual(q[1], { text: 'A.I.', start: 0.35, end: 0.8 });
+});
+
+test('UltraVoice: pede ao app local com o perfil e o texto do dicionário, transcreve a voz e grava o words.json com as palavras do roteiro', async () => {
+  const roteiro = 'A OAB aprovou o atendimento com A.I. aqui na loja, todo cliente recebe resposta no mesmo dia.';
+  const falado = 'A Óabê aprovou o atendimento com Ei Ai aqui na loja, todo cliente recebe resposta no mesmo dia.';
+  const ws = exemplo(2.4, falado);
+  ws[1][0] = 'OAB'; ws[13][0] = 'recebem'; // o transcritor escreve a sigla e troca uma palavra
+  const dir = pasta(MARCA_UV, roteiro), f = uv(ws), t = ouvir(ws);
+  const r = await vozComTempos(dir, { env, fetch: f, transcrever: t, confirmado: true }); // a procura de dado pessoal acha "A.I" como nome possível
+  assert.equal(r.caminho, 'ultravoice');
+  const ger = f.pedidos.find((p) => p.url === `${ULTRAVOICE}/generate`);
+  assert.deepEqual(ger.campos, { text: falado, profile_id: 'perfil-dono_1', language: 'Portuguese', engine: 'omnivoice', seed: '23', speed: '1.0', effect_preset: 'raw' });
+  assert.ok(f.pedidos.every((p) => p.url.startsWith(ULTRAVOICE))); // nada sai do computador
+  assert.deepEqual(t.arquivos, [join(dir, 'audio', 'voz-crua.wav')]);
+  for (const a of ['audio/voz-crua.wav', 'audio/transcricao.json', 'audio/voz.wav', 'words.json']) assert.ok(existsSync(join(dir, a)), a);
+  const w = JSON.parse(readFileSync(join(dir, 'words.json'), 'utf8'));
+  assert.deepEqual(w.map((x) => x.text), roteiro.split(' ')); // a legenda mostra "OAB" e "A.I.", como o dono escreveu
+  assert.deepEqual(w.find((x) => x.text === 'A.I.'), { text: 'A.I.', start: +(ws[6][1] / r.fator).toFixed(3), end: +(ws[7][2] / r.fator).toFixed(3) });
+  assert.deepEqual(r.trocas.map((x) => x.roteiro), ['Óabê', 'recebe']);
+});
+
+test('o words.json do UltraVoice tem o mesmo formato e os mesmos tempos que o da ElevenLabs para a mesma fala', async () => {
+  const ws = exemplo(2.3);
+  const a = pasta(), b = pasta(MARCA_UV);
+  await vozComTempos(a, { env, fetch: api(ws) });
+  await vozComTempos(b, { env, fetch: uv(ws), transcrever: ouvir(ws) });
+  const [we, wu] = [a, b].map((d) => JSON.parse(readFileSync(join(d, 'words.json'), 'utf8')));
+  assert.deepEqual(wu, we);
+  wu.forEach((x) => assert.deepEqual(Object.keys(x), ['text', 'start', 'end']));
+  const sr = (d) => execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=sample_rate,channels', '-of', 'csv=p=0', join(d, 'audio', 'voz.wav')], { encoding: 'utf8' }).trim();
+  assert.equal(sr(b), '48000,1');
+});
+
+test('UltraVoice: voz que não diz o roteiro, pedaço sem voz ou erro do app param sem gravar o words.json', async () => {
+  const ws = exemplo(2.4), errado = ws.map(([, s, e], i) => [i % 3 ? 'outra' : ws[i][0], s, e]); // um terço reconhecido
+  const d1 = pasta(MARCA_UV);
+  await assert.rejects(vozComTempos(d1, { env, fetch: uv(ws), transcrever: ouvir(errado) }), /não parece dizer o roteiro \(a transcrição reconheceu 8 de 22 palavras\).*voz-crua\.wav/);
+  assert.ok(!existsSync(join(d1, 'words.json')));
+  const d2 = pasta(MARCA_UV);
+  await assert.rejects(vozComTempos(d2, { env, fetch: uv(ws, { cabecalhos: { 'X-OmniVoice-Dropped-Chunks': '1', 'X-OmniVoice-Dropped-Text': 'antes do almoço' } }), transcrever: ouvir(ws) }), /sem um pedaço do texto \(antes do almoço\)/);
+  const d3 = pasta(MARCA_UV);
+  await assert.rejects(vozComTempos(d3, { env, fetch: uv(ws, { status: 500 }), transcrever: ouvir(ws) }), /o UltraVoice recusou o pedido \(HTTP 500\).*OmniVoice não instalado/);
+  for (const d of [d2, d3]) assert.ok(!existsSync(join(d, 'words.json')));
+});
+
+test('UltraVoice com dado pessoal no roteiro: a mesma conferência para antes de gerar; ElevenLabs também recebe o texto do dicionário', async () => {
+  const texto = 'Ligue para 11 98765-4321 e fale com a Joana Prado hoje.', f = uv(exemplo(2.5, texto));
+  await assert.rejects(vozComTempos(pasta(MARCA_UV, texto), { env, fetch: f, transcrever: ouvir([]) }),
+    /parece dado pessoal \(telefone 11 98765-4321; nome possível "Joana Prado"\), e o texto vira voz no UltraVoice, neste computador, e vai ao ar no Reel.*--confirmado/);
+  assert.ok(!f.pedidos.some((p) => p.url.endsWith('/generate')));
+  // ElevenLabs: a voz recebe "Óabê", a legenda fica com "OAB"
+  const t2 = 'Aqui a OAB confere tudo.', ws = exemplo(2.5, pronunciar(t2)), g = api(ws), dir = pasta(undefined, t2);
+  await vozComTempos(dir, { env, fetch: g });
+  assert.equal(g.pedidos[0].corpo.text, 'Aqui a Óabê confere tudo.');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'words.json'), 'utf8')).map((x) => x.text), t2.split(' '));
+  // com o perfil e o --elevenlabs, vai pela ElevenLabs sem tocar no UltraVoice
+  const h = api(exemplo(2.4));
+  assert.equal((await vozComTempos(pasta(MARCA_DUAS), { env, fetch: h, elevenlabs: true })).caminho, 'elevenlabs');
+  assert.ok(h.pedidos.every((p) => p.url.startsWith('https://api.elevenlabs.io/')));
 });

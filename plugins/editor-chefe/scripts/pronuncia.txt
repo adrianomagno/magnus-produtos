@@ -1,0 +1,7 @@
+# Dicionário de pronúncia do Motion narrado (português do Brasil), o mesmo do UltraVoice (S11, pronuncia.txt).
+# Uma troca por linha: expressão regular => como escrever para a voz falar certo. Vale para o UltraVoice e para a ElevenLabs.
+# A legenda continua com a palavra do roteiro; só a voz fala a troca. Validar cada linha nova ouvindo.
+\bA\.?\s?I\.(?=\s+\p{Lu}|\s*$) => Ei Ai.
+\bA\.?\s?I\b\.? => Ei Ai
+# OAB se fala "Óabê", de uma vez, nunca soletrado (vale para todo gerador de voz).
+\bOAB\b => Óabê
